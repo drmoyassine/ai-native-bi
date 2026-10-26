@@ -338,4 +338,89 @@ roadmap_item:
 
 Needed before real student data answers anyone: the threshold and the marking come from TASK-002 (contract 3.7 says null with a flag).
 
+---
+
+## TASK-009 — Build the app shell
+
+---
+id: TASK-009
+title: Build the app shell
+description: Accounts and sessions, uploads through the load job, the chart page; served by the API
+status: completed
+priority: P0
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+roadmap_item:
+  id: ROADMAP-009
+  name: 'The app shell: sign-in, uploads, a first chart'
+  url: /ROADMAP.md#ROADMAP-009
+related_decisions:
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+---
+
+Done 2026-10-26. Backend: accounts.py, app.py (/app/api), uploads.py (the load job), charts.py (chart definition v1), migration 0004, main_user.py. Frontend: web/ (Vite, React, TypeScript strict, ECharts): sign-in, uploads with live status, a chart page whose chart definition is shown. Tested: pytest (accounts, the header on writes, uploads refused and accepted, the load job loaded and failed, chart data with governed members only), vitest (the translator), and a browser walk-through against the app in Docker Compose.
+
+---
+
+## TASK-010 — Throttle sign-in attempts
+
+---
+id: TASK-010
+title: Throttle sign-in attempts
+description: Slow down or lock repeated failed sign-ins per email and per address
+status: pending
+priority: P1
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+roadmap_item:
+  id: ROADMAP-009
+  name: 'The app shell: sign-in, uploads, a first chart'
+  url: /ROADMAP.md#ROADMAP-009
+related_decisions:
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+---
+
+Argon2id makes each guess slow, but nothing limits how many are tried. Needed before the app is reachable from outside the institution.
+
+---
+
+## TASK-011 — Manage accounts in the app
+
+---
+id: TASK-011
+title: Manage accounts in the app
+description: An admin invites, disables and resets accounts from the app instead of the command line
+status: pending
+priority: P2
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+roadmap_item:
+  id: ROADMAP-009
+  name: 'The app shell: sign-in, uploads, a first chart'
+  url: /ROADMAP.md#ROADMAP-009
+related_decisions:
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+---
+
 <!-- End VEF generated items. -->

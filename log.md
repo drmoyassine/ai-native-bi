@@ -14,6 +14,14 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-26 — The app shell
+
+Phase 1 merged (#5). `scripts/make_env.py` makes `.env` with every secret generated. The app shell (ROADMAP-009, DEC-014): the
+BI's own accounts and cookie sessions, uploads through a new `load` job, and a chart page that builds a chart definition (DEC-012)
+from Cube's governed members. Learned: FastAPI cannot see a route's `Annotated` dependency defined inside a function when the module
+uses `from __future__ import annotations` (it read the signed-in user as a query parameter); Cube's metadata has `shortTitle`
+("Headcount") beside `title` ("Enrollment Headcount"). Still to do: sign-in throttling (TASK-010), accounts in the app (TASK-011).
+
 ## 2026-10-26 — Phase 1 closed
 
 Pull request #4 merged (phases 0 and 1). Cube now connects as its own role, which reads `analytics` only (TASK-007): rule 5 holds

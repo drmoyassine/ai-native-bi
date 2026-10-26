@@ -22,7 +22,8 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
    runs in a sandbox, credentials live in the secret store (never in code, the repository or logs), and access to sources is read-only.
 7. Stack (DEC-003): Python 3.12, FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for integrations,
    dbt for transforms, Cube for the metric layer, forward-only SQL migrations in `src/bi/migrations` (never edit an applied one),
-   pytest, ruff, mypy strict, structured JSON logs. Node is only for VEF.
+   pytest, ruff, mypy strict, structured JSON logs. The web app (web/, DEC-014): React, TypeScript strict, Vite, ECharts, Vitest;
+   charts are chart definitions (DEC-012), drawn only by `web/src/chart.ts`. Node builds the web app and runs VEF, nothing else.
 
 ## Project memory (VEF)
 
@@ -47,7 +48,8 @@ The two repositories talk through GitHub Issues, bridged by `.github/workflows/i
 
 ```bash
 uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
-pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
+pnpm install && pnpm exec vef check                                                              # project memory (VEF)
+pnpm --filter bi-web typecheck && pnpm --filter bi-web test && pnpm --filter bi-web build      # the web app (web/)
 ```
 
 Tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default `postgres://postgres:postgres@localhost:5432/postgres`. `tests/test_cube.py`

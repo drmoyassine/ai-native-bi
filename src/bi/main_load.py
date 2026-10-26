@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from . import dbt
-from .config import load_env
+from .config import load_env, storage
 from .ingest import IngestError, load_file
 from .log import log
 
@@ -24,16 +24,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--sheet', help='the sheet to load (default: the first)')
     args = parser.parse_args(argv)
     env = load_env()
-    options = {'client_kwargs': {'endpoint_url': env.S3_ENDPOINT_URL}} if env.S3_ENDPOINT_URL else None
+    files = storage(env)
     try:
         loaded = load_file(
             args.file,
             dataset=args.dataset,
             as_of=args.as_of,
             database_url=env.DATABASE_URL,
-            files_url=env.RAW_FILES_URL,
+            files_url=files.files_url,
             sheet=args.sheet,
-            storage_options=options,
+            storage_options=files.options,
         )
         log(
             'info',

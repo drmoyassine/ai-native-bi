@@ -76,6 +76,14 @@ The agent is how people use the BI. In a chat, a user asks it to:
 - **Define a KPI.** It writes the transform and the Cube definition, shows the result and its lineage, and waits for approval.
 - **Build a dashboard.** Generative UI: it composes the dashboard from governed KPIs; the user then configures it.
 
+### The app
+
+The web app (`web/`, [DEC-014](DECISIONS.md#DEC-014)) is a React single-page app built into the API image and served at `/`; its
+API is `/app/api`. People sign in with the BI's own accounts (single sign-on later, [ROADMAP-005](ROADMAP.md#ROADMAP-005)); a
+session is an HttpOnly, SameSite=Strict cookie, and every write also carries `X-BI-App: 1`. An upload is kept under
+`incoming/`, then the worker's `load` job loads it and rebuilds analytics, and the app shows its status, rows and dbt tests. The
+chart page builds a chart definition from Cube's governed members and draws its rows ([ROADMAP-009](ROADMAP.md#ROADMAP-009)).
+
 ### Charts and dashboards
 
 Every chart is one **chart definition** of the BI's own JSON schema ([DEC-012](DECISIONS.md#DEC-012)): a Cube query (measures,
@@ -114,7 +122,8 @@ first: see `docs/ams-contract-proposals.md` ([TASK-006](TASKS.md#TASK-006)).
 - **Security:** row-level security in Cube; Cube's own database role reads `analytics` only, never `raw` or `staging`
   ([TASK-007](TASKS.md#TASK-007)). The AMS calls with `BI_API_KEY`; the BI calls back only the run's own supply route on
   `AMS_CALLBACK_ORIGIN`, never follows a redirect, and forgets the token when the request ends.
-- **Authentication:** the BI's own accounts first, the institution's single sign-on later ([ROADMAP-005](ROADMAP.md#ROADMAP-005)).
+- **Authentication:** the BI's own accounts (Argon2id, server-side sessions, [DEC-014](DECISIONS.md#DEC-014)); the institution's
+  single sign-on later ([ROADMAP-005](ROADMAP.md#ROADMAP-005)). Sign-in throttling is still to do ([TASK-010](TASKS.md#TASK-010)).
 - **Observability:** structured JSON logs.
 - **Deployment:** Docker Compose, alone (`compose.yaml`) or beside the AMS (`compose.together.yaml`). A later self-serve free trial
   is its own small deployment on a real PostgreSQL ([ROADMAP-007](ROADMAP.md#ROADMAP-007)).
@@ -132,6 +141,7 @@ first: see `docs/ams-contract-proposals.md` ([TASK-006](TASKS.md#TASK-006)).
 - **One general-purpose API and MCP server on Cube** — see [DEC-009](DECISIONS.md#DEC-009)
 - **One chart definition, rendered with ECharts** — see [DEC-012](DECISIONS.md#DEC-012)
 - **Charts and dashboards: private drafts, approved to publish** — see [DEC-013](DECISIONS.md#DEC-013)
+- **The app: own accounts, a cookie session, a React app served by the API** — see [DEC-014](DECISIONS.md#DEC-014)
 
 The phases are roadmap items: [ROADMAP.md](ROADMAP.md).
 

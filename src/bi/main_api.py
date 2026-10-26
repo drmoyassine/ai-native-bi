@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 
+import httpx
 import uvicorn
 from psycopg_pool import AsyncConnectionPool
 
 from .api import AppDeps, create_app
-from .config import load_env
+from .app import AppContext
+from .config import load_env, storage
+from .cube import CubeClient
 from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
-from .queue import create_queue, enqueue_collect
+from .queue import create_queue, enqueue_collect, enqueue_load
 
 
 async def main() -> None:
@@ -28,9 +31,22 @@ async def main() -> None:
             await grant_analytics(pool, env.CUBE_DB_USER)
             log('info', 'cube may read analytics', role=env.CUBE_DB_USER)
         queue = create_queue(env.DATABASE_URL)
-        async with queue.open_async():
+        async with queue.open_async(), httpx.AsyncClient() as http:
+            cube = CubeClient(http, env.CUBE_API_URL, env.CUBE_API_SECRET) if env.CUBE_API_URL and env.CUBE_API_SECRET else None
+            context = AppContext(
+                pool=pool,
+                storage=storage(env),
+                enqueue_load=lambda id: enqueue_load(queue, id),
+                cube=cube,
+                cookie_secure=env.APP_COOKIE_SECURE,
+            )
             deps = AppDeps(
-                pool=pool, api_key=env.BI_API_KEY, ams_origin=env.AMS_CALLBACK_ORIGIN, enqueue=lambda id: enqueue_collect(queue, id)
+                pool=pool,
+                api_key=env.BI_API_KEY,
+                ams_origin=env.AMS_CALLBACK_ORIGIN,
+                enqueue=lambda id: enqueue_collect(queue, id),
+                app=context,
+                web_dir=env.WEB_DIR,
             )
             app = create_app(deps)
             log('info', 'bi api listening', port=env.PORT)

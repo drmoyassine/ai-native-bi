@@ -12,9 +12,12 @@ from .callback import Ended, Supplied, Unfit, post_supply
 from .contract import CollectRequest
 from .log import log
 from .sources import CannotAnswer, SourceRegistry
+from .uploads import Storage, process_upload
 
 COLLECT_QUEUE = 'collect'
 COLLECT_TASK = 'collect'
+LOAD_QUEUE = 'load'
+LOAD_TASK = 'load'
 
 
 @dataclass
@@ -108,9 +111,26 @@ async def give_up(pool: AsyncConnectionPool, id: str, attempts: int, error: Base
         )
 
 
-def create_queue(conninfo: str, deps: CollectDeps | None = None, retry: CollectRetry | None = None) -> procrastinate.App:
-    """The job queue on the BI's database (migration 0002). The API only defers jobs (`deps` None); the worker also runs them."""
+@dataclass
+class LoadDeps:
+    pool: AsyncConnectionPool
+    storage: Storage
+    database_url: str
+
+
+def create_queue(
+    conninfo: str, deps: CollectDeps | None = None, retry: CollectRetry | None = None, load: LoadDeps | None = None
+) -> procrastinate.App:
+    """The job queue on the BI's database (migration 0002). The API only defers jobs (no deps); the worker also runs them: `collect`
+    (an AMS run) and `load` (an upload of the app, never retried: process_upload records why it failed)."""
     app = procrastinate.App(connector=procrastinate.PsycopgConnector(conninfo=conninfo))
+    if load is not None:
+
+        async def load_upload(id: str) -> None:
+            outcome = await process_upload(load.pool, load.storage, load.database_url, id)
+            log('info', 'load', id=id, outcome=outcome)
+
+        app.task(name=LOAD_TASK, queue=LOAD_QUEUE)(load_upload)
     if deps is not None:
         strategy = retry or CollectRetry()
 
@@ -130,3 +150,7 @@ def create_queue(conninfo: str, deps: CollectDeps | None = None, retry: CollectR
 
 async def enqueue_collect(app: procrastinate.App, id: str) -> None:
     await app.configure_task(name=COLLECT_TASK, queue=COLLECT_QUEUE).defer_async(id=id)
+
+
+async def enqueue_load(app: procrastinate.App, id: str) -> None:
+    await app.configure_task(name=LOAD_TASK, queue=LOAD_QUEUE).defer_async(id=id)

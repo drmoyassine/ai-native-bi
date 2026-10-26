@@ -20,6 +20,10 @@ services:
       DATABASE_URL: postgres://bi:${POSTGRES_PASSWORD}@postgres:5432/bi
       # Here bi is the server's superuser (POSTGRES_USER): it also creates Cube's read-only role (CUBE_DB_USER).
       BI_DATABASE_ADMIN_URL: postgres://bi:${POSTGRES_PASSWORD}@postgres:5432/bi
+      # The app (ROADMAP-009): governed fields and chart data come from Cube; uploads are kept in the files volume until loaded.
+      CUBE_API_URL: http://bi-cube:4000
+      RAW_FILES_URL: file:///data/raw-files
+    volumes: ["biraw:/data/raw-files"]
     ports: ["4000:4000"]
     depends_on:
       postgres: { condition: service_healthy }
