@@ -26,6 +26,9 @@ importers:
       typescript-eslint:
         specifier: ^8.0.0
         version: 8.72.0(eslint@9.39.5)(typescript@5.9.3)
+      vibe-engineering-framework:
+        specifier: 0.3.1
+        version: 0.3.1
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.20.5)
@@ -591,6 +594,10 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
+  commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
+
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
@@ -1045,6 +1052,11 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
+
+  vibe-engineering-framework@0.3.1:
+    resolution: {integrity: sha512-DPI19Cx9AuG5fAYNPtngJyst9j57Rft1YaVnjhB7W/peGsskOubF8ts/HSvsDFDuHpQAWSMRAeqmeatQa2lLbQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   vite-node@2.1.9:
     resolution: {integrity: sha512-AM9aQ/IPrW/6ENLQg3AGY4K1N2TGZdR5e4gu/MmmR2xR3Ll1+dib+nook92g4TV3PXVyeyxdWwtaCAiUL0hMxA==}
@@ -1555,6 +1567,8 @@ snapshots:
 
   color-name@1.1.4: {}
 
+  commander@12.1.0: {}
+
   concat-map@0.0.1: {}
 
   cron-parser@5.10.2:
@@ -2000,6 +2014,11 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  vibe-engineering-framework@0.3.1:
+    dependencies:
+      commander: 12.1.0
+      js-yaml: 4.3.2
 
   vite-node@2.1.9(@types/node@22.20.5):
     dependencies:

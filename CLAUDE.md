@@ -22,7 +22,13 @@ contract. Read `docs/architecture.md` first.
    integrations, SQL transforms, Cube for the metric layer, forward-only SQL migrations, pytest, structured JSON logs. The current
    scaffold is still TypeScript (Hono, Zod, pg-boss, Vitest) until phase 0 ports it.
 
+## Project memory (VEF)
+
+Vision, roadmap, tasks and decisions live in `docs/vision/`, `docs/roadmap/`, `docs/tasks/` and `docs/decisions/`, managed by
+vibe-engineering-framework (see `AGENTS.md`). Change them with the `/tasks`, `/roadmap` and `/decisions` skills or `vef create` /
+`vef update`; never edit the generated root ledgers (`VISION.md`, `ROADMAP.md`, `TASKS.md`, `DECISIONS.md`) by hand.
+
 ## Checks
 
 Until the port: `pnpm build && pnpm typecheck && pnpm lint && pnpm test` (tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default
-`postgres://postgres:postgres@localhost:5432/postgres`).
+`postgres://postgres:postgres@localhost:5432/postgres`). Always: `pnpm exec vef check`.
