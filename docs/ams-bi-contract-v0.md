@@ -163,18 +163,20 @@ BI's governed API (pull) or the BI pushes a supply (4.2); both write the same ki
 
 All are routes with `requires(...)` or, for the callback, the per-run token (the five-step chain). **[exists]** is built (TASK-090); **[planned]** is decided and not built.
 
-| Direction | Method and path | Purpose | |
-|---|---|---|---|
-| AMS → BI | `POST {BI_BASE_URL}/ams/collect` | The request for one run (3.6); answered 200 with the supply or 202 | **[exists]** |
-| BI → AMS | `POST /api/bi/v0/runs/{id}/supply` | Answer a run with rows, a file or an address (4.2); the run's one-time token | **[exists]** |
-| AMS → BI | `GET /api/bi/v0/runs?updatedSince=` | Collection runs (3.6) with the item's definition, type, method settings, scope, champion, due | **[planned: not built]** the AMS asks the BI for each run itself (above), so the BI has nothing to poll for; it stays for a BI that wants a list |
-| AMS → BI | `GET /api/bi/v0/datasets/{evidenceItemId}/specification` | Dataset specification (columns, grain) | [planned] |
-| AMS → BI | `GET /api/bi/v0/evidence?updatedSince=` | Item metadata (3.1), latest version summary | [planned] |
-| AMS → BI | `GET /api/bi/v0/evidence-versions/{id}/file` | File of a version (DEC-019) | [planned] |
-| BI → AMS | `POST /api/bi/v0/datasets/{evidenceItemId}/versions` | Supply rows with `asOf` and `lineage` (without a run) | [planned] |
-| BI → AMS | `POST /api/bi/v0/evidence/{id}/versions` | Supply a file or URL (without a run) | [planned] |
-| BI → AMS | `POST /api/bi/v0/links` | Propose a link (with rationale) | [planned] |
-| AMS → BI | webhook `POST {bi}/hooks/ams` | `run.created|updated`, `evidence.version.created`, `link.reviewed`, `dataset.specification.updated` | [planned] |
+"Caller" is who makes the HTTP call and "Served by" who answers it. Data can flow the other way: the BI calls the AMS's `GET` routes to read from the AMS.
+
+| Caller | Served by | Method and path | Purpose | |
+|---|---|---|---|---|
+| AMS | BI | `POST {BI_BASE_URL}/ams/collect` | The request for one run (3.6); answered 200 with the supply or 202 | **[exists]** |
+| BI | AMS | `POST /api/bi/v0/runs/{id}/supply` | Answer a run with rows, a file or an address (4.2); the run's one-time token | **[exists]** |
+| BI | AMS | `GET /api/bi/v0/runs?updatedSince=` | Collection runs (3.6) with the item's definition, type, method settings, scope, champion, due | **[planned: not built]** the AMS asks the BI for each run itself (above), so the BI has nothing to poll for; it stays for a BI that wants a list |
+| BI | AMS | `GET /api/bi/v0/datasets/{evidenceItemId}/specification` | Dataset specification (columns, grain) | [planned] |
+| BI | AMS | `GET /api/bi/v0/evidence?updatedSince=` | Item metadata (3.1), latest version summary | [planned] |
+| BI | AMS | `GET /api/bi/v0/evidence-versions/{id}/file` | File of a version (DEC-019) | [planned] |
+| BI | AMS | `POST /api/bi/v0/datasets/{evidenceItemId}/versions` | Supply rows with `asOf` and `lineage` (without a run) | [planned] |
+| BI | AMS | `POST /api/bi/v0/evidence/{id}/versions` | Supply a file or URL (without a run) | [planned] |
+| BI | AMS | `POST /api/bi/v0/links` | Propose a link (with rationale) | [planned] |
+| AMS | BI | webhook `POST {bi}/hooks/ams` | `run.created|updated`, `evidence.version.created`, `link.reviewed`, `dataset.specification.updated` | [planned] |
 
 The earlier draft's `POST /api/bi/v0/runs/{id}/supplied` (mark a run supplied by a version) is replaced by the callback above, which carries the data itself.
 
