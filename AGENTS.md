@@ -35,7 +35,8 @@ vef check
 
 ```bash
 uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
-pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
+pnpm install && pnpm exec vef check                                                              # project memory (VEF)
+pnpm --filter bi-web typecheck && pnpm --filter bi-web test && pnpm --filter bi-web build      # the web app (web/)
 ```
 
 ## Decision discipline

@@ -20,6 +20,10 @@ services:
       DATABASE_URL: postgres://bi:${BI_DB_PASSWORD:?set BI_DB_PASSWORD}@postgres:5432/bi
       BI_DATABASE_ADMIN_URL: postgres://${AMS_POSTGRES_USER:-ams}:${AMS_POSTGRES_PASSWORD:?set AMS_POSTGRES_PASSWORD}@postgres:5432/postgres
       AMS_CALLBACK_ORIGIN: http://app:3000
+      # The app (ROADMAP-009): governed fields and chart data come from Cube; uploads are kept in the files volume until loaded.
+      CUBE_API_URL: http://bi-cube:4000
+      RAW_FILES_URL: file:///data/raw-files
+    volumes: ["biraw:/data/raw-files"]
     depends_on:
       postgres: { condition: service_healthy }
 

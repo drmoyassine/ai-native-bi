@@ -88,13 +88,16 @@ related_decisions:
   - id: DEC-013
     name: 'Charts and dashboards: private drafts, approved to publish'
     url: /DECISIONS.md#DEC-013
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
 related_roadmap_items:
   - id: ROADMAP-003
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  at: '2026-10-26T21:39:41.703Z'
 ---
 
 A BI team is usually the bottleneck between a question and an answer. Here the agent is how people use the BI: it asks
@@ -177,6 +180,9 @@ related_decisions:
   - id: DEC-012
     name: One chart definition, rendered with ECharts
     url: /DECISIONS.md#DEC-012
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
 related_roadmap_items:
   - id: ROADMAP-004
     name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
@@ -184,9 +190,12 @@ related_roadmap_items:
   - id: ROADMAP-006
     name: AMS requests beyond collect
     url: /ROADMAP.md#ROADMAP-006
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  at: '2026-10-26T21:39:41.703Z'
 ---
 
 The BI works on its own and with the AMS (drmoyassine/ams), which is one consumer among others. Every consumer reads the

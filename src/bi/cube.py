@@ -66,7 +66,7 @@ class CubeClient:
                         members.append(
                             {
                                 'name': m['name'],
-                                'title': m.get('title') or m['name'],
+                                'title': m.get('shortTitle') or m.get('title') or m['name'],  # 'Headcount', not 'Enrollment Headcount'
                                 'type': m.get('type'),
                                 'kind': kind[:-1],
                                 'description': m.get('description'),

@@ -23,6 +23,9 @@ related_decisions:
   - id: DEC-012
     name: One chart definition, rendered with ECharts
     url: /DECISIONS.md#DEC-012
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
 related_roadmap_items:
   - id: ROADMAP-004
     name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
@@ -30,9 +33,12 @@ related_roadmap_items:
   - id: ROADMAP-006
     name: AMS requests beyond collect
     url: /ROADMAP.md#ROADMAP-006
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  at: '2026-10-26T21:39:41.703Z'
 ---
 # open-consumption — Every consumer, one governed layer
 

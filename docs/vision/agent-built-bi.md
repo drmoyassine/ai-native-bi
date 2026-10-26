@@ -21,13 +21,16 @@ related_decisions:
   - id: DEC-013
     name: 'Charts and dashboards: private drafts, approved to publish'
     url: /DECISIONS.md#DEC-013
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
 related_roadmap_items:
   - id: ROADMAP-003
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  at: '2026-10-26T21:39:41.703Z'
 ---
 # agent-built-bi — An agent builds the BI
 

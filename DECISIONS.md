@@ -480,6 +480,9 @@ related_roadmap_items:
   - id: ROADMAP-008
     name: First real data
     url: /ROADMAP.md#ROADMAP-008
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
 related_tasks:
   - id: TASK-002
     name: Settle the privacy rules for student data
@@ -492,7 +495,7 @@ related_tasks:
     url: /TASKS.md#TASK-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T21:22:32.764Z'
+  at: '2026-10-26T21:39:41.703Z'
 ---
 
 Decided with Mohamad Yassine on 2026-10-26. Supersedes DEC-008.
@@ -542,9 +545,12 @@ related_roadmap_items:
   - id: ROADMAP-004
     name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
     url: /ROADMAP.md#ROADMAP-004
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  at: '2026-10-26T21:39:41.703Z'
 ---
 
 Decided with Mohamad Yassine on 2026-10-26. Vega-Lite was the alternative; ECharts was chosen for dashboards (interaction, large data, maps, right-to-left).
@@ -596,5 +602,71 @@ modified:
 ---
 
 Decided with Mohamad Yassine on 2026-10-26.
+
+---
+
+## DEC-014 — The app: the BI's own accounts, a cookie session, a React app served by the API
+
+---
+id: DEC-014
+title: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+status: accepted
+context: >-
+  Real data comes in through the app (DEC-011), the agent will live in it (ROADMAP-003) and charts are drawn in it
+  (DEC-012). Single sign-on comes later (ROADMAP-005).
+decision: >-
+  The app is a React and TypeScript single-page app (Vite, ECharts) in web/, built into the API image and served by the
+  API at /, with its API under /app/api. People sign in with the BI's own accounts (Argon2id); the first account is made
+  from the command line (no default accounts). A session is a random token in an HttpOnly, SameSite=Strict cookie,
+  stored only as its SHA-256; every request that changes something must also carry the header X-BI-App: 1. Uploads go
+  through the worker's load job; charts are chart definitions checked against Cube's governed members.
+rationale: >-
+  One origin (no CORS, a strict cookie works), one image to deploy, and the same governed path for people as for the
+  agent. Server-side sessions can be ended at once; a custom header on writes defeats forged cross-site requests.
+consequences: >-
+  Node builds the web app (Docker stage, CI job) as well as running VEF. Sign-in has no throttling yet (TASK-010), and
+  accounts are created from the command line until the app manages them (TASK-011).
+tags:
+  - app
+  - security
+  - ui
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+related_vision:
+  - id: agent-built-bi
+    name: An agent builds the BI
+    url: /VISION.md#agent-built-bi
+  - id: open-consumption
+    name: Every consumer, one governed layer
+    url: /VISION.md#open-consumption
+related_decisions:
+  - id: DEC-011
+    name: Phase 1 on test files; real data through the frontend
+    url: /DECISIONS.md#DEC-011
+  - id: DEC-012
+    name: One chart definition, rendered with ECharts
+    url: /DECISIONS.md#DEC-012
+related_roadmap_items:
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
+related_tasks:
+  - id: TASK-009
+    name: Build the app shell
+    url: /TASKS.md#TASK-009
+  - id: TASK-010
+    name: Throttle sign-in attempts
+    url: /TASKS.md#TASK-010
+  - id: TASK-011
+    name: Manage accounts in the app
+    url: /TASKS.md#TASK-011
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T21:39:41.703Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26 (the app shell first, before the agent).
 
 <!-- End VEF generated items. -->

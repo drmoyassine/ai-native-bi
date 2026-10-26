@@ -44,3 +44,17 @@ jobs:
             -e CUBEJS_DEV_MODE=false -e CUBEJS_CACHE_AND_QUEUE_DRIVER=memory -e PORT=4400 cubejs/cube:v1.8.13
           timeout 120 sh -c 'until curl -sf localhost:4400/readyz >/dev/null; do sleep 2; done'
       - run: uv run pytest
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter bi-web typecheck
+      - run: pnpm --filter bi-web test
+      - run: pnpm --filter bi-web build
