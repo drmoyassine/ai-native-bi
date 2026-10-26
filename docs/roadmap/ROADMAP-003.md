@@ -23,8 +23,8 @@ related_decisions:
     url: /DECISIONS.md#DEC-006
 modified:
   by: agent/claude-code
-  at: '2026-10-26T21:46:56.262Z'
+  at: '2026-10-26T21:57:40.888Z'
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 
-Spec proposed 2026-10-26 in docs/agent-spec.md: the runtime (the Claude API SDK tool runner in a worker job), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost, and delivery in four steps (2a ask, 2b build from a file, 2c connect a system, 2d define a KPI). Decisions are recorded once it is approved.
+Spec proposed 2026-10-26 in docs/agent-spec.md and revised the same day for any model provider: the runtime (Pydantic AI in a worker job, the model per mode a setting), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost, and delivery in four steps (2a ask, 2b build from a file, 2c connect a system, 2d define a KPI). Decisions are recorded once it is approved.
