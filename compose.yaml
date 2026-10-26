@@ -1,0 +1,34 @@
+# The BI on its own: its own PostgreSQL, the API and the worker. For one stack with the AMS, use compose.together.yaml.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: bi
+    volumes: [bipgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bi -d bi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  bi-api:
+    build: { context: ., target: api }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bi:${POSTGRES_PASSWORD}@postgres:5432/bi
+    ports: ["4000:4000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  bi-worker:
+    build: { context: ., target: worker }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bi:${POSTGRES_PASSWORD}@postgres:5432/bi
+    depends_on:
+      bi-api: { condition: service_healthy }
+
+volumes:
+  bipgdata:

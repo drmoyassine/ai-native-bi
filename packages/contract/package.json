@@ -1,0 +1,10 @@
+{
+  "name": "@bi/contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": { "build": "tsc -b" },
+  "dependencies": { "zod": "^4.6.5" }
+}

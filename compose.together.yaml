@@ -1,0 +1,33 @@
+# Co-deployment (AMS DEC-034): the AMS and the BI in one Compose project, sharing the AMS's PostgreSQL server, its Garage store and
+# one private network. Storage stays separate: the BI gets its own role and database on that server (created at start-up through
+# BI_DATABASE_ADMIN_URL) and never reads the AMS's. They talk only through the contract, over the private network:
+#   AMS -> BI   http://bi-api:4000/ams/collect   (the AMS allows plain http only to BI_PRIVATE_HOST=bi-api)
+#   BI  -> AMS  http://app:3000/api/bi/v0/runs/{id}/supply
+#
+#   docker compose -f compose.together.yaml up --build
+#
+# The AMS services come from its own compose.yaml (AMS_DIR, default ../ams) and read its own .env, which must also set
+#   BI_BASE_URL=http://bi-api:4000  BI_PRIVATE_HOST=bi-api  BI_API_KEY=<the BI's key>  APP_PUBLIC_URL=http://app:3000
+include:
+  - path: ${AMS_DIR:-../ams}/compose.yaml
+    env_file: ${AMS_DIR:-../ams}/.env
+
+services:
+  bi-api:
+    build: { context: ., target: api }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bi:${BI_DB_PASSWORD:?set BI_DB_PASSWORD}@postgres:5432/bi
+      BI_DATABASE_ADMIN_URL: postgres://${AMS_POSTGRES_USER:-ams}:${AMS_POSTGRES_PASSWORD:?set AMS_POSTGRES_PASSWORD}@postgres:5432/postgres
+      AMS_CALLBACK_ORIGIN: http://app:3000
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  bi-worker:
+    build: { context: ., target: worker }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bi:${BI_DB_PASSWORD:?set BI_DB_PASSWORD}@postgres:5432/bi
+      AMS_CALLBACK_ORIGIN: http://app:3000
+    depends_on:
+      bi-api: { condition: service_healthy }
