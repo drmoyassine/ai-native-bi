@@ -29,7 +29,7 @@ existing `form` and `manual` items is the AMS's decision.
 The BI is now Python (FastAPI, Pydantic; its mirror is `src/bi/contract.py`). Proposal: the AMS publishes its contract schemas as JSON Schema (generated from its Zod
 schemas), and the BI generates its Pydantic models from them, with a test that fails when the two drift.
 
-## 4. Names in queries
+## 4. Names in queries (resolved in the BI)
 
-The BI's mirror accepts names (metric, dimension, filter field) of lowercase letters, digits and `_`; contract 3.1 says names may also
-have `.` and `-`. To check against the AMS's `packages/shared/src/collection.ts` and align the contract text or the schema.
+The BI's mirror accepted only lowercase names of 64 characters; the AMS (`NAME` in `packages/shared/src/evidence.ts`) accepts
+`^[A-Za-z][A-Za-z0-9_.-]{0,99}$`, as contract 3.1 says. The mirror was wrong and now follows the AMS; nothing to raise.

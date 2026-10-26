@@ -29,7 +29,8 @@ EvidenceType = Literal['document', 'dataset']
 ScheduleEvery = Literal['day', 'week', 'month', 'quarter', 'semester', 'year']
 DataColumnType = Literal['text', 'number', 'integer', 'percent', 'date', 'choice', 'yes_no']
 
-Name = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r'^[a-z][a-z0-9_]{0,63}$')]
+# The AMS's NAME in packages/shared/src/evidence.ts.
+Name = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r'^[A-Za-z][A-Za-z0-9_.-]{0,99}$')]
 Trimmed = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
@@ -57,6 +58,12 @@ class DataColumn(_Wire):
     required: bool = False
     choices: list[Trimmed] | None = None
     help: Trimmed | None = None
+
+    @model_validator(mode='after')
+    def _choices_listed(self) -> DataColumn:
+        if self.type == 'choice' and not self.choices:
+            raise ValueError(f'list the choices for {self.label}')
+        return self
 
 
 ShortStr = Annotated[StrictStr, StringConstraints(max_length=200)]

@@ -242,9 +242,7 @@ modified:
 ---
 id: TASK-006
 title: Raise the contract proposals in the AMS
-description: >-
-  docs/ams-contract-proposals.md: new request kinds, forms moving to the BI, JSON Schema for the mirror, names in
-  queries
+description: 'docs/ams-contract-proposals.md: new request kinds, forms moving to the BI, JSON Schema for the mirror'
 status: pending
 priority: P1
 last_updated: '2026-10-26'
@@ -261,7 +259,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-007
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T13:38:53.482Z'
 ---
 
 <!-- End VEF generated items. -->

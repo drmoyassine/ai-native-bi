@@ -53,7 +53,7 @@ def test_the_request_keeps_null_and_absent_apart() -> None:
     with pytest.raises(ValidationError):
         CollectRequest.model_validate({k: v for k, v in REQUEST.items() if k != 'query'})
     with pytest.raises(ValidationError):
-        CollectRequest.model_validate({**REQUEST, 'query': {'metric': 'Enrollment'}})
+        CollectRequest.model_validate({**REQUEST, 'query': {'metric': '1enrollment'}})
     with pytest.raises(ValidationError):
         CollectRequest.model_validate({**REQUEST, 'query': {'filters': [{'field': 'level', 'op': 'eq', 'value': '1' * 201}]}})
 
@@ -71,3 +71,21 @@ def test_sends_the_supply_as_camel_case_without_absent_fields() -> None:
     body = SupplyBody(rows=[{'n': None}], as_of='2026-10-20', file_name=None)
     assert body.wire() == {'rows': [{'n': None}], 'asOf': '2026-10-20'}
     assert SupplyBody(rows=[{'n': 1}], as_of='2026-10-20').wire() == {'rows': [{'n': 1}], 'asOf': '2026-10-20'}
+
+
+def test_names_follow_the_ams_rule() -> None:
+    # The AMS's NAME (packages/shared/src/evidence.ts): a letter, then letters, digits, _ . - (up to 100 characters).
+    for name in ['enrollment_headcount', 'Enrollment.Headcount', 'retention-rate', 'a' * 100]:
+        query = {'metric': name, 'dimensions': [name], 'filters': [{'field': name, 'op': 'eq', 'value': 1}]}
+        assert CollectRequest.model_validate({**REQUEST, 'query': query}).query is not None
+    for name in ['1st', '_x', 'a b', 'a' * 101, 'a/b']:
+        with pytest.raises(ValidationError):
+            CollectRequest.model_validate({**REQUEST, 'query': {'metric': name}})
+
+
+def test_a_choice_column_lists_its_choices() -> None:
+    column = {'key': 'level', 'label': 'Level', 'type': 'choice'}
+    with pytest.raises(ValidationError):
+        CollectRequest.model_validate({**REQUEST, 'evidence': {**REQUEST['evidence'], 'columns': [column]}})
+    ok = {**REQUEST, 'evidence': {**REQUEST['evidence'], 'columns': [column | {'choices': ['bachelor', 'master']}]}}
+    assert CollectRequest.model_validate(ok).evidence.columns is not None
