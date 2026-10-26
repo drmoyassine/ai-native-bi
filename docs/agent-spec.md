@@ -32,8 +32,8 @@ It never publishes, deploys or approves anything. What it builds is a draft unti
 7. **Bounded.** Each turn has an iteration cap and a token budget; each person a monthly budget; usage is recorded per turn.
 8. **Same tools outside the app.** The tools the chat agent uses are the ones the MCP server offers to outside agents later (DEC-009),
    defined once.
-9. **Any model provider.** Claude (through Anthropic, Bedrock, Vertex or Foundry), OpenAI, OpenRouter, or a model the institution hosts
-   (vLLM, Ollama) is a setting, not a rewrite; the best model per job is chosen by the eval set (§ 11).
+9. **Five providers, chosen in the app.** Anthropic, OpenAI, any OpenAI-compatible server, OpenRouter and Ollama. Their model lists are
+   fetched automatically into a model selector; an admin decides which models may be used and the default per mode (§ 3, § 9).
 
 ## 3. Runtime: where the loop runs
 
@@ -73,26 +73,39 @@ browser ◀──GET  /app/api/conversations/{id}/events (SSE, Last-Event-ID)─
 - **Interrupt:** `POST .../interrupt` sets a flag the job checks between steps; the turn ends with what it has, recorded as
   interrupted. Tools in flight finish or time out (§ 6 limits).
 
-### Models and providers
+### Providers and the model selector
 
-A conversation is pinned at its start to one model, written as Pydantic AI writes it (`provider:model`), from settings per mode:
+Providers are configured in the app by an admin (not in environment variables): each has a kind, a key (kept in the secret store, § 8)
+and, where it applies, an address. Pydantic AI connects to each with that key and address:
 
-| Setting | Default | Examples |
-|---|---|---|
-| `AGENT_MODEL_ASK` | `anthropic:claude-opus-5-5` | `bedrock:…`, `openai:…`, `openrouter:…`, `ollama:…` |
-| `AGENT_MODEL_BUILD` | `anthropic:claude-opus-5-5` | the strongest coding model the eval set finds |
-| `AGENT_BASE_URL`, provider keys | none | a self-hosted OpenAI-compatible server (vLLM); keys from the environment, never in code |
+| Provider | Connects with | Model list fetched from | Tool support known from |
+|---|---|---|---|
+| **Anthropic** | `AnthropicProvider(api_key)` | `GET /v1/models` (the Anthropic SDK's `models.list()`): id, name, context window, output limit, capabilities | its capabilities |
+| **OpenAI** | `OpenAIProvider(api_key)` | `GET /v1/models` (the OpenAI SDK's `models.list()`): ids only | not listed: chat models kept by kind (embedding, image, audio, moderation left out), then a test call (below) |
+| **OpenAI-compatible** | `OpenAIProvider(base_url, api_key)` (a self-hosted vLLM, LM Studio, a gateway, …) | `GET {base_url}/models` | a test call |
+| **OpenRouter** | `OpenRouterProvider(api_key)` | `GET https://openrouter.ai/api/v1/models`: name, context, prices, `supported_parameters` | `tools` in `supported_parameters` |
+| **Ollama** | `OllamaProvider(base_url)` | `GET /api/tags`, then `POST /api/show` per model | `tools` in its `capabilities` |
 
-Switching model applies to new conversations: tool-call formats and reasoning state differ between providers, and Claude's history must
-stay exactly as produced. Where the data goes depends on this choice (§ 7):
+- **Fetching:** each provider's list is fetched when it is saved, every 6 hours by the worker, and on demand ("Refresh"); kept in
+  `provider_model` with what the list says (name, context window, output limit, prices where given, tool and reasoning support).
+- **Only tool-capable models are offered:** the agent cannot work without tools. Where a list does not say, enabling a model runs a
+  test call (one short request with one tool) and records the result.
+- **The admin allows models** per mode (ask, build) and sets a default for each. A model that disappears from its provider's list is
+  marked unavailable, never silently replaced.
+- **The selector:** starting a conversation shows the allowed models of its mode, grouped by provider, the default chosen, each with
+  its context window and where its data goes (below). The conversation is pinned to the model picked: tool-call formats and reasoning
+  state differ between providers, and some (Claude) check the history against what they produced. A new model applies from the next
+  conversation.
 
-| Route | Data path |
+**Where the data goes**, shown beside each model in the selector and the admin page:
+
+| Provider | Data path |
 |---|---|
-| Anthropic API | Anthropic, under its terms |
-| Bedrock / Vertex / Foundry | The institution's cloud account, region and terms |
-| OpenAI / Azure OpenAI | OpenAI or Microsoft, under their terms |
-| OpenRouter | OpenRouter **and** the upstream provider it routes to; pin upstream providers in its settings |
-| vLLM / Ollama on the institution's servers | Nowhere: the only route on which nothing leaves the institution |
+| Anthropic | Anthropic, under its terms |
+| OpenAI | OpenAI, under its terms |
+| OpenAI-compatible | Wherever that server runs: the institution's own servers (nothing leaves) or a third party |
+| OpenRouter | OpenRouter **and** the upstream provider it routes to; upstream providers pinned in its settings |
+| Ollama | The server it runs on, normally the institution's own (nothing leaves) |
 
 ## 4. The loop
 
@@ -108,7 +121,8 @@ Per `agent_turn` job:
      the token limit above, the three `anthropic_cache_*` settings (§ 10), `anthropic_context_management` (compaction and clearing old
      tool results, § below), `anthropic_eager_input_streaming` for large tool inputs, and refusal fallbacks (`fallbacks: "default"`
      with beta `server-side-fallback-2026-07-01`, through `extra_body` and `anthropic_betas`) where the route supports them;
-   - **OpenAI-compatible settings** when the model is: `openai_reasoning_effort` per mode, `openai_prompt_cache_key` per conversation;
+   - **OpenAI, OpenAI-compatible, OpenRouter and Ollama settings** where the model takes them: `openai_reasoning_effort` per mode,
+     `openai_prompt_cache_key` per conversation;
    - **tool choice** automatic (some models, Claude Opus 5.5 among them, refuse forced tool use); tool inputs are validated against their
      schemas by Pydantic before any tool runs.
 3. At each node: stream text, thinking updates and tool calls to `agent_event`; when the model's response is complete, append it to
@@ -196,6 +210,8 @@ Migration `0005_agent.sql`:
 | `draft` | kind (integration, kpi, chart, dashboard), owner, built_by (person or agent), files or definition, test report, state |
 | `approval` | draft, requested_by, status (pending, approved, rejected), decided_by, decided_at, note |
 | `secret` | handle, encrypted value (AES-GCM, key `BI_SECRETS_KEY` from `make_env.py`), created_by, last_used_at |
+| `model_provider` | kind (anthropic, openai, openai_compatible, openrouter, ollama), name, base_url, key (a secret handle), enabled |
+| `provider_model` | provider, model id, name, context window, output limit, prices, tool and reasoning support (and how it was known), fetched_at, available, allowed per mode, default per mode |
 
 **Append-only history is required, not a preference:** some models (Claude Opus 5.5) tie their reasoning to the exact conversation that
 produced it, so an edited earlier turn invalidates it. Messages are never edited or deleted; "forget this" archives the conversation.
@@ -212,12 +228,16 @@ produced it, so an edited earlier turn invalidates it. Messages are never edited
 | `GET /conversations/{id}/events?after=` | Server-sent events; resumes from `Last-Event-ID` |
 | `POST /conversations/{id}/interrupt` | Stop the running turn |
 | `POST /conversations/{id}/credentials` | The secret form's answer: stored, the handle returned to the turn |
+| `GET /models?mode=` | The allowed models for the selector, grouped by provider, with the default |
+| `GET/POST/PUT /admin/providers`, `POST /admin/providers/{id}/refresh` | Providers (admin): add, change, fetch the model list now |
+| `PUT /admin/models/{id}` | Allow a model per mode, make it the default (admin); runs the test call when tool support is unknown |
 
 **Events:** `turn.started`, `text.delta`, `progress` (the model's progress notes), `tool.started` (name, short summary of the input),
 `tool.finished` (ok or error, short summary), `result.table`, `result.chart` (a chart definition, drawn by `web/src/chart.ts`),
 `result.proposal` (a link to the approval), `credentials.requested`, `turn.finished` (stop reason, usage), `turn.failed`.
 
-**Screen:** a conversation list; the thread with streamed text, progress lines, collapsible tool activity, inline tables and charts and
+**Screens:** the model selector when a conversation starts (§ 3); an admin page for providers and models (keys, addresses, the fetched
+lists, allowed models and defaults, each model's data path). The chat: a conversation list; the thread with streamed text, progress lines, collapsible tool activity, inline tables and charts and
 proposal cards; a stop button; the secret form when asked; a budget line. Approvals get their own page (approve, reject, note), outside
 the chat, so no chat message can approve anything.
 
@@ -237,7 +257,7 @@ the chat, so no chat message can approve anything.
 
 | Step | Contents | Done when |
 |---|---|---|
-| **2a. Ask** | Pydantic AI (pinned), the model settings, tables, the loop in the worker, events and SSE, the chat screen, `list_metrics`, `query_metric`, `propose_chart`, `list_datasets`, `describe_dataset`; the scrubber; usage | A person asks a KPI question and gets a governed answer and a chart; no row ever reaches the model (tested) |
+| **2a. Ask** | Pydantic AI (pinned), the five providers, model lists and the selector, the admin page for providers, the secret store, tables, the loop in the worker, events and SSE, the chat screen, `list_metrics`, `query_metric`, `propose_chart`, `list_datasets`, `describe_dataset`; the scrubber; usage | A person asks a KPI question and gets a governed answer and a chart; no row ever reaches the model (tested) |
 | **2b. Build from a file** | The sandbox runner and image, build mode, `run_command` and the file tools, `list_uploads`, `run_integration_test`, `propose_integration`, approvals page | From an uploaded export, the agent drafts dlt and dbt code, tests it, proposes it; a person approves it; it runs in production |
 | **2c. Connect a system** | `request_credentials`, the secret store, per-draft egress; Banner first (DEC-008/011) | Banner connected end to end from the chat |
 | **2d. Define a KPI** | `propose_kpi`: dbt model and Cube definition, steward approval | A new KPI approved and queryable through Cube and the AMS |
@@ -249,21 +269,31 @@ multi-turn conversation with tools and checks the replayed history is accepted (
 ## 12. Decisions to record once approved
 
 1. Runtime A: Pydantic AI in a worker job, provider-neutral; the API never calls a model (§ 3).
-2. A conversation is pinned to one model; models per mode are settings, chosen by the eval set (§ 3, § 11).
+2. Five providers (Anthropic, OpenAI, OpenAI-compatible, OpenRouter, Ollama), configured in the app; their model lists fetched
+   automatically into a selector; tool-capable models only; an admin allows models per mode; a conversation pinned to one model (§ 3).
 3. The model sees schemas, profiles and suppressed aggregates only, whatever the provider (§ 7).
 4. Our own sandbox and our own file and command tools for code the agent writes; deny-by-default network; credentials by handle (§ 6).
 5. Conversations append-only, events through PostgreSQL and SSE (§ 8, § 9).
 6. Approvals outside the chat (§ 9).
 
-## 13. Questions for you
+## 13. Recommended answers (to confirm)
 
-1. **Data with the model provider:** is the default of § 7 right (no rows at all), or may the agent see masked samples while building?
-   Which route (§ 3) does the institution allow: a provider's API, its own cloud account (Bedrock, Vertex, Foundry), or only a model
-   on its own servers? Is there a data processing agreement, or a residency requirement?
-2. **Who approves:** any admin, or a steward per dataset (the registrar for enrollment)?
-3. **Where approved integrations live:** as versioned bundles in the BI's database, materialized at deploy (proposed), or in a git
-   repository the BI commits to?
-4. **Secrets:** an encrypted table in the BI's database for now (proposed), or the institution's vault from the start?
-5. **Budget:** a monthly token budget per person, or one for the institution?
-6. **Language:** should the chat answer in Arabic as well as English (the calendar already has Arabic names), and the app read
-   right to left?
+1. **Data with the model provider.** No rows at all (§ 7). Where the agent needs a value's *format* (a 9-digit ID, a term code like
+   `202610`), the profile states the pattern, never real values. On test data any of the five providers may be used; before real data
+   (ROADMAP-008) the institution allows providers explicitly, preferring a direct agreement with a provider that does not train on the
+   data and limits retention, or a model on its own servers (Ollama, an OpenAI-compatible server). OpenRouter is for trying models on
+   test data, not for real data (it adds a second processor).
+2. **Who approves.** The data's steward (the registrar for enrollment) approves integrations and KPIs on their data; a BI admin approves
+   what touches the platform (a new source system, credentials, network access). Whoever asked for a draft never approves it. Until
+   stewards are named, an admin acts for them.
+3. **Where approved integrations live.** Versioned, immutable bundles in the BI's database, materialized at deploy; rolling back picks
+   the previous version. The agent never touches the product's code. An export to git can come later, for review.
+4. **Secrets.** An encrypted table now (the key from `make_env.py`), behind a small secret-store interface, so the institution's vault
+   (Azure Key Vault, say) can replace it without changing the agent or its tools. Provider keys and source credentials both live there;
+   source accounts are read-only.
+5. **Budget.** A hard monthly cap for the institution, a soft monthly share per person (adjustable by an admin), the per-turn limits of
+   § 4, and spend shown in the app.
+6. **Language.** Answers in the asker's language from 2a (Arabic included). The app's CSS becomes direction-neutral now (logical
+   properties); right-to-left layout and Arabic labels follow as their own task.
+7. **Models per mode.** To start, a strong tool-capable model for both modes (Claude Opus 5.5 where Anthropic is enabled); the eval set
+   shows which allowed models hold up per mode, and the admin's defaults follow it.
