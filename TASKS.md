@@ -119,10 +119,6 @@ last_updated: '2026-10-26'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
-roadmap_item:
-  id: ROADMAP-002
-  name: 'Phase 1: the pipeline end to end, from files to the AMS'
-  url: /ROADMAP.md#ROADMAP-002
 related_decisions:
   - id: DEC-005
     name: 'Warehouse: raw and analytics on PostgreSQL, raw files on S3'
@@ -135,7 +131,11 @@ related_decisions:
     url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T21:22:32.764Z'
+roadmap_item:
+  id: ROADMAP-008
+  name: First real data
+  url: /ROADMAP.md#ROADMAP-008
 ---
 
 Needed before the first real data is uploaded through the frontend (DEC-011), not before building the pipeline.
@@ -282,7 +282,7 @@ modified:
 id: TASK-007
 title: A read-only database role for Cube
 description: Cube connects as the BI's owner role today; give it a role that can only read analytics
-status: pending
+status: completed
 priority: P1
 last_updated: '2026-10-26'
 generated:
@@ -298,10 +298,12 @@ related_decisions:
     url: /DECISIONS.md#DEC-004
 modified:
   by: agent/claude-code
-  at: '2026-10-26T18:14:30.345Z'
+  at: '2026-10-26T21:22:32.764Z'
 ---
 
 Cube's model only reads analytics, but its database role can read raw too. A role with SELECT on analytics only makes rule 5 hold in the database, not only in the model. Roles are server-level: created with the database (ensure_database) or by the deployment.
+
+Done 2026-10-26. Cube connects as `CUBE_DB_USER` (default `bi_cube`). At start the API creates it with `BI_DATABASE_ADMIN_URL` (or resets its password) and, as the BI's own role, grants it the analytics schema: usage, select on its tables, and default privileges so the tables dbt rebuilds stay readable. raw, staging and the BI's own tables are never granted (tests/test_reader.py; checked in Docker Compose: `permission denied for schema raw`).
 
 ---
 
@@ -317,10 +319,6 @@ last_updated: '2026-10-26'
 generated:
   by: agent/claude-code
   at: '2026-10-26T18:14:30.345Z'
-roadmap_item:
-  id: ROADMAP-002
-  name: 'Phase 1: the pipeline end to end, from files to the AMS'
-  url: /ROADMAP.md#ROADMAP-002
 depends_on:
   - id: TASK-002
     name: Settle the privacy rules for student data
@@ -331,7 +329,11 @@ related_decisions:
     url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T18:14:30.345Z'
+  at: '2026-10-26T21:22:32.764Z'
+roadmap_item:
+  id: ROADMAP-008
+  name: First real data
+  url: /ROADMAP.md#ROADMAP-008
 ---
 
 Needed before real student data answers anyone: the threshold and the marking come from TASK-002 (contract 3.7 says null with a flag).

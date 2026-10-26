@@ -18,6 +18,8 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://bi:${POSTGRES_PASSWORD}@postgres:5432/bi
+      # Here bi is the server's superuser (POSTGRES_USER): it also creates Cube's read-only role (CUBE_DB_USER).
+      BI_DATABASE_ADMIN_URL: postgres://bi:${POSTGRES_PASSWORD}@postgres:5432/bi
     ports: ["4000:4000"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -32,7 +34,7 @@ services:
     volumes: ["biraw:/data/raw-files"]
     depends_on:
       bi-api: { condition: service_healthy }
-      bi-cube: { condition: service_started }
+      bi-cube: { condition: service_healthy }
 
   # The governed metric layer (DEC-004): the worker reads every KPI through it. Not published: only the BI's services reach it.
   bi-cube:
@@ -41,15 +43,21 @@ services:
       CUBEJS_DB_TYPE: postgres
       CUBEJS_DB_HOST: postgres
       CUBEJS_DB_NAME: bi
-      CUBEJS_DB_USER: bi
-      CUBEJS_DB_PASS: ${POSTGRES_PASSWORD}
+      # Cube's own role: it may read analytics only (TASK-007), created and granted by bi-api at start.
+      CUBEJS_DB_USER: ${CUBE_DB_USER:-bi_cube}
+      CUBEJS_DB_PASS: ${CUBE_DB_PASSWORD:?set CUBE_DB_PASSWORD}
       CUBEJS_API_SECRET: ${CUBE_API_SECRET:?set CUBE_API_SECRET}
       CUBEJS_DEV_MODE: "false"
       # One Cube instance: its cache and queue in memory. Several instances or pre-aggregations need Cube Store.
       CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
     volumes: ["./cube:/cube/conf:ro"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/readyz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     depends_on:
-      postgres: { condition: service_healthy }
+      bi-api: { condition: service_healthy }
 
 volumes:
   bipgdata:

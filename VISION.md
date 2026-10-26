@@ -135,9 +135,12 @@ related_roadmap_items:
   - id: ROADMAP-002
     name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
+  - id: ROADMAP-008
+    name: First real data
+    url: /ROADMAP.md#ROADMAP-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  at: '2026-10-26T21:22:32.764Z'
 ---
 
 The institution's numbers (enrollment, retention, graduation, outcomes, faculty, finance, strategic plan) come from many

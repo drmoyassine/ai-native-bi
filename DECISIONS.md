@@ -477,6 +477,9 @@ related_roadmap_items:
   - id: ROADMAP-002
     name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
+  - id: ROADMAP-008
+    name: First real data
+    url: /ROADMAP.md#ROADMAP-008
 related_tasks:
   - id: TASK-002
     name: Settle the privacy rules for student data
@@ -489,7 +492,7 @@ related_tasks:
     url: /TASKS.md#TASK-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T18:14:30.345Z'
+  at: '2026-10-26T21:22:32.764Z'
 ---
 
 Decided with Mohamad Yassine on 2026-10-26. Supersedes DEC-008.

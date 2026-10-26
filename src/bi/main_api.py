@@ -9,7 +9,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from .api import AppDeps, create_app
 from .config import load_env
-from .db import ensure_database, migrate
+from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
 from .queue import create_queue, enqueue_collect
 
@@ -22,6 +22,11 @@ async def main() -> None:
         applied = await migrate(pool)
         if applied:
             log('info', 'migrated', applied=applied)
+        if env.CUBE_DB_PASSWORD:
+            if env.BI_DATABASE_ADMIN_URL:
+                await ensure_reader_role(env.BI_DATABASE_ADMIN_URL, env.CUBE_DB_USER, env.CUBE_DB_PASSWORD)
+            await grant_analytics(pool, env.CUBE_DB_USER)
+            log('info', 'cube may read analytics', role=env.CUBE_DB_USER)
         queue = create_queue(env.DATABASE_URL)
         async with queue.open_async():
             deps = AppDeps(

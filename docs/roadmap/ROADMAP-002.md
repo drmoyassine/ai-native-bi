@@ -3,7 +3,7 @@ id: ROADMAP-002
 title: 'Phase 1: the pipeline end to end, from files to the AMS'
 description: .xlsb, .xlsx and .csv files to raw, dbt, Cube and enrollment_headcount, answered to the AMS; tested on made-up files
 phase: '1'
-status: In Progress
+status: Completed
 priority: P0
 tags:
   - warehouse
@@ -33,9 +33,6 @@ related_decisions:
     name: Phase 1 on test files; real data through the frontend
     url: /DECISIONS.md#DEC-011
 related_tasks:
-  - id: TASK-002
-    name: Settle the privacy rules for student data
-    url: /TASKS.md#TASK-002
   - id: TASK-003
     name: Choose dbt or SQLMesh for transforms
     url: /TASKS.md#TASK-003
@@ -48,12 +45,9 @@ related_tasks:
   - id: TASK-007
     name: A read-only database role for Cube
     url: /TASKS.md#TASK-007
-  - id: TASK-008
-    name: Suppress small cells in answers
-    url: /TASKS.md#TASK-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T18:14:30.345Z'
+  at: '2026-10-26T21:22:32.764Z'
 ---
 # ROADMAP-002 — Phase 1: the pipeline end to end, from files to the AMS
 

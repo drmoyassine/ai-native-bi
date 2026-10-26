@@ -26,6 +26,26 @@ async def ensure_database(admin_url: str, database_url: str) -> None:
             await admin.execute(sql.SQL('create database {} owner {}').format(sql.Identifier(db), sql.Identifier(user)))
 
 
+async def ensure_reader_role(admin_url: str, user: str, password: str) -> None:
+    """Creates the role Cube connects as (TASK-007), or resets its password: a login and nothing else. What it may read is granted by
+    `grant_analytics`, by the BI's own role."""
+    async with await psycopg.AsyncConnection.connect(admin_url, autocommit=True) as admin:
+        exists = await (await admin.execute('select 1 from pg_roles where rolname = %s', [user])).fetchone()
+        verb = sql.SQL('alter' if exists else 'create')
+        await admin.execute(sql.SQL('{} role {} login password {}').format(verb, sql.Identifier(user), sql.Literal(password)))
+
+
+async def grant_analytics(pool: AsyncConnectionPool, reader: str) -> None:
+    """Lets `reader` read the analytics schema and nothing else (CLAUDE.md rule 5): its tables now and those dbt builds later (the
+    default privileges of the BI's role, which dbt runs as). raw and staging are never granted."""
+    reader_id = sql.Identifier(reader)
+    async with pool.connection() as conn:
+        await conn.execute('create schema if not exists analytics')
+        await conn.execute(sql.SQL('grant usage on schema analytics to {}').format(reader_id))
+        await conn.execute(sql.SQL('grant select on all tables in schema analytics to {}').format(reader_id))
+        await conn.execute(sql.SQL('alter default privileges in schema analytics grant select on tables to {}').format(reader_id))
+
+
 def migration_names() -> list[str]:
     folder = resources.files('bi') / 'migrations'
     return sorted(f.name for f in folder.iterdir() if f.name.endswith('.sql'))
