@@ -15,13 +15,19 @@ related_decisions:
   - id: DEC-006
     name: A person approves what the agent builds
     url: /DECISIONS.md#DEC-006
+  - id: DEC-012
+    name: One chart definition, rendered with ECharts
+    url: /DECISIONS.md#DEC-012
+  - id: DEC-013
+    name: 'Charts and dashboards: private drafts, approved to publish'
+    url: /DECISIONS.md#DEC-013
 related_roadmap_items:
   - id: ROADMAP-003
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 # agent-built-bi — An agent builds the BI
 

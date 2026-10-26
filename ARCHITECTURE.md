@@ -69,6 +69,22 @@ The agent is how people use the BI. In a chat, a user asks it to:
 - **Define a KPI.** It writes the transform and the Cube definition, shows the result and its lineage, and waits for approval.
 - **Build a dashboard.** Generative UI: it composes the dashboard from governed KPIs; the user then configures it.
 
+### Charts and dashboards
+
+Every chart is one **chart definition** of the BI's own JSON schema ([DEC-012](DECISIONS.md#DEC-012)): a Cube query (measures,
+dimensions, filters, time), the visual (type; which field goes on x, y, colour, size) and its labels. Three ways build it, one object
+results:
+
+- **the agent**, in the app's chat;
+- **the API**, for apps and agents outside the BI;
+- **drag and drop**, Looker-style: the field panel is Cube's metadata (governed measures and dimensions only), fields are dragged into
+  slots, and the chart re-queries live.
+
+One translator turns a definition into Apache ECharts options: rendered in the browser in the app, and as PNG or SVG by a small
+server-side renderer for consumers, who get either the definition with its data or the image. Neither the agent nor the API writes
+raw ECharts options. A chart or dashboard is a private draft until approved for publishing; only published ones are shared or served
+by the API ([DEC-013](DECISIONS.md#DEC-013)).
+
 ### The AMS
 
 The AMS **requests**; the BI **owns its KPIs end to end** ([DEC-007](DECISIONS.md#DEC-007)). The AMS may ask for a reading of a
@@ -106,6 +122,8 @@ first: see `docs/ams-contract-proposals.md` ([TASK-006](TASKS.md#TASK-006)).
 - **Phase 1 on test files; real data through the frontend** — see [DEC-011](DECISIONS.md#DEC-011) (supersedes DEC-008)
 - **dbt for transforms** — see [DEC-010](DECISIONS.md#DEC-010)
 - **One general-purpose API and MCP server on Cube** — see [DEC-009](DECISIONS.md#DEC-009)
+- **One chart definition, rendered with ECharts** — see [DEC-012](DECISIONS.md#DEC-012)
+- **Charts and dashboards: private drafts, approved to publish** — see [DEC-013](DECISIONS.md#DEC-013)
 
 The phases are roadmap items: [ROADMAP.md](ROADMAP.md).
 

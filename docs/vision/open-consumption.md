@@ -20,16 +20,19 @@ related_decisions:
   - id: DEC-009
     name: One general-purpose API and MCP server on Cube
     url: /DECISIONS.md#DEC-009
+  - id: DEC-012
+    name: One chart definition, rendered with ECharts
+    url: /DECISIONS.md#DEC-012
 related_roadmap_items:
   - id: ROADMAP-004
-    name: 'Phase 3: API, MCP server, KPI canvas and document AI'
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
     url: /ROADMAP.md#ROADMAP-004
   - id: ROADMAP-006
     name: AMS requests beyond collect
     url: /ROADMAP.md#ROADMAP-006
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 # open-consumption — Every consumer, one governed layer
 

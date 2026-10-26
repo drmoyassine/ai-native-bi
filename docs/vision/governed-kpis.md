@@ -21,13 +21,16 @@ related_decisions:
   - id: DEC-010
     name: dbt for transforms
     url: /DECISIONS.md#DEC-010
+  - id: DEC-013
+    name: 'Charts and dashboards: private drafts, approved to publish'
+    url: /DECISIONS.md#DEC-013
 related_roadmap_items:
   - id: ROADMAP-002
     name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 # governed-kpis — One trusted definition of every KPI
 

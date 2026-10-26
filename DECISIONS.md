@@ -399,11 +399,11 @@ related_vision:
     url: /VISION.md#open-consumption
 related_roadmap_items:
   - id: ROADMAP-004
-    name: 'Phase 3: API, MCP server, KPI canvas and document AI'
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
     url: /ROADMAP.md#ROADMAP-004
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 
 ---
@@ -487,5 +487,105 @@ modified:
 ---
 
 Decided with Mohamad Yassine on 2026-10-26. Supersedes DEC-008.
+
+---
+
+## DEC-012 — One chart definition, rendered with ECharts
+
+---
+id: DEC-012
+title: One chart definition, rendered with ECharts
+status: accepted
+context: >-
+  Charts are built three ways: by the agent in chat, by API, and by people dragging fields in the app; and handed to
+  consumers by API.
+decision: >-
+  Every chart is one JSON chart definition of the BI's own schema: a Cube query (measures, dimensions, filters, time)
+  plus the visual (type and which field goes on x, y, colour, size) and its labels. The agent, the API and the
+  drag-and-drop builder all produce and edit this definition. One translator turns it into Apache ECharts options; the
+  app renders them in the browser, and a small server-side renderer (Node, beside Cube) makes PNG or SVG for consumers.
+  Consumers get the definition with its data, or the image.
+rationale: >-
+  One kind of object whoever built it: checked against a schema, approved, versioned, handed out. Neither the agent nor
+  the API writes raw ECharts options, which are large and can carry JavaScript functions (code). One renderer keeps a
+  chart identical in the app, the API and a report. The builder lists only governed fields from Cube's metadata, so a
+  hand-built chart cannot use an ungoverned number.
+consequences: >-
+  The chart definition schema is a contract of the BI, versioned like one. The library sits behind the translator and
+  can be swapped. The builder uses Cube's metadata API, Cube's JavaScript client, dnd-kit and react-grid-layout. Image
+  rendering adds a Node service.
+tags:
+  - charts
+  - ui
+  - api
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T17:54:58.321Z'
+related_vision:
+  - id: open-consumption
+    name: Every consumer, one governed layer
+    url: /VISION.md#open-consumption
+  - id: agent-built-bi
+    name: An agent builds the BI
+    url: /VISION.md#agent-built-bi
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T17:54:58.321Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26. Vega-Lite was the alternative; ECharts was chosen for dashboards (interaction, large data, maps, right-to-left).
+
+---
+
+## DEC-013 — Charts and dashboards: private drafts, approved to publish
+
+---
+id: DEC-013
+title: 'Charts and dashboards: private drafts, approved to publish'
+status: accepted
+context: People and the agent both build charts and dashboards (DEC-012); DEC-006 requires approval of what the agent builds.
+decision: >-
+  A chart or dashboard starts as a private draft of whoever built it, a person or the agent. It needs approval only to
+  be published: shared on a dashboard others see, or served by the API to consumers. The same rule for both.
+rationale: Exploring stays fast and personal; what others rely on is approved, whoever made it.
+consequences: >-
+  Charts and dashboards carry a state (draft, published) and an approver; the API serves only published ones to
+  consumers.
+tags:
+  - charts
+  - governance
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T17:54:58.321Z'
+related_vision:
+  - id: agent-built-bi
+    name: An agent builds the BI
+    url: /VISION.md#agent-built-bi
+  - id: governed-kpis
+    name: One trusted definition of every KPI
+    url: /VISION.md#governed-kpis
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-006
+    name: A person approves what the agent builds
+    url: /DECISIONS.md#DEC-006
+  - id: DEC-012
+    name: One chart definition, rendered with ECharts
+    url: /DECISIONS.md#DEC-012
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T17:54:58.321Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26.
 
 <!-- End VEF generated items. -->

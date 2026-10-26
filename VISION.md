@@ -82,13 +82,19 @@ related_decisions:
   - id: DEC-006
     name: A person approves what the agent builds
     url: /DECISIONS.md#DEC-006
+  - id: DEC-012
+    name: One chart definition, rendered with ECharts
+    url: /DECISIONS.md#DEC-012
+  - id: DEC-013
+    name: 'Charts and dashboards: private drafts, approved to publish'
+    url: /DECISIONS.md#DEC-013
 related_roadmap_items:
   - id: ROADMAP-003
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 
 A BI team is usually the bottleneck between a question and an answer. Here the agent is how people use the BI: it asks
@@ -122,13 +128,16 @@ related_decisions:
   - id: DEC-010
     name: dbt for transforms
     url: /DECISIONS.md#DEC-010
+  - id: DEC-013
+    name: 'Charts and dashboards: private drafts, approved to publish'
+    url: /DECISIONS.md#DEC-013
 related_roadmap_items:
   - id: ROADMAP-002
     name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 
 The institution's numbers (enrollment, retention, graduation, outcomes, faculty, finance, strategic plan) come from many
@@ -162,16 +171,19 @@ related_decisions:
   - id: DEC-009
     name: One general-purpose API and MCP server on Cube
     url: /DECISIONS.md#DEC-009
+  - id: DEC-012
+    name: One chart definition, rendered with ECharts
+    url: /DECISIONS.md#DEC-012
 related_roadmap_items:
   - id: ROADMAP-004
-    name: 'Phase 3: API, MCP server, KPI canvas and document AI'
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
     url: /ROADMAP.md#ROADMAP-004
   - id: ROADMAP-006
     name: AMS requests beyond collect
     url: /ROADMAP.md#ROADMAP-006
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:54:58.321Z'
 ---
 
 The BI works on its own and with the AMS (drmoyassine/ams), which is one consumer among others. Every consumer reads the
