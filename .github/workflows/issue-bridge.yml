@@ -1,0 +1,42 @@
+name: Issue bridge
+
+# Requests between drmoyassine/ams and drmoyassine/ai-native-bi as GitHub Issues (script: .github/scripts/issue-bridge.sh).
+#   An issue labelled `for-ams` is copied to drmoyassine/ams and linked both ways.
+#   An issue labelled `from-ams` here came from drmoyassine/ams: closing it closes the original with the outcome and the last comment.
+# Needs the secret AMS_REPO_TOKEN: a fine-grained token with Issues: read and write on both repositories.
+
+on:
+  issues:
+    types: [opened, labeled, closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-bridge-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  bridge:
+    if: contains(github.event.issue.labels.*.name, 'for-ams') || contains(github.event.issue.labels.*.name, 'from-ams')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
+      - run: bash .github/scripts/issue-bridge.sh
+        env:
+          GH_TOKEN: ${{ secrets.AMS_REPO_TOKEN }}
+          THIS_REPO: ${{ github.repository }}
+          OTHER_REPO: drmoyassine/ams
+          OUT_LABEL: for-ams
+          IN_LABEL: from-ams
+          COPY_LABEL: from-bi
+          ACTION: ${{ github.event.action }}
+          NUMBER: ${{ github.event.issue.number }}
+          TITLE: ${{ github.event.issue.title }}
+          BODY: ${{ github.event.issue.body }}
+          URL: ${{ github.event.issue.html_url }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          STATE_REASON: ${{ github.event.issue.state_reason }}
+          LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}

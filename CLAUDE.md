@@ -16,6 +16,15 @@
 5. Same stack and habits as the AMS: TypeScript strict, Hono, Zod at every boundary, pg-boss, forward-only SQL migrations in
    `packages/core/migrations`, Vitest, structured JSON logs.
 
+## Requests to and from the AMS
+
+The two repositories talk through GitHub Issues, bridged by `.github/workflows/issue-bridge.yml`:
+- **Need something from the AMS** (a contract change, a new field, a route, a bug)? Open an issue here labelled `for-ams`. It is
+  copied to the AMS (labelled `from-bi` there); when the AMS closes it, this issue gets the outcome and is closed.
+- **At the start of a session, check `from-ams` issues** (requests the AMS made of the BI). Close one when it is done or declined,
+  with a last comment saying what was done (commit or PR) or why not: that comment is what the AMS receives.
+- Never edit the contract to get a change: ask with `for-ams`, then merge the `ams-contract-sync` pull request when it comes.
+
 ## Checks
 
 `pnpm build && pnpm typecheck && pnpm lint && pnpm test` (tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default
