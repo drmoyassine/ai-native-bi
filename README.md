@@ -50,7 +50,7 @@ The contract also allows a sync **200** answer with the supply in the body; the 
 ## Run
 
 ```bash
-cp .env.example .env    # set BI_API_KEY, AMS_CALLBACK_ORIGIN, POSTGRES_PASSWORD
+python3 scripts/make_env.py   # .env with every secret generated (keeps values already set); then check AMS_CALLBACK_ORIGIN
 docker compose up --build                            # the BI alone, API on :4000
 docker compose -f compose.together.yaml up --build   # with the AMS (AMS_DIR, default ../ams), see the file's header
 
