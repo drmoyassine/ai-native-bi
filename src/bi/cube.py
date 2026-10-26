@@ -49,3 +49,28 @@ class CubeClient:
                 raise CubeError(f'Cube answered {res.status_code}: {body.get("error", res.text[:200])}')
             data: list[dict[str, Any]] = body.get('data', [])
             return data
+
+    async def meta(self) -> list[dict[str, Any]]:
+        """The governed members (public measures and dimensions of every cube): name, title, type, kind and description."""
+        try:
+            res = await self._client.get(f'{self._url}/meta', headers={'authorization': self._token()}, timeout=self._timeout_s)
+        except httpx.HTTPError as e:
+            raise CubeError(f'Cube could not be reached: {e}') from e
+        if res.status_code != 200:
+            raise CubeError(f'Cube answered {res.status_code}: {res.text[:200]}')
+        members: list[dict[str, Any]] = []
+        for cube in res.json().get('cubes', []):
+            for kind in ('measures', 'dimensions'):
+                for m in cube.get(kind, []):
+                    if m.get('public', m.get('isVisible', True)):
+                        members.append(
+                            {
+                                'name': m['name'],
+                                'title': m.get('title') or m['name'],
+                                'type': m.get('type'),
+                                'kind': kind[:-1],
+                                'description': m.get('description'),
+                                'cube': cube.get('title') or cube['name'],
+                            }
+                        )
+        return members

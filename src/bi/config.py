@@ -7,6 +7,8 @@ from urllib.parse import urlsplit
 
 from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
+from .uploads import Storage
+
 
 def origin_of(value: str) -> str:
     """scheme://host[:port] of an http(s) URL, lower-cased, default port left out (like a browser's URL.origin)."""
@@ -39,6 +41,10 @@ class Env(BaseModel):
     RAW_FILES_URL: Annotated[str, StringConstraints(min_length=1)] = 'file:///data/raw-files'
     """Where loaded files are kept unchanged: a folder (file://) or a bucket (s3://, with S3_ENDPOINT_URL for Garage)."""
     S3_ENDPOINT_URL: Annotated[str, StringConstraints(min_length=1)] | None = None
+    APP_COOKIE_SECURE: bool = True
+    """The session cookie is sent over HTTPS only. false only for a local http:// address."""
+    WEB_DIR: Annotated[str, StringConstraints(min_length=1)] | None = None
+    """The built web app to serve at / (the image sets it)."""
 
 
 def load_env(source: Mapping[str, str] | None = None) -> Env:
@@ -46,3 +52,9 @@ def load_env(source: Mapping[str, str] | None = None) -> Env:
     values = os.environ if source is None else source
     clean = {k: v for k, v in values.items() if k in Env.model_fields and v != ''}
     return Env.model_validate(clean)
+
+
+def storage(env: Env) -> Storage:
+    """Where files are kept (RAW_FILES_URL), with the bucket's endpoint when it is not AWS (S3_ENDPOINT_URL, e.g. Garage)."""
+    options = {'client_kwargs': {'endpoint_url': env.S3_ENDPOINT_URL}} if env.S3_ENDPOINT_URL else None
+    return Storage(files_url=env.RAW_FILES_URL, options=options)

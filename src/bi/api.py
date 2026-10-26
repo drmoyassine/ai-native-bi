@@ -8,14 +8,17 @@ which land here too and carry the name in the body's `endpoint`.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import FastAPI, Path, Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from psycopg_pool import AsyncConnectionPool
 
+from .app import AppContext, create_router
 from .collect import Refused, accept_collect, key_matches
 
 
@@ -26,6 +29,10 @@ class AppDeps:
     ams_origin: str
     enqueue: Callable[[str], Awaitable[None]]
     """Queues the work of one accepted request (Procrastinate in production)."""
+    app: AppContext | None = None
+    """The app's API (/app/api); None serves the AMS's route only."""
+    web_dir: str | None = None
+    """The built web app (web/dist), served at /."""
 
 
 def create_app(deps: AppDeps) -> FastAPI:
@@ -60,4 +67,8 @@ def create_app(deps: AppDeps) -> FastAPI:
     async def collect_named(request: Request, endpoint: Annotated[str, Path(pattern=r'^[A-Za-z0-9_.-]+$')]) -> Response:
         return await collect(request)
 
+    if deps.app is not None:
+        app.include_router(create_router(deps.app))
+    if deps.web_dir and os.path.isdir(deps.web_dir):
+        app.mount('/', StaticFiles(directory=deps.web_dir, html=True), name='web')  # after every route: they match first
     return app

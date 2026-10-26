@@ -65,7 +65,7 @@ async def accepted(pool: AsyncConnectionPool, **over: Any) -> str:
 
 async def test_migrates_once_and_creates_the_database_once(pool: AsyncConnectionPool) -> None:
     await ensure_database(ADMIN, database_url('bi_test'))  # again: nothing to do
-    assert migration_names() == ['0001_collect_request.sql', '0002_procrastinate.sql', '0003_collect_no_data.sql']
+    assert migration_names() == ['0001_collect_request.sql', '0002_procrastinate.sql', '0003_collect_no_data.sql', '0004_app.sql']
     assert await migrate(pool) == []
 
 
