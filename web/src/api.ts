@@ -29,6 +29,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 export const api = {
   get: <T>(path: string) => call<T>('GET', path),
   post: <T>(path: string, body?: unknown) => call<T>('POST', path, body),
+  put: <T>(path: string, body?: unknown) => call<T>('PUT', path, body),
   delete: <T>(path: string) => call<T>('DELETE', path),
 };
 
@@ -53,4 +54,36 @@ export interface Upload {
   created_at: string;
   finished_at: string | null;
   name: string;
+}
+
+export interface ModelChoice {
+  model_id: string;
+  name: string;
+  context_window: number | null;
+  price_in: number | null;
+  price_out: number | null;
+  default: boolean;
+}
+
+export interface ModelGroup {
+  provider_id: string;
+  kind: string;
+  provider: string;
+  data_path: string;
+  models: ModelChoice[];
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  mode: 'ask' | 'build';
+  model_id: string;
+  provider: string;
+  created_at: string;
+}
+
+export interface Usage {
+  person: { used: number; cap: number };
+  institution: { used: number; cap: number };
+  month_start: string;
 }

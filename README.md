@@ -18,6 +18,11 @@ Cube serves `enrollment_headcount`, and the worker answers the AMS from Cube. Re
 The app shell (ROADMAP-009): sign in with the BI's own accounts, upload a file (loaded and analytics rebuilt by the worker, with
 the status of each upload), and chart a governed measure from Cube.
 
+The agent, step 2a (ROADMAP-003, TASK-012): ask questions in a chat and get answers with governed tables and proposed charts. An
+admin adds model providers (Anthropic, OpenAI, OpenAI-compatible, OpenRouter, Ollama) on the Models page; their model lists are
+fetched and each model is tested for tool calls before people can use it. Needs `BI_SECRETS_KEY` (`python3 scripts/make_env.py`).
+Verified against a server that speaks the OpenAI protocol and with scripted models; no live provider has been called yet.
+
 Stack: Python 3.12, FastAPI, Pydantic, Procrastinate, dlt, dbt, Cube, httpx, psycopg, PostgreSQL 16, pytest, ruff, mypy, uv, Docker
 Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web app and runs the project-memory tool (VEF).
 
@@ -35,9 +40,10 @@ Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web
 | `cube/model/` | The governed metrics (Cube) |
 | `src/bi/metrics.py`, `cube.py` | The first source: the AMS's metric names onto Cube, and the Cube client |
 | `src/bi/app.py`, `accounts.py`, `uploads.py`, `charts.py` | The app's API (`/app/api`): sessions, uploads, governed members, chart data |
+| `src/bi/agent/` | The agent: providers and model lists, secret store, the turn loop (Pydantic AI), governed read tools, small-count hiding, the chat's routes |
 | `web/` | The web app (Vite, React, ECharts), built into the API image and served at `/`; `web/src/chart.ts` draws every chart |
 | `scripts/make_env.py` | `.env` from `.env.example` with every secret generated |
-| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue, `0003` `no_data`, `0004` the app |
+| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue, `0003` `no_data`, `0004` the app, `0005` the agent |
 | `tests/` | pytest, against a real PostgreSQL |
 
 ## How an AMS request flows (async)

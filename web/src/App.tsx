@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError, type User } from './api';
+import { Chat } from './Chat';
 import { ChartPage } from './ChartPage';
 import { Login } from './Login';
+import { Providers } from './Providers';
 import { Uploads } from './Uploads';
 
-type Page = 'chart' | 'uploads';
+type Page = 'chat' | 'chart' | 'uploads' | 'models';
 
 export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [datasets, setDatasets] = useState<string[]>([]);
-  const [page, setPage] = useState<Page>('chart');
+  const [page, setPage] = useState<Page>('chat');
 
   async function load() {
     try {
@@ -39,12 +41,20 @@ export function App() {
       <header>
         <strong>AI-native BI</strong>
         <nav>
+          <button className={page === 'chat' ? 'active' : ''} onClick={() => setPage('chat')}>
+            Ask
+          </button>
           <button className={page === 'chart' ? 'active' : ''} onClick={() => setPage('chart')}>
             Chart
           </button>
           <button className={page === 'uploads' ? 'active' : ''} onClick={() => setPage('uploads')}>
             Uploads
           </button>
+          {user.is_admin && (
+            <button className={page === 'models' ? 'active' : ''} onClick={() => setPage('models')}>
+              Models
+            </button>
+          )}
         </nav>
         <span className="who">
           {user.name}
@@ -53,7 +63,12 @@ export function App() {
           </button>
         </span>
       </header>
-      <main>{page === 'chart' ? <ChartPage /> : <Uploads datasets={datasets} />}</main>
+      <main className={page === 'chat' ? 'wide' : ''}>
+        {page === 'chat' && <Chat />}
+        {page === 'chart' && <ChartPage />}
+        {page === 'uploads' && <Uploads datasets={datasets} />}
+        {page === 'models' && user.is_admin && <Providers />}
+      </main>
     </>
   );
 }

@@ -69,17 +69,20 @@ class ChartDefinition(_Spec):
         return self
 
 
-def unknown_members(chart: ChartDefinition, governed: list[dict[str, Any]]) -> list[str]:
-    """The members the chart names that Cube does not offer (or offers as the other kind): only governed numbers are charted."""
+def unknown_query_members(q: ChartQuery, governed: list[dict[str, Any]]) -> list[str]:
+    """The members a query names that Cube does not offer (or offers as the other kind): only governed numbers are queried."""
     kinds = {m['name']: m['kind'] for m in governed}
-    q = chart.query
     wanted = [(m, 'measure') for m in q.measures] + [(d, 'dimension') for d in q.dimensions]
     wanted += [(f.member, 'dimension') for f in q.filters] + ([(q.time.dimension, 'dimension')] if q.time else [])
     return sorted({m for m, kind in wanted if kinds.get(m) != kind})
 
 
-def cube_query(chart: ChartDefinition) -> dict[str, Any]:
-    q = chart.query
+def unknown_members(chart: ChartDefinition, governed: list[dict[str, Any]]) -> list[str]:
+    """The members the chart names that Cube does not offer: only governed numbers are charted."""
+    return unknown_query_members(chart.query, governed)
+
+
+def query_to_cube(q: ChartQuery) -> dict[str, Any]:
     out: dict[str, Any] = {
         'measures': q.measures,
         'dimensions': q.dimensions,
@@ -94,3 +97,7 @@ def cube_query(chart: ChartDefinition) -> dict[str, Any]:
             time['granularity'] = q.time.granularity
         out['timeDimensions'] = [time]
     return out
+
+
+def cube_query(chart: ChartDefinition) -> dict[str, Any]:
+    return query_to_cube(chart.query)

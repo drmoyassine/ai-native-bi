@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 # The secrets this script makes up. Each is 32 random bytes, URL-safe (it also goes into database addresses).
-GENERATED = ('POSTGRES_PASSWORD', 'BI_API_KEY', 'CUBE_API_SECRET', 'CUBE_DB_PASSWORD', 'BI_DB_PASSWORD')
+GENERATED = ('POSTGRES_PASSWORD', 'BI_API_KEY', 'CUBE_API_SECRET', 'CUBE_DB_PASSWORD', 'BI_DB_PASSWORD', 'BI_SECRETS_KEY')
 # Secrets that belong to someone else: never made up here.
 FOREIGN = {'AMS_POSTGRES_PASSWORD': "the AMS's PostgreSQL superuser password (from the AMS's .env), for compose.together.yaml"}
 PLACEHOLDERS = {'', 'change-me'}

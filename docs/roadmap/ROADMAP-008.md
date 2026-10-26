@@ -20,6 +20,9 @@ related_decisions:
   - id: DEC-011
     name: Phase 1 on test files; real data through the frontend
     url: /DECISIONS.md#DEC-011
+  - id: DEC-017
+    name: The model sees schemas, profiles and suppressed aggregates, never rows
+    url: /DECISIONS.md#DEC-017
 related_tasks:
   - id: TASK-002
     name: Settle the privacy rules for student data
@@ -29,7 +32,7 @@ related_tasks:
     url: /TASKS.md#TASK-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T21:22:32.764Z'
+  at: '2026-10-26T22:07:12.855Z'
 ---
 # ROADMAP-008 — First real data
 

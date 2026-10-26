@@ -44,6 +44,14 @@ class Env(BaseModel):
     APP_COOKIE_SECURE: bool = True
     """The session cookie is sent over HTTPS only. false only for a local http:// address."""
     WEB_DIR: Annotated[str, StringConstraints(min_length=1)] | None = None
+    BI_SECRETS_KEY: Annotated[str, StringConstraints(min_length=43, max_length=44)] | None = None
+    """The key of the secret store (32 random bytes, base64url; scripts/make_env.py writes one). Without it: no provider keys."""
+    AGENT_INSTITUTION_MONTHLY_TOKENS: Annotated[int, Field(gt=0)] = 100_000_000
+    """The hard monthly cap of the institution (input plus output tokens of every turn)."""
+    AGENT_PERSON_MONTHLY_TOKENS: Annotated[int, Field(gt=0)] = 10_000_000
+    """The monthly share of each person."""
+    SUPPRESSION_THRESHOLD: Annotated[int, Field(ge=1)] = 5
+    """Counts under this are hidden from the agent (and, with TASK-008, from answers). The value comes from the privacy rules (TASK-002)."""
     """The built web app to serve at / (the image sets it)."""
 
 

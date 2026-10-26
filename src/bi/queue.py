@@ -8,6 +8,10 @@ from procrastinate.jobs import Job
 from procrastinate.retry import BaseRetryStrategy, RetryDecision
 from psycopg_pool import AsyncConnectionPool
 
+from .agent import providers as agent_providers
+from .agent import store as agent_store
+from .agent.secrets import SecretStore
+from .agent.turn import TurnDeps, process_turn
 from .callback import Ended, Supplied, Unfit, post_supply
 from .contract import CollectRequest
 from .log import log
@@ -18,6 +22,9 @@ COLLECT_QUEUE = 'collect'
 COLLECT_TASK = 'collect'
 LOAD_QUEUE = 'load'
 LOAD_TASK = 'load'
+AGENT_QUEUE = 'agent'
+TURN_TASK = 'agent_turn'
+REFRESH_TASK = 'refresh_models'
 
 
 @dataclass
@@ -118,12 +125,38 @@ class LoadDeps:
     database_url: str
 
 
+@dataclass
+class AgentWorkerDeps:
+    turn: TurnDeps
+    secrets: SecretStore | None
+    http: httpx.AsyncClient
+
+
 def create_queue(
-    conninfo: str, deps: CollectDeps | None = None, retry: CollectRetry | None = None, load: LoadDeps | None = None
+    conninfo: str,
+    deps: CollectDeps | None = None,
+    retry: CollectRetry | None = None,
+    load: LoadDeps | None = None,
+    agent: AgentWorkerDeps | None = None,
 ) -> procrastinate.App:
     """The job queue on the BI's database (migration 0002). The API only defers jobs (no deps); the worker also runs them: `collect`
     (an AMS run) and `load` (an upload of the app, never retried: process_upload records why it failed)."""
     app = procrastinate.App(connector=procrastinate.PsycopgConnector(conninfo=conninfo))
+    if agent is not None:
+
+        async def agent_turn(run_id: str) -> None:
+            # Never retried: a half-done turn may have had effects; process_turn records how it ended.
+            outcome = await process_turn(agent.turn, run_id)
+            log('info', 'agent turn', run_id=run_id, outcome=outcome)
+
+        app.task(name=TURN_TASK, queue=AGENT_QUEUE)(agent_turn)
+
+        async def refresh_models(timestamp: int) -> None:
+            outcome = await agent_providers.refresh_all(agent.turn.pool, agent.secrets, agent.http)
+            pruned = await agent_store.prune_events(agent.turn.pool)
+            log('info', 'model lists refreshed', providers=outcome, events_pruned=pruned)
+
+        app.periodic(cron='0 */6 * * *')(app.task(name=REFRESH_TASK, queue=AGENT_QUEUE)(refresh_models))
     if load is not None:
 
         async def load_upload(id: str) -> None:
@@ -154,3 +187,8 @@ async def enqueue_collect(app: procrastinate.App, id: str) -> None:
 
 async def enqueue_load(app: procrastinate.App, id: str) -> None:
     await app.configure_task(name=LOAD_TASK, queue=LOAD_QUEUE).defer_async(id=id)
+
+
+async def enqueue_turn(app: procrastinate.App, run_id: str, conversation_id: str) -> None:
+    """Queues a turn; the lock makes the turns of one conversation run one at a time."""
+    await app.configure_task(name=TURN_TASK, queue=AGENT_QUEUE, lock=conversation_id).defer_async(run_id=run_id)

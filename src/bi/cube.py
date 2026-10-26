@@ -68,6 +68,7 @@ class CubeClient:
                                 'name': m['name'],
                                 'title': m.get('shortTitle') or m.get('title') or m['name'],  # 'Headcount', not 'Enrollment Headcount'
                                 'type': m.get('type'),
+                                'agg_type': m.get('aggType'),
                                 'kind': kind[:-1],
                                 'description': m.get('description'),
                                 'cube': cube.get('title') or cube['name'],

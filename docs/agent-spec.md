@@ -114,7 +114,7 @@ Per `agent_turn` job:
 1. Load the conversation's messages **exactly as stored** (Pydantic AI's `ModelMessage` list, § 8; append-only).
 2. Drive `agent.iter(user_message, message_history=..., usage_limits=..., model_settings=...)` node by node, with the mode's toolset
    (§ 5), the frozen instructions, and:
-   - **usage limits** per turn (`UsageLimits`): requests (30 to answer, 150 to build) and total tokens (64K to answer, 400K to build);
+   - **usage limits** per turn (`UsageLimits`): requests (30 to answer, 150 to build), output tokens (32K to answer, 128K to build) and total tokens (2M to answer, 8M to build). Input tokens add up over a loop's requests (each request resends the history), so the output limit is the real bound on a turn's length and the total limit a backstop;
    - **common settings:** `max_tokens` 64000, `parallel_tool_calls` on, streaming always;
    - **Claude settings** when the model is Claude: thinking adaptive with `display: "updates"` (progress notes, never the reasoning),
      `anthropic_effort` set explicitly (`medium` to answer, `high` to build; Opus 5.5 defaults to `medium`), `anthropic_task_budget` as
