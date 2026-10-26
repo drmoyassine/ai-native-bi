@@ -16,7 +16,7 @@ Phase 0 is done (ROADMAP-001): the AMS adapter runs on Python. Next is phase 1 (
 exists yet.
 
 Stack: Python 3.12, FastAPI, Pydantic, Procrastinate, httpx, psycopg, PostgreSQL 16, pytest, ruff, mypy, uv, Docker Compose. Coming:
-dlt, SQL transforms, Cube, S3. Node is used only for the project-memory tool (VEF).
+dlt, dbt, Cube, S3. Node is used only for the project-memory tool (VEF).
 
 ## Layout
 

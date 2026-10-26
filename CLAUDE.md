@@ -21,7 +21,7 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
 6. **A person approves what the agent builds.** An integration, a KPI or a dashboard is not live until approved. The agent's code
    runs in a sandbox, credentials live in the secret store (never in code, the repository or logs), and access to sources is read-only.
 7. Stack (DEC-003): Python 3.12, FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for integrations,
-   SQL transforms, Cube for the metric layer, forward-only SQL migrations in `src/bi/migrations` (never edit an applied one),
+   dbt for transforms, Cube for the metric layer, forward-only SQL migrations in `src/bi/migrations` (never edit an applied one),
    pytest, ruff, mypy strict, structured JSON logs. Node is only for VEF.
 
 ## Project memory (VEF)

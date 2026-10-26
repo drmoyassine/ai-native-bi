@@ -18,13 +18,16 @@ related_decisions:
   - id: DEC-004
     name: Cube is the governed layer and the only read path for KPIs
     url: /DECISIONS.md#DEC-004
+  - id: DEC-010
+    name: dbt for transforms
+    url: /DECISIONS.md#DEC-010
 related_roadmap_items:
   - id: ROADMAP-002
-    name: 'Phase 1: first slice from file exports to the AMS'
+    name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 # governed-kpis — One trusted definition of every KPI
 

@@ -32,7 +32,7 @@ consumer among others (see "The AMS" below).
 |---|---|---|
 | Sources | Students (Banner SIS, DegreeWorks), faculty and staff (FAS/SAS), learning outcomes (Canvas, DegreeWorks, X-Matrix, Explorance), feedback and research (Explorance Blue, DSpace), strategic planning (X-Matrix, FAS/SAS), finance (Oracle Fusion), documents (SharePoint, policies, criteria, AMS evidence files), and manual entry, sheets and forms | Read-only access; each source is one integration |
 | Extract and load | Each integration copies a source as it is into **raw** storage: files in S3, immutable, loaded into the `raw` schema | dlt pipelines, one standard pattern the agent fills in |
-| Transform | `raw` into **analytical** data in the `analytics` schema: conformed across sources, at student grain | SQL models (dbt or SQLMesh, [TASK-003](TASKS.md#TASK-003)) |
+| Transform | `raw` into **analytical** data in the `analytics` schema: conformed across sources, at student grain | dbt models ([DEC-010](DECISIONS.md#DEC-010)) |
 | Governed layer | Each KPI defined **once** in the metric registry, with its steward, version and lineage; row-level security; certified snapshots (a report or dataset saved as it was at a point in time) | Cube (Cube Core, open source) |
 | Serving | One general-purpose API and an MCP server on top of Cube ([DEC-009](DECISIONS.md#DEC-009)) | FastAPI; MCP |
 | Consumers | The BI's own dashboards (the KPI canvas, generative UI), the AMS, Tableau and Power BI (Cube's SQL API), third-party apps and AI agents | |
@@ -86,8 +86,8 @@ first: see `docs/ams-contract-proposals.md` ([TASK-006](TASKS.md#TASK-006)).
 - **Agent containment:** the agent's code runs in a sandbox; credentials go to a secret store, never into code, the repository or
   logs; access to sources is read-only.
 - **Privacy:** nothing student-level leaves the BI; consumers get aggregates with small cells suppressed. The rules (regulator,
-  threshold, how a suppressed cell is marked) are open: [TASK-002](TASKS.md#TASK-002), before the first real data. Real exports are
-  never committed to the repository ([DEC-008](DECISIONS.md#DEC-008)).
+  threshold, how a suppressed cell is marked) are open: [TASK-002](TASKS.md#TASK-002), before the first real upload. Real exports
+  arrive through the frontend and are never committed to the repository ([DEC-011](DECISIONS.md#DEC-011)).
 - **Security:** row-level security in Cube. The AMS calls with `BI_API_KEY`; the BI calls back only the run's own supply route on
   `AMS_CALLBACK_ORIGIN`, never follows a redirect, and forgets the token when the request ends.
 - **Authentication:** the BI's own accounts first, the institution's single sign-on later ([ROADMAP-005](ROADMAP.md#ROADMAP-005)).
@@ -103,7 +103,8 @@ first: see `docs/ams-contract-proposals.md` ([TASK-006](TASKS.md#TASK-006)).
 - **Warehouse: raw and analytics on PostgreSQL, raw files on S3** — see [DEC-005](DECISIONS.md#DEC-005)
 - **A person approves what the agent builds** — see [DEC-006](DECISIONS.md#DEC-006)
 - **The AMS requests; the BI owns its KPIs end to end** — see [DEC-007](DECISIONS.md#DEC-007)
-- **First slice from real file exports; Banner through the agent** — see [DEC-008](DECISIONS.md#DEC-008)
+- **Phase 1 on test files; real data through the frontend** — see [DEC-011](DECISIONS.md#DEC-011) (supersedes DEC-008)
+- **dbt for transforms** — see [DEC-010](DECISIONS.md#DEC-010)
 - **One general-purpose API and MCP server on Cube** — see [DEC-009](DECISIONS.md#DEC-009)
 
 The phases are roadmap items: [ROADMAP.md](ROADMAP.md).

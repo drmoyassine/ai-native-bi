@@ -101,12 +101,12 @@ modified:
 
 ---
 
-## ROADMAP-002 — Phase 1: first slice from file exports to the AMS
+## ROADMAP-002 — Phase 1: the pipeline end to end, from files to the AMS
 
 ---
 id: ROADMAP-002
-title: 'Phase 1: first slice from file exports to the AMS'
-description: Real .xlsb, .xlsx and .csv exports to raw, analytics, Cube and enrollment_headcount, answered to the AMS
+title: 'Phase 1: the pipeline end to end, from files to the AMS'
+description: .xlsb, .xlsx and .csv files to raw, dbt, Cube and enrollment_headcount, answered to the AMS; tested on made-up files
 phase: '1'
 status: Deferred
 priority: P0
@@ -131,6 +131,12 @@ related_decisions:
   - id: DEC-008
     name: First slice from real file exports; Banner through the agent
     url: /DECISIONS.md#DEC-008
+  - id: DEC-010
+    name: dbt for transforms
+    url: /DECISIONS.md#DEC-010
+  - id: DEC-011
+    name: Phase 1 on test files; real data through the frontend
+    url: /DECISIONS.md#DEC-011
 related_tasks:
   - id: TASK-002
     name: Settle the privacy rules for student data
@@ -139,14 +145,14 @@ related_tasks:
     name: Choose dbt or SQLMesh for transforms
     url: /TASKS.md#TASK-003
   - id: TASK-004
-    name: Load the file exports into raw and analytics
+    name: Load files into raw and analytics
     url: /TASKS.md#TASK-004
   - id: TASK-005
     name: Define enrollment_headcount in Cube and answer the AMS
     url: /TASKS.md#TASK-005
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
 Proves every layer on real data and becomes the pattern the agent copies in phase 2.

@@ -197,7 +197,7 @@ related_vision:
     url: /VISION.md#open-consumption
 related_roadmap_items:
   - id: ROADMAP-002
-    name: 'Phase 1: first slice from file exports to the AMS'
+    name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
 related_tasks:
   - id: TASK-005
@@ -205,7 +205,7 @@ related_tasks:
     url: /TASKS.md#TASK-005
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
 ---
@@ -234,7 +234,7 @@ generated:
   at: '2026-10-26T13:23:31.090Z'
 related_roadmap_items:
   - id: ROADMAP-002
-    name: 'Phase 1: first slice from file exports to the AMS'
+    name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
 related_tasks:
   - id: TASK-002
@@ -244,11 +244,11 @@ related_tasks:
     name: Choose dbt or SQLMesh for transforms
     url: /TASKS.md#TASK-003
   - id: TASK-004
-    name: Load the file exports into raw and analytics
+    name: Load files into raw and analytics
     url: /TASKS.md#TASK-004
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:24:19.725Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
 ---
@@ -336,7 +336,7 @@ modified:
 ---
 id: DEC-008
 title: First slice from real file exports; Banner through the agent
-status: accepted
+status: superseded
 context: There are no Banner credentials yet.
 decision: >-
   Phase 1 runs end to end on real exports (.xlsb, .xlsx, .csv). Banner is connected later by the agent, end to end, from
@@ -354,18 +354,22 @@ generated:
   at: '2026-10-26T13:23:31.090Z'
 related_roadmap_items:
   - id: ROADMAP-002
-    name: 'Phase 1: first slice from file exports to the AMS'
+    name: 'Phase 1: the pipeline end to end, from files to the AMS'
     url: /ROADMAP.md#ROADMAP-002
 related_tasks:
   - id: TASK-002
     name: Settle the privacy rules for student data
     url: /TASKS.md#TASK-002
   - id: TASK-004
-    name: Load the file exports into raw and analytics
+    name: Load files into raw and analytics
     url: /TASKS.md#TASK-004
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
+superseded_by:
+  id: DEC-011
+  name: Phase 1 on test files; real data through the frontend
+  url: /DECISIONS.md#DEC-011
 ---
 
 ---
@@ -401,5 +405,87 @@ modified:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
 ---
+
+---
+
+## DEC-010 — dbt for transforms
+
+---
+id: DEC-010
+title: dbt for transforms
+status: accepted
+context: 'Transforms from raw to analytics need a SQL tool (TASK-003): dbt or SQLMesh.'
+decision: dbt (dbt-core with the PostgreSQL adapter) builds the analytics schema from raw.
+rationale: >-
+  Cube reads dbt models directly (cube_dbt), dbt is the transform tool agents know best, and its tests and docs give
+  lineage from source to KPI.
+consequences: dbt models and tests live in the repository; the agent writes dbt models in phase 2.
+tags:
+  - warehouse
+  - dbt
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T17:33:38.583Z'
+related_vision:
+  - id: governed-kpis
+    name: One trusted definition of every KPI
+    url: /VISION.md#governed-kpis
+related_roadmap_items:
+  - id: ROADMAP-002
+    name: 'Phase 1: the pipeline end to end, from files to the AMS'
+    url: /ROADMAP.md#ROADMAP-002
+related_tasks:
+  - id: TASK-003
+    name: Choose dbt or SQLMesh for transforms
+    url: /TASKS.md#TASK-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T17:33:38.583Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26.
+
+---
+
+## DEC-011 — Phase 1 on test files; real data through the frontend
+
+---
+id: DEC-011
+title: Phase 1 on test files; real data through the frontend
+status: accepted
+context: DEC-008 planned phase 1 on real exports. Real data will instead be uploaded through the frontend once one exists.
+decision: >-
+  Phase 1 builds and tests the whole pipeline (files to raw, dbt, Cube, the first source) on made-up test files that
+  live only in the tests and never answer the AMS. Real exports (.xlsb, .xlsx, .csv) are uploaded through the frontend
+  when there is one; Banner is still connected later by the agent.
+rationale: The pipeline does not need real data to be built; real student data waits for the upload path and the privacy rules.
+consequences: >-
+  The privacy rules (TASK-002) are needed before the first real upload, not before phase 1. Test files are never
+  mistaken for data: no source answers the AMS from them.
+tags:
+  - phase-1
+  - sources
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T17:33:38.583Z'
+related_roadmap_items:
+  - id: ROADMAP-002
+    name: 'Phase 1: the pipeline end to end, from files to the AMS'
+    url: /ROADMAP.md#ROADMAP-002
+related_tasks:
+  - id: TASK-002
+    name: Settle the privacy rules for student data
+    url: /TASKS.md#TASK-002
+  - id: TASK-004
+    name: Load files into raw and analytics
+    url: /TASKS.md#TASK-004
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T17:33:38.583Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26. Supersedes DEC-008.
 
 <!-- End VEF generated items. -->

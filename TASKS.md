@@ -110,7 +110,9 @@ to end against PostgreSQL. CI runs ruff, mypy and pytest.
 ---
 id: TASK-002
 title: Settle the privacy rules for student data
-description: Regulator and data protection law, the small-cell suppression threshold, how a suppressed cell is marked in a supply
+description: >-
+  Regulator and data protection law, the small-cell suppression threshold, how a suppressed cell is marked in a supply;
+  before the first real upload
 status: pending
 priority: P0
 last_updated: '2026-10-26'
@@ -119,7 +121,7 @@ generated:
   at: '2026-10-26T13:23:31.090Z'
 roadmap_item:
   id: ROADMAP-002
-  name: 'Phase 1: first slice from file exports to the AMS'
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
   url: /ROADMAP.md#ROADMAP-002
 related_decisions:
   - id: DEC-005
@@ -128,12 +130,15 @@ related_decisions:
   - id: DEC-008
     name: First slice from real file exports; Banner through the agent
     url: /DECISIONS.md#DEC-008
+  - id: DEC-011
+    name: Phase 1 on test files; real data through the frontend
+    url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
-Must be settled before the first real export is loaded.
+Needed before the first real data is uploaded through the frontend (DEC-011), not before building the pipeline.
 
 ---
 
@@ -143,7 +148,7 @@ Must be settled before the first real export is loaded.
 id: TASK-003
 title: Choose dbt or SQLMesh for transforms
 description: The SQL transform tool for raw to analytics
-status: pending
+status: completed
 priority: P1
 last_updated: '2026-10-26'
 generated:
@@ -151,25 +156,28 @@ generated:
   at: '2026-10-26T13:23:31.090Z'
 roadmap_item:
   id: ROADMAP-002
-  name: 'Phase 1: first slice from file exports to the AMS'
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
   url: /ROADMAP.md#ROADMAP-002
 related_decisions:
   - id: DEC-005
     name: 'Warehouse: raw and analytics on PostgreSQL, raw files on S3'
     url: /DECISIONS.md#DEC-005
+  - id: DEC-010
+    name: dbt for transforms
+    url: /DECISIONS.md#DEC-010
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
 ---
 
-## TASK-004 — Load the file exports into raw and analytics
+## TASK-004 — Load files into raw and analytics
 
 ---
 id: TASK-004
-title: Load the file exports into raw and analytics
-description: dlt pipeline for .xlsb, .xlsx and .csv into S3 and the raw schema; transforms into analytics
+title: Load files into raw and analytics
+description: dlt pipeline for .xlsb, .xlsx and .csv into S3 and the raw schema; dbt models into analytics; tested on made-up files
 status: pending
 priority: P0
 last_updated: '2026-10-26'
@@ -178,15 +186,12 @@ generated:
   at: '2026-10-26T13:23:31.090Z'
 roadmap_item:
   id: ROADMAP-002
-  name: 'Phase 1: first slice from file exports to the AMS'
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
   url: /ROADMAP.md#ROADMAP-002
 depends_on:
   - id: TASK-001
     name: Port the scaffold to Python
     url: /TASKS.md#TASK-001
-  - id: TASK-002
-    name: Settle the privacy rules for student data
-    url: /TASKS.md#TASK-002
   - id: TASK-003
     name: Choose dbt or SQLMesh for transforms
     url: /TASKS.md#TASK-003
@@ -197,12 +202,15 @@ related_decisions:
   - id: DEC-008
     name: First slice from real file exports; Banner through the agent
     url: /DECISIONS.md#DEC-008
+  - id: DEC-011
+    name: Phase 1 on test files; real data through the frontend
+    url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
-The exports are never committed to the repository.
+Built and tested on made-up test files (DEC-011). Real exports arrive later through the frontend; they are never committed to the repository.
 
 ---
 
@@ -220,11 +228,11 @@ generated:
   at: '2026-10-26T13:23:31.090Z'
 roadmap_item:
   id: ROADMAP-002
-  name: 'Phase 1: first slice from file exports to the AMS'
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
   url: /ROADMAP.md#ROADMAP-002
 depends_on:
   - id: TASK-004
-    name: Load the file exports into raw and analytics
+    name: Load files into raw and analytics
     url: /TASKS.md#TASK-004
 related_decisions:
   - id: DEC-004
@@ -232,7 +240,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-004
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T17:33:38.583Z'
 ---
 
 ---
