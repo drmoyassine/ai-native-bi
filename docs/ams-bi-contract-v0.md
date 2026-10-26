@@ -194,6 +194,11 @@ Idempotency: every POST takes an `Idempotency-Key`; a repeat returns the first r
 - Files to the BI over HTTPS only; the BI's use of them (indexing, AI) is governed by DEC-019 and the BI's own policy.
 - Rates and size limits per route; a refused request returns the reason.
 
+**Co-deployment (DEC-034).** Both products may run in one Compose project (the BI repository's `compose.together.yaml`): one PostgreSQL
+server and one Garage store, but the BI has its own database, role and bucket and never reads the AMS's. On that private network the
+AMS calls the BI over plain http only to the one host named `BI_PRIVATE_HOST` (a single-label service name, e.g. `BI_BASE_URL=http://bi-api:4000`),
+and the BI calls back the AMS's internal address (`APP_PUBLIC_URL=http://app:3000`). Nothing else in this contract changes.
+
 ## 7. What the BI team can build now
 
 1. The **semantic layer and metric definitions** that match dataset definitions (3.3, 3.7) and the PRD §9.4 dataset list:
