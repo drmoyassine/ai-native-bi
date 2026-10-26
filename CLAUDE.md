@@ -19,11 +19,15 @@
 ## Requests to and from the AMS
 
 The two repositories talk through GitHub Issues, bridged by `.github/workflows/issue-bridge.yml`:
-- **Need something from the AMS** (a contract change, a new field, a route, a bug)? Open an issue here labelled `for-ams`. It is
+- **Need something from the AMS** (a contract change, a new field, a route, a bug)? `/request`, or open an issue here labelled `for-ams`. It is
   copied to the AMS (labelled `from-bi` there); when the AMS closes it, this issue gets the outcome and is closed.
-- **At the start of a session, check `from-ams` issues** (requests the AMS made of the BI). Close one when it is done or declined,
+- **At the start of a session, run `/inbox`** (open `from-ams` issues: requests the AMS made of the BI). Close one when it is done or declined,
   with a last comment saying what was done (commit or PR) or why not: that comment is what the AMS receives.
 - Never edit the contract to get a change: ask with `for-ams`, then merge the `ams-contract-sync` pull request when it comes.
+
+- **Moving code** between the repositories: `/request` with a `## Hand-over` (paths and commit SHA); the receiving side attaches
+  the source read-only, ports it into its own layout and closes the request with the commit; only then does the source remove it.
+  The skills `.claude/skills/request` and `.claude/skills/inbox` hold the steps (manual invoke only).
 
 ## Checks
 
