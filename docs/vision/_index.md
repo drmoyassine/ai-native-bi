@@ -8,13 +8,20 @@ generated:
 
 # Vision
 
-<!-- PROJECT: Describe why this product exists. What problem does it solve? Who is it for? -->
+The institution's numbers (enrollment, retention, graduation, learning outcomes, faculty, research, finance, the strategic plan)
+live in many systems: Banner, DegreeWorks, Canvas, Explorance, X-Matrix, FAS/SAS, Oracle Fusion, SharePoint and spreadsheets. Each
+report recomputes them by hand, and two reports rarely agree.
 
-*Replace this placeholder with your product vision. A good vision statement answers:*
-- *Why does this exist?*
-- *What problem does it solve?*
-- *Who is the target user?*
-- *What does success look like?*
+**AI-native BI** is the institution's business intelligence platform. It brings those sources into one warehouse, defines every KPI
+once with its steward, version and lineage, and serves it to everyone who needs it: the institutional effectiveness office, deans and
+leadership through dashboards, the AMS for accreditation and quality reports (PUC, ABET, QS, self-studies), BI tools, other apps and
+AI agents. An agent does most of the building, connecting sources, defining KPIs and composing dashboards from a conversation,
+and a person approves each piece before it goes live.
+
+**Who it is for:** the institutional effectiveness office first, then everyone at the institution who needs a trusted number.
+
+**Success:** any KPI the institution reports has one definition, one answer and a visible lineage; a new source or KPI takes a
+conversation and an approval, not a project.
 
 ---
 

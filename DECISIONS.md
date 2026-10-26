@@ -81,4 +81,325 @@ last_updated: '2026-01-01'
 
 This decision establishes the documentation substrate for the project. The framework was adopted via `vef setup`. See [vibe-engineering-framework](https://github.com/drmoyassine/vibe-engineering-framework) for the canonical definition.
 
+---
+
+## DEC-002 — One institution per deployment
+
+---
+id: DEC-002
+title: One institution per deployment
+status: accepted
+context: The BI could be built as a multi-tenant service or as one deployment per institution.
+decision: >-
+  One institution, one deployment; never multi-tenant. A later self-serve free trial for another institution is its own
+  small deployment, converted to a paid hosted deployment or archived at its end.
+rationale: >-
+  The product serves one institution's data, privacy rules and source systems; multi-tenancy would add isolation and
+  security work with no user.
+consequences: >-
+  No tenant column or tenant routing anywhere. A free-trial deployment needs a real PostgreSQL (Cube cannot connect to
+  PGlite); archiving is a dump and a stopped instance.
+tags:
+  - deployment
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_vision:
+  - id: governed-kpis
+    name: One trusted definition of every KPI
+    url: /VISION.md#governed-kpis
+related_roadmap_items:
+  - id: ROADMAP-007
+    name: Self-serve free trial
+    url: /ROADMAP.md#ROADMAP-007
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26.
+
+---
+
+## DEC-003 — Python stack (FastAPI)
+
+---
+id: DEC-003
+title: Python stack (FastAPI)
+status: accepted
+context: >-
+  The scaffold is TypeScript (Hono, Zod, pg-boss, Vitest), the same stack as the AMS. The core of the product is an
+  agent that builds data pipelines.
+decision: >-
+  The BI's back end is Python: FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for
+  integrations, SQL transforms, forward-only SQL migrations, pytest, structured JSON logs. The UI is TypeScript/React;
+  Cube stays its own Node service.
+rationale: >-
+  The data-engineering tools the agent works with (dlt, dbt or SQLMesh, polars, DuckDB) are Python; an agent writing
+  pipelines works best in the language of its tools. The scaffold is small, so the port is cheap now.
+consequences: >-
+  Two languages across the AMS and the BI. The contract mirror becomes Pydantic models, ideally generated from JSON
+  Schema the AMS publishes. The TypeScript scaffold stays until the port (ROADMAP-001).
+tags:
+  - stack
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_roadmap_items:
+  - id: ROADMAP-001
+    name: 'Phase 0: port the scaffold to Python'
+    url: /ROADMAP.md#ROADMAP-001
+related_tasks:
+  - id: TASK-001
+    name: Port the scaffold to Python
+    url: /TASKS.md#TASK-001
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
+Decided with Mohamad Yassine on 2026-10-26. Supersedes the earlier rule "same stack as the AMS" in CLAUDE.md.
+
+---
+
+## DEC-004 — Cube is the governed layer and the only read path for KPIs
+
+---
+id: DEC-004
+title: Cube is the governed layer and the only read path for KPIs
+status: accepted
+context: KPIs need one definition, row-level security, lineage and certified snapshots, served to many consumers.
+decision: >-
+  Cube (Cube Core, open source) holds the metric registry. Every consumer reads KPIs through Cube: the KPI canvas, the
+  AMS adapter, the API, the MCP server and Tableau or Power BI (Cube's SQL API). Nobody reads the raw or analytics
+  tables directly, and queries are structured, never SQL.
+rationale: >-
+  One place for definitions, security and lineage; Cube's query format is already structured, which suits AI agents and
+  the AMS.
+consequences: >-
+  Row-level security lives in Cube's security context and query rewrite. Ingestion and transforms run beneath Cube, not
+  through it. Cube adds a service to deploy.
+tags:
+  - cube
+  - metrics
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_vision:
+  - id: governed-kpis
+    name: One trusted definition of every KPI
+    url: /VISION.md#governed-kpis
+  - id: open-consumption
+    name: Every consumer, one governed layer
+    url: /VISION.md#open-consumption
+related_roadmap_items:
+  - id: ROADMAP-002
+    name: 'Phase 1: first slice from file exports to the AMS'
+    url: /ROADMAP.md#ROADMAP-002
+related_tasks:
+  - id: TASK-005
+    name: Define enrollment_headcount in Cube and answer the AMS
+    url: /TASKS.md#TASK-005
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
+---
+
+## DEC-005 — Warehouse: raw and analytics on PostgreSQL, raw files on S3
+
+---
+id: DEC-005
+title: 'Warehouse: raw and analytics on PostgreSQL, raw files on S3'
+status: accepted
+context: Sources must be read-only and replayable; analysis needs conformed data across sources.
+decision: >-
+  Extract and load first: each integration lands its source unchanged as immutable files in S3 and in the raw schema.
+  SQL transforms build the analytics schema, conformed across sources at student grain. Cube reads only analytics.
+rationale: >-
+  Immutable raw data can be audited and replayed when a transform changes; one PostgreSQL keeps operations simple and is
+  the BI's own database (AMS DEC-017 and AMS DEC-034).
+consequences: >-
+  Student-level data sits in the warehouse, so privacy rules must be settled before the first real data (TASK-002). The
+  transform tool (dbt or SQLMesh) is still to choose (TASK-003).
+tags:
+  - warehouse
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_roadmap_items:
+  - id: ROADMAP-002
+    name: 'Phase 1: first slice from file exports to the AMS'
+    url: /ROADMAP.md#ROADMAP-002
+related_tasks:
+  - id: TASK-002
+    name: Settle the privacy rules for student data
+    url: /TASKS.md#TASK-002
+  - id: TASK-003
+    name: Choose dbt or SQLMesh for transforms
+    url: /TASKS.md#TASK-003
+  - id: TASK-004
+    name: Load the file exports into raw and analytics
+    url: /TASKS.md#TASK-004
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:24:19.725Z'
+---
+
+---
+
+## DEC-006 — A person approves what the agent builds
+
+---
+id: DEC-006
+title: A person approves what the agent builds
+status: accepted
+context: The agent writes and runs integration code, holds credentials and defines KPIs.
+decision: >-
+  An integration, a KPI or a dashboard built by the agent is live only after a person approves it, including a KPI the
+  AMS asks for. The agent's code runs in a sandbox, credentials live in a secret store (never in code, the repository or
+  logs), and access to sources is read-only.
+rationale: >-
+  One trusted definition per KPI needs human sign-off; code an agent writes against institutional systems needs
+  containment.
+consequences: The agent needs an approval workflow, a sandbox and a secret store from phase 2.
+tags:
+  - agent
+  - security
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_vision:
+  - id: agent-built-bi
+    name: An agent builds the BI
+    url: /VISION.md#agent-built-bi
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
+---
+
+## DEC-007 — The AMS requests; the BI owns its KPIs end to end
+
+---
+id: DEC-007
+title: The AMS requests; the BI owns its KPIs end to end
+status: accepted
+context: The AMS (drmoyassine/ams) owns the contract and today has its own form and manual collection methods.
+decision: >-
+  The AMS may ask the BI for a reading, a table, a dashboard or a new KPI (by a request schema); the BI answers in the
+  format asked. Manual entry, sheets and forms belong to the BI. Curriculum maps belong to their own systems; the BI
+  only aggregates their data.
+rationale: One product owns data and its definitions; the AMS keeps accreditation, evidence links and approvals.
+consequences: >-
+  The contract must change in the AMS first (docs/ams-contract-proposals.md). Until then the only request is collect one
+  run.
+tags:
+  - ams
+  - contract
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_vision:
+  - id: open-consumption
+    name: Every consumer, one governed layer
+    url: /VISION.md#open-consumption
+related_roadmap_items:
+  - id: ROADMAP-006
+    name: AMS requests beyond collect
+    url: /ROADMAP.md#ROADMAP-006
+related_tasks:
+  - id: TASK-006
+    name: Raise the contract proposals in the AMS
+    url: /TASKS.md#TASK-006
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
+---
+
+## DEC-008 — First slice from real file exports; Banner through the agent
+
+---
+id: DEC-008
+title: First slice from real file exports; Banner through the agent
+status: accepted
+context: There are no Banner credentials yet.
+decision: >-
+  Phase 1 runs end to end on real exports (.xlsb, .xlsx, .csv). Banner is connected later by the agent, end to end, from
+  the frontend.
+rationale: Proves every layer on real data now and gives the agent a tested pattern to copy.
+consequences: >-
+  The exports hold student data: they are never committed to the repository, and the privacy rules must be settled
+  first. Because they are real, the slice may supply the AMS for real.
+tags:
+  - phase-1
+  - sources
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_roadmap_items:
+  - id: ROADMAP-002
+    name: 'Phase 1: first slice from file exports to the AMS'
+    url: /ROADMAP.md#ROADMAP-002
+related_tasks:
+  - id: TASK-002
+    name: Settle the privacy rules for student data
+    url: /TASKS.md#TASK-002
+  - id: TASK-004
+    name: Load the file exports into raw and analytics
+    url: /TASKS.md#TASK-004
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
+---
+
+## DEC-009 — One general-purpose API and MCP server on Cube
+
+---
+id: DEC-009
+title: One general-purpose API and MCP server on Cube
+status: accepted
+context: Consumers include the KPI canvas, the AMS, BI tools, third-party apps and AI agents.
+decision: >-
+  Build one general-purpose API and an MCP server on top of Cube for all consumers, rather than a separate integration
+  per consumer.
+rationale: One surface to secure and version; AI agents get governed metrics through MCP with structured queries only.
+consequences: The AMS adapter becomes one user of that surface.
+tags:
+  - api
+  - mcp
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+related_vision:
+  - id: open-consumption
+    name: Every consumer, one governed layer
+    url: /VISION.md#open-consumption
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, KPI canvas and document AI'
+    url: /ROADMAP.md#ROADMAP-004
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T13:23:31.090Z'
+---
+
 <!-- End VEF generated items. -->

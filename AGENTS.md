@@ -33,13 +33,12 @@ vef check
 3. **Run the build + tests** after non-trivial changes; read the whole output.
 4. **Migrations are forward-only.** Destructive changes (drops, mass updates) need explicit owner approval.
 
-<!-- PROJECT: Add your build/test commands here, e.g.: -->
-<!--
+Until the Python port (ROADMAP-001):
+
 ```bash
-npm run type-check
-npm test
+pnpm install && pnpm build && pnpm typecheck && pnpm lint && pnpm test   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
+pnpm exec vef check
 ```
--->
 
 ## Decision discipline
 
@@ -56,4 +55,7 @@ npm test
 - Run `/apply` to migrate scattered content into the canonical schema.
 - `vef setup` is the adoption/upgrade lifecycle write; `vef create` and `vef update` are the day-to-day record writers. `vef check` is the strict read-only local/CI gate; `vef doctor` explains blockers. Review and commit `.vef/`, `docs/`, regenerated ledgers, adapters, and the managed enforcement workflow together. Existing adapter files are never overwritten.
 
-<!-- PROJECT: Add your project-specific conventions here. -->
+## Project conventions
+
+The rules in `CLAUDE.md` apply: the AMS owns the contract; separate storage from the AMS; no invented data; call back only the AMS;
+every read of a KPI goes through Cube; a person approves what the agent builds. Real data exports (student data) are never committed.

@@ -8,11 +8,11 @@ dashboards, each approved by a person before it goes live.
 It works on its own, or with the AMS (drmoyassine/ams), the accreditation and quality management system, which requests readings
 through the contract in `docs/ams-bi-contract-v0.md` (owned by the AMS; this is a copy) and `docs/endpoints.md`.
 
-**Read `docs/architecture.md`** for the layers, the agent, the boundary with the AMS and the phases.
+**Read `ARCHITECTURE.md`** for the layers, the agent and the boundary with the AMS; `VISION.md`, `ROADMAP.md` (the phases), `TASKS.md` and `DECISIONS.md` hold the rest (managed with vibe-engineering-framework).
 
 ## Status
 
-Phase 0 of `docs/architecture.md`: the code is a TypeScript scaffold of the AMS adapter only, to be ported to Python (FastAPI). No
+Before phase 0 (`ROADMAP.md`, ROADMAP-001): the code is a TypeScript scaffold of the AMS adapter only, to be ported to Python (FastAPI). No
 source, warehouse or metric layer exists yet.
 
 Stack (target): Python, FastAPI, Pydantic, Procrastinate, dlt, SQL transforms, Cube, PostgreSQL 16 + S3, pytest, Docker Compose.
