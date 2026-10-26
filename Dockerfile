@@ -6,7 +6,8 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
-RUN uv sync --frozen --no-dev --no-editable && useradd --system --uid 10001 bi
+RUN uv sync --frozen --no-dev --no-editable && useradd --system --uid 10001 bi \
+  && mkdir -p /data/raw-files && chown bi /data/raw-files
 USER bi
 
 FROM base AS api

@@ -10,6 +10,11 @@ dependencies = [
   "psycopg[binary,pool]>=3.2",
   "procrastinate==3.10.0",  # pinned: its schema is migration 0002
   "httpx>=0.28",
+  "dlt[filesystem,postgres]>=1.5",
+  "python-calamine>=0.3",
+  "dbt-core>=1.9",
+  "dbt-postgres>=1.9",
+  "pyjwt>=2.9",
 ]
 
 [dependency-groups]
@@ -18,6 +23,7 @@ dev = [
   "pytest-asyncio>=0.25",
   "mypy>=1.13",
   "ruff>=0.8",
+  "openpyxl>=3.1.5",
 ]
 
 [build-system]
@@ -36,6 +42,10 @@ asyncio_default_test_loop_scope = "session"
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["fsspec", "fsspec.*", "openpyxl", "openpyxl.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 140

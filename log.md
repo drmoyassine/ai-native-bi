@@ -14,6 +14,15 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-26 — Phase 1: the pipeline end to end, on made-up files
+
+A file now goes all the way: raw (dlt, cells as text, the file kept unchanged), dbt (staging, analytics, data tests), Cube
+(`enrollment_headcount`), and the worker answers the AMS from Cube (TASK-004, TASK-005; DEC-010, DEC-011). Learned on the way:
+Cube in production mode needs Cube Store unless its cache and queue run in memory (one instance: memory); Cube 1.8 refuses
+`renewQuery` and takes `cache: "must-revalidate"` in the request body instead; an all-empty column would vanish from raw unless every
+header is declared as a text column; Cube answers numbers as text. Follow-ups: a read-only role for Cube (TASK-007), small-cell
+suppression once the privacy rules are set (TASK-008, TASK-002).
+
 ## 2026-10-26 — Phase 0: the scaffold runs on Python
 
 ROADMAP-001 done (TASK-001, DEC-003). The AMS adapter is now `src/bi`: FastAPI, Pydantic, Procrastinate, httpx, psycopg, with the

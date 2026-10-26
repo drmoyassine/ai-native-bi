@@ -48,3 +48,19 @@ async def make_pool() -> AsyncIterator[PoolFactory]:
     yield make
     for pool in pools:
         await pool.close()
+
+
+CUBE_DB = 'bi_cube_test'
+"""The database the test Cube reads (CUBEJS_DB_NAME); created before Cube starts, never dropped by the tests."""
+
+
+@pytest.fixture(scope='session')
+def cube_env() -> tuple[str, str]:
+    """Cube's address and secret for the integration tests: CUBE_TEST_URL and CUBE_TEST_SECRET. Without them the tests skip locally;
+    CI sets REQUIRE_CUBE=1, which turns a missing Cube into a failure instead."""
+    url, secret = os.environ.get('CUBE_TEST_URL'), os.environ.get('CUBE_TEST_SECRET')
+    if not url or not secret:
+        if os.environ.get('REQUIRE_CUBE') == '1':
+            pytest.fail('REQUIRE_CUBE=1 but CUBE_TEST_URL or CUBE_TEST_SECRET is not set')
+        pytest.skip('no Cube: set CUBE_TEST_URL and CUBE_TEST_SECRET (Cube reading the database bi_cube_test)')
+    return url, secret

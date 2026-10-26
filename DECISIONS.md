@@ -203,9 +203,12 @@ related_tasks:
   - id: TASK-005
     name: Define enrollment_headcount in Cube and answer the AMS
     url: /TASKS.md#TASK-005
+  - id: TASK-007
+    name: A read-only database role for Cube
+    url: /TASKS.md#TASK-007
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T18:14:30.345Z'
 ---
 
 ---
@@ -481,9 +484,12 @@ related_tasks:
   - id: TASK-004
     name: Load files into raw and analytics
     url: /TASKS.md#TASK-004
+  - id: TASK-008
+    name: Suppress small cells in answers
+    url: /TASKS.md#TASK-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T18:14:30.345Z'
 ---
 
 Decided with Mohamad Yassine on 2026-10-26. Supersedes DEC-008.

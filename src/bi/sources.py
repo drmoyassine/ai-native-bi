@@ -6,16 +6,20 @@ from typing import Protocol
 from .contract import CollectRequest, SupplyBody
 
 
+class CannotAnswer(Exception):
+    """The source knows the metric but not the request's shape (a dimension, a filter or the item's columns): no supply, and why."""
+
+
 class Source(Protocol):
     """Where the BI finds the data for a request. Each source says which requests it can answer (usually by `query.metric` or the
-    `endpoint` name) and answers with a supply. None is registered yet: the governed metric layer, the warehouse and the source
-    systems come next. A source NEVER invents values: no data means no supply."""
+    `endpoint` name) and answers with a supply, or None when it has no data for the period. A source NEVER invents values: no data
+    means no supply (CLAUDE.md rule 3)."""
 
     name: str
 
     def can_answer(self, req: CollectRequest) -> bool: ...
 
-    async def answer(self, req: CollectRequest) -> SupplyBody: ...
+    async def answer(self, req: CollectRequest) -> SupplyBody | None: ...
 
 
 class SourceRegistry:

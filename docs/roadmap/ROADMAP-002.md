@@ -3,7 +3,7 @@ id: ROADMAP-002
 title: 'Phase 1: the pipeline end to end, from files to the AMS'
 description: .xlsb, .xlsx and .csv files to raw, dbt, Cube and enrollment_headcount, answered to the AMS; tested on made-up files
 phase: '1'
-status: Deferred
+status: In Progress
 priority: P0
 tags:
   - warehouse
@@ -45,9 +45,15 @@ related_tasks:
   - id: TASK-005
     name: Define enrollment_headcount in Cube and answer the AMS
     url: /TASKS.md#TASK-005
+  - id: TASK-007
+    name: A read-only database role for Cube
+    url: /TASKS.md#TASK-007
+  - id: TASK-008
+    name: Suppress small cells in answers
+    url: /TASKS.md#TASK-008
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T18:14:30.345Z'
 ---
 # ROADMAP-002 — Phase 1: the pipeline end to end, from files to the AMS
 

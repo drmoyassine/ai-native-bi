@@ -22,6 +22,9 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       TEST_DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      CUBE_TEST_URL: http://localhost:4400
+      CUBE_TEST_SECRET: ci-cube-secret-0123456789abcdefghijkl
+      REQUIRE_CUBE: '1'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -32,4 +35,12 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
+      - name: Start Cube on the test database (tests/test_cube.py)
+        run: |
+          psql "$TEST_DATABASE_ADMIN_URL" -c 'create database bi_cube_test'
+          docker run -d --name cube --network host -v "$PWD/cube:/cube/conf:ro" \
+            -e CUBEJS_DB_TYPE=postgres -e CUBEJS_DB_HOST=localhost -e CUBEJS_DB_NAME=bi_cube_test \
+            -e CUBEJS_DB_USER=postgres -e CUBEJS_DB_PASS=postgres -e CUBEJS_API_SECRET="$CUBE_TEST_SECRET" \
+            -e CUBEJS_DEV_MODE=false -e CUBEJS_CACHE_AND_QUEUE_DRIVER=memory -e PORT=4400 cubejs/cube:v1.8.13
+          timeout 120 sh -c 'until curl -sf localhost:4400/readyz >/dev/null; do sleep 2; done'
       - run: uv run pytest

@@ -2,7 +2,7 @@
 id: TASK-004
 title: Load files into raw and analytics
 description: dlt pipeline for .xlsb, .xlsx and .csv into S3 and the raw schema; dbt models into analytics; tested on made-up files
-status: pending
+status: completed
 priority: P0
 last_updated: '2026-10-26'
 generated:
@@ -31,8 +31,10 @@ related_decisions:
     url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T18:14:30.345Z'
 ---
 # TASK-004 — Load files into raw and analytics
 
 Built and tested on made-up test files (DEC-011). Real exports arrive later through the frontend; they are never committed to the repository.
+
+Done 2026-10-26. `src/bi/ingest.py` keeps each file unchanged (read-only, under its SHA-256) and appends its rows to `raw.<dataset>` as text with their file, row, as-of date and load time; the same file loads once. `src/bi/transform` (dbt) builds `staging.stg_enrollment` (typed; per term, the latest upload replaces the earlier) and `analytics.enrollment` (one row per student and term) with data tests. `python -m bi.main_load` loads and rebuilds. Tested on .xlsx and .csv; .xlsb and .xls are read by the same library (calamine) but not yet tested on a real file.

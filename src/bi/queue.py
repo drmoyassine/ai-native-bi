@@ -11,7 +11,7 @@ from psycopg_pool import AsyncConnectionPool
 from .callback import Ended, Supplied, Unfit, post_supply
 from .contract import CollectRequest
 from .log import log
-from .sources import SourceRegistry
+from .sources import CannotAnswer, SourceRegistry
 
 COLLECT_QUEUE = 'collect'
 COLLECT_TASK = 'collect'
@@ -31,8 +31,9 @@ class CallbackError(Exception):
 
 async def process_collect(deps: CollectDeps, id: str) -> str:
     """Works one request: find a source, ask it, call the AMS back. Outcomes are kept on the row. A request no source can answer is
-    `no_source` and the AMS is NOT called (its run stays requested and its owner sees it; the AMS's own retries ask again). A 401/409
-    from the AMS ends the request (`refused`). A network error raises, so the queue retries it."""
+    `no_source`, and one its source has no data for is `no_data`: the AMS is NOT called (its run stays requested and its owner sees
+    it; the AMS's own retries ask again). A 401/409 from the AMS ends the request (`refused`). A network error raises, so the queue
+    retries it."""
     async with deps.pool.connection() as conn:
         row = await (
             await conn.execute(
@@ -60,7 +61,14 @@ async def process_collect(deps: CollectDeps, id: str) -> str:
         metric = req.query.metric if req.query and req.query.metric else '(none)'
         await end('no_source', f'no source answers metric "{metric}"' + (f' at endpoint "{req.endpoint}"' if req.endpoint else ''))
         return 'no_source'
-    supply = await source.answer(req)
+    try:
+        supply = await source.answer(req)
+    except CannotAnswer as e:
+        await end('no_source', f'{source.name}: {e}')
+        return 'no_source'
+    if supply is None:
+        await end('no_data', f'{source.name} has no data for {req.period.label}')
+        return 'no_data'
     r = await post_supply(deps.client, callback_url, token, supply, deps.callback_timeout_ms)
     if isinstance(r, Supplied):
         await end('supplied', None)

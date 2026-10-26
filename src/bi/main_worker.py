@@ -8,16 +8,22 @@ import httpx
 from psycopg_pool import AsyncConnectionPool
 
 from .config import load_env
+from .cube import CubeClient
 from .log import log
+from .metrics import CubeMetricSource
 from .queue import COLLECT_QUEUE, CollectDeps, create_queue
-from .sources import SourceRegistry
+from .sources import Source, SourceRegistry
 
 
 async def main() -> None:
     env = load_env()
     async with AsyncConnectionPool(env.DATABASE_URL, open=False) as pool, httpx.AsyncClient() as client:
-        # No sources yet: every request ends as no_source until the metric layer registers some (src/bi/sources.py).
-        deps = CollectDeps(pool=pool, sources=SourceRegistry([]), callback_timeout_ms=env.CALLBACK_TIMEOUT_MS, client=client)
+        sources: list[Source] = []
+        if env.CUBE_API_URL and env.CUBE_API_SECRET:
+            sources.append(CubeMetricSource(CubeClient(client, env.CUBE_API_URL, env.CUBE_API_SECRET)))
+        else:
+            log('info', 'no cube configured: every request ends no_source')
+        deps = CollectDeps(pool=pool, sources=SourceRegistry(sources), callback_timeout_ms=env.CALLBACK_TIMEOUT_MS, client=client)
         queue = create_queue(env.DATABASE_URL, deps)
         async with queue.open_async():
             log('info', 'bi worker started', queues=[COLLECT_QUEUE])

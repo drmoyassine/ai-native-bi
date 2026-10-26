@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: stg_enrollment
+    columns:
+      - name: student_id
+        data_tests: [not_null]
+      - name: term_code
+        data_tests: [not_null]
+      - name: term_start
+        data_tests: [not_null]
+  - name: enrollment
+    description: One row per student and term (the current snapshot of each term).
+    data_tests:
+      - unique:
+          column_name: "student_id || '|' || term_code"
+    columns:
+      - name: student_id
+        data_tests: [not_null]
+      - name: term_code
+        data_tests: [not_null]
+      - name: as_of
+        data_tests: [not_null]

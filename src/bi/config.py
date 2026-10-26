@@ -28,6 +28,13 @@ class Env(BaseModel):
     AMS_CALLBACK_ORIGIN: Annotated[str, AfterValidator(origin_of)]
     """The only origin the BI calls back (the AMS's APP_PUBLIC_URL)."""
     CALLBACK_TIMEOUT_MS: Annotated[int, Field(gt=0)] = 30_000
+    CUBE_API_URL: Annotated[str, StringConstraints(min_length=1)] | None = None
+    """Cube's address (e.g. http://cube:4000); without it the worker has no source and every request ends no_source."""
+    CUBE_API_SECRET: Annotated[str, StringConstraints(min_length=32)] | None = None
+    """Cube's CUBEJS_API_SECRET, to sign the worker's tokens (HS256: at least 32 characters)."""
+    RAW_FILES_URL: Annotated[str, StringConstraints(min_length=1)] = 'file:///data/raw-files'
+    """Where loaded files are kept unchanged: a folder (file://) or a bucket (s3://, with S3_ENDPOINT_URL for Garage)."""
+    S3_ENDPOINT_URL: Annotated[str, StringConstraints(min_length=1)] | None = None
 
 
 def load_env(source: Mapping[str, str] | None = None) -> Env:

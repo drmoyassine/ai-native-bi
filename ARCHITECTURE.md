@@ -43,11 +43,18 @@ Cube is its own Node service. Today the code is the AMS adapter, in Python since
 ## Data model
 
 - **Warehouse** ([DEC-005](DECISIONS.md#DEC-005)): PostgreSQL, the BI's own database also when it shares a server with the AMS
-  (AMS DEC-017 and AMS DEC-034), with the schemas `raw` (sources as they are) and `analytics` (conformed, student grain), plus S3 for raw
-  files and documents.
-- **Metric registry**: the Cube model; one definition per KPI, with steward, version and lineage.
-- **AMS requests**: `collect_request` (migration `0001`; the job queue is Procrastinate's schema, migration `0002`), one row per AMS run and attempt, holding the request and its outcome
-  (`queued`, `running`, `supplied`, `no_source`, `refused`, `failed`). The callback token is cleared when the request ends.
+  (AMS DEC-017 and AMS DEC-034):
+  - **files**, kept unchanged under their SHA-256 (`RAW_FILES_URL`: a volume today, a bucket such as Garage later), read-only;
+  - **`raw`** (`src/bi/ingest.py`, dlt): one table per dataset, every cell as text exactly as written, every row with its file
+    (`_bi_file_sha256`, `_bi_file_name`, `_bi_row`), its as-of date and load time. Appended, never changed;
+  - **`staging`** (dbt views, `src/bi/transform`): typed, and the current snapshot: for each term, the latest upload replaces the
+    earlier ones;
+  - **`analytics`** (dbt tables): conformed, at student grain (`analytics.enrollment`: one row per student and term), with dbt tests.
+- **Metric registry**: the Cube model (`cube/model`); one definition per KPI, with steward, version and lineage. The worker's source
+  maps the AMS's metric names onto it (`src/bi/metrics.py`).
+- **AMS requests**: `collect_request` (migration `0001`; the job queue is Procrastinate's schema, migration `0002`), one row per AMS
+  run and attempt, holding the request and its outcome (`queued`, `running`, `supplied`, `no_source`, `no_data`, `refused`, `failed`).
+  The callback token is cleared when the request ends.
 
 ## Key patterns
 

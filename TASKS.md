@@ -178,7 +178,7 @@ modified:
 id: TASK-004
 title: Load files into raw and analytics
 description: dlt pipeline for .xlsb, .xlsx and .csv into S3 and the raw schema; dbt models into analytics; tested on made-up files
-status: pending
+status: completed
 priority: P0
 last_updated: '2026-10-26'
 generated:
@@ -207,10 +207,12 @@ related_decisions:
     url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T18:14:30.345Z'
 ---
 
 Built and tested on made-up test files (DEC-011). Real exports arrive later through the frontend; they are never committed to the repository.
+
+Done 2026-10-26. `src/bi/ingest.py` keeps each file unchanged (read-only, under its SHA-256) and appends its rows to `raw.<dataset>` as text with their file, row, as-of date and load time; the same file loads once. `src/bi/transform` (dbt) builds `staging.stg_enrollment` (typed; per term, the latest upload replaces the earlier) and `analytics.enrollment` (one row per student and term) with data tests. `python -m bi.main_load` loads and rebuilds. Tested on .xlsx and .csv; .xlsb and .xls are read by the same library (calamine) but not yet tested on a real file.
 
 ---
 
@@ -220,7 +222,7 @@ Built and tested on made-up test files (DEC-011). Real exports arrive later thro
 id: TASK-005
 title: Define enrollment_headcount in Cube and answer the AMS
 description: The Cube model, and a source in the collect worker that queries Cube and supplies rows, asOf and lineage
-status: pending
+status: completed
 priority: P0
 last_updated: '2026-10-26'
 generated:
@@ -240,8 +242,10 @@ related_decisions:
     url: /DECISIONS.md#DEC-004
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T18:14:30.345Z'
 ---
+
+Done 2026-10-26. `cube/model/cubes/enrollment.yml` (headcount, as-of date, dimensions program, level, status, term); `src/bi/metrics.py` maps `enrollment_headcount` onto it, turns the run's period, dimensions and filters into a Cube query, and answers rows in the item's columns with asOf and lineage. A shape the metric does not have is `no_source` with the reason; no data for the period is `no_data` (migration 0003); neither calls the AMS. Tested end to end against a real Cube (tests/test_cube.py) and in Docker Compose.
 
 ---
 
@@ -269,5 +273,67 @@ modified:
   by: agent/claude-code
   at: '2026-10-26T13:38:53.482Z'
 ---
+
+---
+
+## TASK-007 — A read-only database role for Cube
+
+---
+id: TASK-007
+title: A read-only database role for Cube
+description: Cube connects as the BI's owner role today; give it a role that can only read analytics
+status: pending
+priority: P1
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T18:14:30.345Z'
+roadmap_item:
+  id: ROADMAP-002
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
+  url: /ROADMAP.md#ROADMAP-002
+related_decisions:
+  - id: DEC-004
+    name: Cube is the governed layer and the only read path for KPIs
+    url: /DECISIONS.md#DEC-004
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T18:14:30.345Z'
+---
+
+Cube's model only reads analytics, but its database role can read raw too. A role with SELECT on analytics only makes rule 5 hold in the database, not only in the model. Roles are server-level: created with the database (ensure_database) or by the deployment.
+
+---
+
+## TASK-008 — Suppress small cells in answers
+
+---
+id: TASK-008
+title: Suppress small cells in answers
+description: Hide counts under the threshold of TASK-002 in Cube answers, and mark them as the contract says
+status: pending
+priority: P0
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T18:14:30.345Z'
+roadmap_item:
+  id: ROADMAP-002
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
+  url: /ROADMAP.md#ROADMAP-002
+depends_on:
+  - id: TASK-002
+    name: Settle the privacy rules for student data
+    url: /TASKS.md#TASK-002
+related_decisions:
+  - id: DEC-011
+    name: Phase 1 on test files; real data through the frontend
+    url: /DECISIONS.md#DEC-011
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T18:14:30.345Z'
+---
+
+Needed before real student data answers anyone: the threshold and the marking come from TASK-002 (contract 3.7 says null with a flag).
 
 <!-- End VEF generated items. -->

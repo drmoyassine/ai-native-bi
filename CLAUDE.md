@@ -50,4 +50,5 @@ uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy &&
 pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
 ```
 
-Tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default `postgres://postgres:postgres@localhost:5432/postgres`.
+Tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default `postgres://postgres:postgres@localhost:5432/postgres`. `tests/test_cube.py`
+also needs Cube reading the database `bi_cube_test` (`CUBE_TEST_URL`, `CUBE_TEST_SECRET`; CI starts it, see `.github/workflows/ci.yml`).
