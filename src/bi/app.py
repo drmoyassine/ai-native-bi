@@ -7,16 +7,17 @@ site cannot send without the BI's consent (no CORS is allowed), so a forged form
 import datetime as dt
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from importlib import resources
 from typing import Annotated, Any
 
-import yaml
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
 from . import accounts, uploads
 from .accounts import User
+from .agent.catalog import datasets
+from .agent.routes import AgentContext, create_agent_router
+from .agent.suppress import count_measures, suppress_rows
 from .charts import ChartDefinition, cube_query, unknown_members
 from .cube import CubeClient, CubeError
 from .ingest import DATASET
@@ -33,12 +34,8 @@ class AppContext:
     enqueue_load: Callable[[str], Awaitable[None]]
     cube: CubeClient | None
     cookie_secure: bool = True
-
-
-def datasets() -> list[str]:
-    """The datasets the transforms know (the raw sources of the dbt project): what an upload can be."""
-    text = (resources.files('bi') / 'transform' / 'models' / 'sources.yml').read_text('utf-8')
-    return sorted(t['name'] for s in yaml.safe_load(text)['sources'] if s['name'] == 'raw' for t in s['tables'])
+    agent: AgentContext | None = None
+    """The agent's chat and admin routes (ROADMAP-003); None leaves them out."""
 
 
 class SignIn(BaseModel):
@@ -127,8 +124,7 @@ def create_router(ctx: AppContext) -> APIRouter:
         except CubeError as e:
             raise HTTPException(502, str(e)) from e
 
-    @router.post('/charts/data')
-    async def chart_data(chart: ChartDefinition, user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:
+    async def chart_rows(chart: ChartDefinition, client: CubeClient) -> list[dict[str, Any]]:
         """The rows of a chart definition, from Cube; time members come back under their own name (not name.granularity)."""
         try:
             unknown = unknown_members(chart, await client.meta())
@@ -143,6 +139,34 @@ def create_router(ctx: AppContext) -> APIRouter:
             for r in rows:
                 if key in r:
                     r[time.dimension] = r.pop(key)
-        return {'rows': rows}
+        return rows
 
+    @router.post('/charts/data')
+    async def chart_data(chart: ChartDefinition, user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:
+        return {'rows': await chart_rows(chart, client)}
+
+    if ctx.agent is not None:
+        threshold = ctx.agent.suppression_threshold
+
+        @router.get('/drafts/{draft_id}/data')
+        async def draft_data(draft_id: str, user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:
+            """The rows of a draft chart the agent proposed, with small counts hidden as in the agent's own answers (DEC-017): the chat
+            shows nothing the model was not allowed to see. Only its owner can read it."""
+            async with ctx.pool.connection() as conn:
+                row = await (
+                    await conn.execute('select definition from draft where id::text = %s and owner_id = %s', [draft_id, user.id])
+                ).fetchone()
+            if row is None:
+                raise HTTPException(404, 'no such draft')
+            chart = ChartDefinition.model_validate(row[0])
+            rows = await chart_rows(chart, client)
+            try:
+                counts = count_measures(await client.meta())
+            except CubeError as e:
+                raise HTTPException(502, str(e)) from e
+            shown, hidden = suppress_rows(rows, chart.query.measures, counts, threshold)
+            return {'rows': shown, 'suppressed_cells': hidden}
+
+    if ctx.agent is not None:
+        router.include_router(create_agent_router(ctx.agent, current_user))
     return router

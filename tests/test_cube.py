@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import json
 from collections.abc import AsyncIterator
@@ -104,3 +105,35 @@ async def test_a_period_without_data_is_no_supply(pool: AsyncConnectionPool, cub
     )
     assert outcome == 'no_data'
     assert calls == []
+
+
+async def test_the_agents_tools_work_on_the_real_cube(pool: AsyncConnectionPool, cube_env: tuple[str, str]) -> None:
+    """Count measures come from Cube's own `aggType`, so small-cell hiding works on the real metadata; the as-of date rides along."""
+    from bi.agent.suppress import count_measures
+    from bi.agent.tools import AgentDeps, query_metric
+    from bi.charts import ChartQuery
+
+    async with httpx.AsyncClient() as http:
+        cube = CubeClient(http, *cube_env)
+        members = await cube.meta()
+        assert 'enrollment.headcount' in count_measures(members) and 'enrollment.as_of' not in count_measures(members)
+
+        class Ctx:  # the part of Pydantic AI's RunContext the tool reads
+            deps = AgentDeps(
+                pool=pool,
+                cube=cube,
+                user_id='u',
+                conversation_id='c',
+                run_id='r',
+                suppression_threshold=2,
+                emit=lambda t, p: asyncio.sleep(0),
+            )
+
+        query = ChartQuery.model_validate({'measures': ['enrollment.headcount'], 'dimensions': ['enrollment.program']})
+        result = await query_metric(Ctx(), query)  # type: ignore[arg-type]
+    rows = {r['enrollment.program']: r for r in result['rows']}
+    assert rows['BSME']['enrollment.headcount'] == 2 and result['as_of'] == '2026-10-20'
+    assert rows['BSCE']['enrollment.headcount'] is None and rows['BSCE']['suppressed'] == [
+        'enrollment.headcount'
+    ]  # one student: under the threshold of 2
+    assert result['suppressed_cells'] >= 1 and 'enrollment.as_of' not in str(result['rows'])

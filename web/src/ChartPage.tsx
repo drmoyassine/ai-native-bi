@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
-import { label, number, toEcharts, type ChartDefinition, type ChartType, type GovernedMember, type Row } from './chart';
-import { EChart } from './EChart';
+import type { ChartDefinition, ChartType, GovernedMember, Row } from './chart';
+import { ChartView } from './ChartView';
 
 const TYPES: ChartType[] = ['bar', 'line', 'pie', 'table', 'number'];
 
@@ -51,9 +51,6 @@ export function ChartPage() {
       .catch((err: Error) => setError(err.message));
   }, [definition]);
 
-  const option = definition && rows ? toEcharts(definition, rows, members) : null;
-  const first = definition?.query.measures[0] ?? '';
-
   return (
     <section>
       <h2>Chart</h2>
@@ -93,38 +90,7 @@ export function ChartPage() {
       {rows && rows.length === 0 && <p className="hint">No data: nothing has been loaded for this yet.</p>}
       {definition && rows && rows.length > 0 && (
         <div className="card">
-          {option && <EChart option={option} />}
-          {type === 'number' && (
-            <figure className="number">
-              <figcaption>{definition.title}</figcaption>
-              <strong>{number(rows[0]?.[first])?.toLocaleString() ?? '—'}</strong>
-            </figure>
-          )}
-          {type === 'table' && (
-            <table>
-              <thead>
-                <tr>
-                  {[...(definition.query.dimensions ?? []), ...definition.query.measures].map((m) => (
-                    <th key={m}>{members.find((x) => x.name === m)?.title ?? m}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i}>
-                    {(definition.query.dimensions ?? []).map((d) => (
-                      <td key={d}>{label(r[d])}</td>
-                    ))}
-                    {definition.query.measures.map((m) => (
-                      <td key={m} className="num">
-                        {number(r[m])?.toLocaleString() ?? ''}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <ChartView definition={definition} rows={rows} members={members} />
         </div>
       )}
       {definition && (

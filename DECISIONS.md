@@ -669,4 +669,285 @@ modified:
 
 Decided with Mohamad Yassine on 2026-10-26 (the app shell first, before the agent).
 
+---
+
+## DEC-015 — The agent runs on Pydantic AI in a worker job; the API never calls a model
+
+---
+id: DEC-015
+title: The agent runs on Pydantic AI in a worker job; the API never calls a model
+status: accepted
+context: >-
+  The agent needs a loop that works with several model providers and keeps every tool under our control
+  (docs/agent-spec.md).
+decision: >-
+  The agent's loop is Pydantic AI (pinned version), driven step by step in a Procrastinate job per user message, one
+  turn at a time per conversation. The API stores the message, queues the turn and streams events from PostgreSQL over
+  server-sent events; it never calls a model.
+rationale: >-
+  Provider-neutral, in our stack, with every tool checked against the person's permissions and the privacy and approval
+  rules; turns survive a closed browser.
+consequences: >-
+  Pydantic AI moves fast: pin it and keep a contract test per provider in use that replays a multi-turn conversation
+  with tools.
+tags:
+  - agent
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+related_vision:
+  - id: agent-built-bi
+    name: An agent builds the BI
+    url: /VISION.md#agent-built-bi
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-006
+    name: A person approves what the agent builds
+    url: /DECISIONS.md#DEC-006
+related_tasks:
+  - id: TASK-012
+    name: 'Agent step 2a: ask questions, get charts'
+    url: /TASKS.md#TASK-012
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+---
+
+---
+
+## DEC-016 — Five model providers, configured in the app, models fetched automatically
+
+---
+id: DEC-016
+title: Five model providers, configured in the app, models fetched automatically
+status: accepted
+context: The institution wants to choose the model provider and not be tied to one.
+decision: >-
+  Anthropic, OpenAI, any OpenAI-compatible server, OpenRouter and Ollama, configured in the app by an admin with keys in
+  the secret store. Each provider's model list is fetched automatically (on save, every 6 hours, on demand); only models
+  that can call tools are offered; an admin allows models per mode (ask, build) and sets defaults; a conversation is
+  pinned to the model it started with. The selector shows each model's data path.
+rationale: >-
+  Choice of provider and where data goes is the institution's decision, and the best model per job is found by
+  evaluation, not assumed.
+consequences: >-
+  Tool support not stated by a provider's list is settled by a test call. A model that disappears from its provider's
+  list is marked unavailable, never replaced silently.
+tags:
+  - agent
+  - providers
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-015
+    name: The agent runs on Pydantic AI in a worker job; the API never calls a model
+    url: /DECISIONS.md#DEC-015
+related_tasks:
+  - id: TASK-012
+    name: 'Agent step 2a: ask questions, get charts'
+    url: /TASKS.md#TASK-012
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+---
+
+---
+
+## DEC-017 — The model sees schemas, profiles and suppressed aggregates, never rows
+
+---
+id: DEC-017
+title: The model sees schemas, profiles and suppressed aggregates, never rows
+status: accepted
+context: Every model provider is outside the BI, so what reaches it has left the institution.
+decision: >-
+  Tools return column names and types, null rates, distinct counts, ranges, value formats described as patterns, and
+  aggregates from Cube with small cells suppressed; never a row about a person, identifiers, free text or credentials,
+  whatever the provider. This holds in the tools, not the prompt. Sandbox output passes the same scrubber.
+rationale: >-
+  Rule 5 (nothing student-level leaves the BI) covers the model provider; enforcing it in tools makes it independent of
+  the model.
+consequences: >-
+  The suppression threshold (TASK-002) must be set before real data is used with the agent. Providers are allowed
+  explicitly before real data (ROADMAP-008); OpenRouter is for trying models on test data only.
+tags:
+  - agent
+  - privacy
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+  - id: ROADMAP-008
+    name: First real data
+    url: /ROADMAP.md#ROADMAP-008
+related_decisions:
+  - id: DEC-005
+    name: 'Warehouse: raw and analytics on PostgreSQL, raw files on S3'
+    url: /DECISIONS.md#DEC-005
+  - id: DEC-008
+    name: First slice from real file exports; Banner through the agent
+    url: /DECISIONS.md#DEC-008
+related_tasks:
+  - id: TASK-012
+    name: 'Agent step 2a: ask questions, get charts'
+    url: /TASKS.md#TASK-012
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+---
+
+---
+
+## DEC-018 — Conversations are append-only; events go through PostgreSQL and SSE
+
+---
+id: DEC-018
+title: Conversations are append-only; events go through PostgreSQL and SSE
+status: accepted
+context: >-
+  Some models (Claude Opus 5.5) tie their reasoning to the exact history that produced it, and turns must survive a
+  closed tab.
+decision: >-
+  A conversation's messages are stored as Pydantic AI messages and are never edited or deleted (forgetting archives the
+  conversation). Each turn writes events to agent_event and notifies listeners; the chat reads them over server-sent
+  events and resumes from the last event id.
+rationale: Replay stays valid on every provider, and the chat needs no second message system.
+consequences: Events are kept 30 days. Compaction and clearing old tool results happen in the request, never in storage.
+tags:
+  - agent
+  - chat
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-015
+    name: The agent runs on Pydantic AI in a worker job; the API never calls a model
+    url: /DECISIONS.md#DEC-015
+related_tasks:
+  - id: TASK-012
+    name: 'Agent step 2a: ask questions, get charts'
+    url: /TASKS.md#TASK-012
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+---
+
+---
+
+## DEC-019 — Agent work is approved outside the chat, by the data's steward
+
+---
+id: DEC-019
+title: Agent work is approved outside the chat, by the data's steward
+status: accepted
+context: DEC-006 requires a person to approve what the agent builds.
+decision: >-
+  Approvals happen on their own page, never through a chat message. The steward of the data (the registrar for
+  enrollment) approves integrations and KPIs on their data; a BI admin approves what touches the platform (a new source
+  system, credentials, network access); whoever asked for a draft never approves it; until stewards are named an admin
+  acts for them. Approved integrations are versioned immutable bundles in the BI's database, materialized at deploy.
+rationale: >-
+  A chat message can be forged by anything the agent reads; an approval page cannot. Bundles in the database need no git
+  repository, credentials or CI of their own.
+consequences: Built in step 2b. An export to git can come later for review.
+tags:
+  - agent
+  - approval
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-006
+    name: A person approves what the agent builds
+    url: /DECISIONS.md#DEC-006
+  - id: DEC-013
+    name: 'Charts and dashboards: private drafts, approved to publish'
+    url: /DECISIONS.md#DEC-013
+related_tasks:
+  - id: TASK-013
+    name: 'Agent step 2b: build an integration from an uploaded file'
+    url: /TASKS.md#TASK-013
+  - id: TASK-014
+    name: 'Agent step 2c: connect a source system (Banner)'
+    url: /TASKS.md#TASK-014
+  - id: TASK-015
+    name: 'Agent step 2d: define a KPI'
+    url: /TASKS.md#TASK-015
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+---
+
+---
+
+## DEC-020 — Secrets in an encrypted table behind a small interface; budgets; language
+
+---
+id: DEC-020
+title: Secrets in an encrypted table behind a small interface; budgets; language
+status: accepted
+context: The agent needs provider keys and, later, source credentials; cost and language need rules.
+decision: >-
+  Secrets live in an encrypted table (AES-GCM, key BI_SECRETS_KEY made by make_env.py) behind a secret-store interface
+  the institution's vault can replace; the agent never sees a value, only a handle. A hard monthly token cap for the
+  institution, a soft share per person adjustable by an admin, per-turn limits, spend shown in the app. The agent
+  answers in the asker's language (Arabic included); the app's CSS is direction-neutral from now, right-to-left layout
+  and Arabic labels follow as their own task.
+rationale: Simple now, replaceable later; no surprise bills; the institution works in Arabic and English.
+consequences: Provider keys and source credentials share the store; source accounts should be read-only.
+tags:
+  - agent
+  - secrets
+  - budget
+last_updated: '2026-10-26'
+generated:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-006
+    name: A person approves what the agent builds
+    url: /DECISIONS.md#DEC-006
+  - id: DEC-015
+    name: The agent runs on Pydantic AI in a worker job; the API never calls a model
+    url: /DECISIONS.md#DEC-015
+related_tasks:
+  - id: TASK-012
+    name: 'Agent step 2a: ask questions, get charts'
+    url: /TASKS.md#TASK-012
+  - id: TASK-014
+    name: 'Agent step 2c: connect a source system (Banner)'
+    url: /TASKS.md#TASK-014
+modified:
+  by: agent/claude-code
+  at: '2026-10-26T22:07:12.855Z'
+---
+
 <!-- End VEF generated items. -->

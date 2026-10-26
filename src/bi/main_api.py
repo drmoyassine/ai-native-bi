@@ -8,13 +8,15 @@ import httpx
 import uvicorn
 from psycopg_pool import AsyncConnectionPool
 
+from .agent.routes import AgentContext
+from .agent.secrets import DbSecretStore
 from .api import AppDeps, create_app
 from .app import AppContext
 from .config import load_env, storage
 from .cube import CubeClient
 from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
-from .queue import create_queue, enqueue_collect, enqueue_load
+from .queue import create_queue, enqueue_collect, enqueue_load, enqueue_turn
 
 
 async def main() -> None:
@@ -33,12 +35,23 @@ async def main() -> None:
         queue = create_queue(env.DATABASE_URL)
         async with queue.open_async(), httpx.AsyncClient() as http:
             cube = CubeClient(http, env.CUBE_API_URL, env.CUBE_API_SECRET) if env.CUBE_API_URL and env.CUBE_API_SECRET else None
+            secrets = DbSecretStore(pool, env.BI_SECRETS_KEY) if env.BI_SECRETS_KEY else None
             context = AppContext(
                 pool=pool,
                 storage=storage(env),
                 enqueue_load=lambda id: enqueue_load(queue, id),
                 cube=cube,
                 cookie_secure=env.APP_COOKIE_SECURE,
+                agent=AgentContext(
+                    pool=pool,
+                    database_url=env.DATABASE_URL,
+                    secrets=secrets,
+                    http=http,
+                    enqueue_turn=lambda run_id, conversation_id: enqueue_turn(queue, run_id, conversation_id),
+                    institution_monthly_tokens=env.AGENT_INSTITUTION_MONTHLY_TOKENS,
+                    person_monthly_tokens=env.AGENT_PERSON_MONTHLY_TOKENS,
+                    suppression_threshold=env.SUPPRESSION_THRESHOLD,
+                ),
             )
             deps = AppDeps(
                 pool=pool,

@@ -14,6 +14,22 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-26 — Agent step 2a: ask questions, get charts
+
+TASK-012 (DEC-015 to DEC-020): the agent answers questions in a chat. Pydantic AI 2.61 runs the loop in a worker job; five provider
+kinds (Anthropic, OpenAI, OpenAI-compatible, OpenRouter, Ollama) are configured on an admin page with their model lists fetched and
+each model tested for tool calls; keys are AES-GCM encrypted in the BI's database (`BI_SECRETS_KEY`); the chat streams over SSE from
+PostgreSQL; the model's tools return schemas, profiles and aggregates with small counts hidden, never rows. Learned on the way:
+Pydantic AI's `FunctionModel` needs a stream function to exercise the streaming path, consecutive `ModelRequest`s are merged and a run
+can start from a stored user message, so every turn's end must leave valid history (`seal()` answers unfinished tool calls); tool
+results arrive on `FunctionToolResultEvent.part`; a run's final status and final event must be written in one transaction or the SSE
+stream can end before its last event; FastAPI route modules cannot use `from __future__ import annotations` with these dependencies;
+input tokens accumulate over a loop (each request resends the history), so a turn's output limit is the real bound. A chart the agent
+proposes first drew small counts that its table had hidden, because it used the chart page's unsuppressed route: caught in the
+browser walk-through, fixed with a draft data route that hides them, and tested. Not yet verified: any live provider (Anthropic cache
+and thinking settings, OpenRouter, Ollama); only a fake OpenAI-protocol server over real HTTP and scripted models. Next: 2b (the build
+sandbox and approvals page, TASK-013).
+
 ## 2026-10-26 — The app shell
 
 Phase 1 merged (#5). `scripts/make_env.py` makes `.env` with every secret generated. The app shell (ROADMAP-009, DEC-014): the

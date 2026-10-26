@@ -76,13 +76,23 @@ The agent is how people use the BI. In a chat, a user asks it to:
 - **Define a KPI.** It writes the transform and the Cube definition, shows the result and its lineage, and waits for approval.
 - **Build a dashboard.** Generative UI: it composes the dashboard from governed KPIs; the user then configures it.
 
+Built so far (step 2a, [TASK-012](TASKS.md#TASK-012); the full design is `docs/agent-spec.md`): **asking**. A person asks in the chat
+and the agent answers from the governed metrics with tables and proposed charts; it cannot yet build anything. The loop (Pydantic
+AI, [DEC-015](DECISIONS.md#DEC-015)) runs in a worker job, never in the API; the API stores the message, queues the turn and streams
+the turn's events to the browser over SSE from PostgreSQL ([DEC-018](DECISIONS.md#DEC-018)). The model is one of five provider
+kinds an admin configures in the app, with its model list fetched from the provider ([DEC-016](DECISIONS.md#DEC-016)); keys are
+kept encrypted in the BI's own database ([DEC-020](DECISIONS.md#DEC-020)). The model never sees rows: its tools return schemas,
+profiles and aggregates with small counts hidden ([DEC-017](DECISIONS.md#DEC-017)), and a chart it proposes is drawn from the same
+hidden-small-counts read (`/app/api/drafts/<id>/data`), so the chat shows nothing the model was not allowed to see.
+
 ### The app
 
 The web app (`web/`, [DEC-014](DECISIONS.md#DEC-014)) is a React single-page app built into the API image and served at `/`; its
 API is `/app/api`. People sign in with the BI's own accounts (single sign-on later, [ROADMAP-005](ROADMAP.md#ROADMAP-005)); a
 session is an HttpOnly, SameSite=Strict cookie, and every write also carries `X-BI-App: 1`. An upload is kept under
 `incoming/`, then the worker's `load` job loads it and rebuilds analytics, and the app shows its status, rows and dbt tests. The
-chart page builds a chart definition from Cube's governed members and draws its rows ([ROADMAP-009](ROADMAP.md#ROADMAP-009)).
+chart page builds a chart definition from Cube's governed members and draws its rows ([ROADMAP-009](ROADMAP.md#ROADMAP-009)). The
+chat (Ask) and, for admins, the Models page (providers, keys, which models people may use) belong to the agent above.
 
 ### Charts and dashboards
 

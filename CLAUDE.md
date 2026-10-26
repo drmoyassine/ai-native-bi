@@ -25,6 +25,14 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
    pytest, ruff, mypy strict, structured JSON logs. The web app (web/, DEC-014): React, TypeScript strict, Vite, ECharts, Vitest;
    charts are chart definitions (DEC-012), drawn only by `web/src/chart.ts`. Node builds the web app and runs VEF, nothing else.
 
+## The agent (ROADMAP-003)
+
+`src/bi/agent/` is the agent (spec: `docs/agent-spec.md`, decisions DEC-015 to DEC-020). The loop runs in the worker (`agent_turn` job),
+never in the API; the model sees no rows (tools return schemas, profiles and aggregates with small counts hidden, `suppress.py`); a
+chart it proposes is read through `/app/api/drafts/<id>/data`, which hides them too. Providers, keys and models are configured in the
+app; keys live in the `secret` table, encrypted with `BI_SECRETS_KEY`. Tests need no model: they use scripted models and
+`tests/fake_openai.py` (an OpenAI-protocol server over real HTTP). Do not add a tool that returns rows about people.
+
 ## Project memory (VEF)
 
 Vision, roadmap, tasks and decisions live in `docs/vision/`, `docs/roadmap/`, `docs/tasks/` and `docs/decisions/`, managed by
@@ -48,7 +56,7 @@ The two repositories talk through GitHub Issues, bridged by `.github/workflows/i
 
 ```bash
 uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
-pnpm install && pnpm exec vef check                                                              # project memory (VEF)
+pnpm install && pnpm --filter bi-web typecheck && pnpm --filter bi-web test && pnpm exec vef check                                                              # project memory (VEF)
 pnpm --filter bi-web typecheck && pnpm --filter bi-web test && pnpm --filter bi-web build      # the web app (web/)
 ```
 

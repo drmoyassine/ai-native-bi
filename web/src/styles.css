@@ -44,8 +44,8 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 .login form { width: min(360px, 100%); display: flex; flex-direction: column; gap: 12px; }
 .upload, .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
 table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.9rem; }
-th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-td.num { text-align: right; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num { font-variant-numeric: tabular-nums; }
 .status { font-weight: 600; }
 .status.loaded { color: var(--ok); }
 .status.failed { color: var(--error); }
@@ -57,3 +57,31 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .number strong { display: block; font-size: 3rem; font-variant-numeric: tabular-nums; }
 details { margin-top: 16px; }
 pre { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow: auto; font-size: 0.8rem; }
+/* Logical properties (start/end, inline/block) so a right-to-left language needs no restyling. */
+th, td { text-align: start; }
+td.num { text-align: end; }
+main.wide { max-inline-size: 1280px; }
+.chat { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; }
+.chat aside { display: flex; flex-direction: column; gap: 8px; }
+.chat aside ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.chat aside button { inline-size: 100%; text-align: start; border: none; background: none; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat aside button.active { color: var(--fg); background: var(--card); font-weight: 600; box-shadow: inset 2px 0 0 var(--accent); }
+.thread-pane { min-inline-size: 0; }
+.thread { display: flex; flex-direction: column; gap: 10px; min-block-size: 40vh; max-block-size: 65vh; overflow-y: auto; padding-block-end: 8px; }
+.bubble { margin: 0; padding: 10px 14px; border-radius: 10px; max-inline-size: 85%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble.user { align-self: flex-end; background: var(--accent); color: #fff; }
+.bubble.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--line); }
+.tool { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.tool.failed { color: var(--error); }
+.result { max-inline-size: 100%; overflow-x: auto; }
+.composer { display: flex; gap: 8px; margin-block-start: 12px; align-items: flex-end; }
+.composer textarea { flex: 1; font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); resize: vertical; }
+.composer button { background: var(--accent); color: #fff; border-color: var(--accent); }
+.usage { margin-block: 6px 0; }
+.new-chat { max-inline-size: 520px; display: flex; flex-direction: column; gap: 12px; }
+.new-chat h2 { margin: 0; }
+.provider { margin-block-start: 12px; }
+.provider-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+tr.gone { opacity: 0.55; }
+@media (max-width: 720px) { .chat { grid-template-columns: 1fr; } }
+.thread > * { flex-shrink: 0; }
