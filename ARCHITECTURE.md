@@ -111,7 +111,8 @@ first: see `docs/ams-contract-proposals.md` ([TASK-006](TASKS.md#TASK-006)).
 - **Privacy:** nothing student-level leaves the BI; consumers get aggregates with small cells suppressed. The rules (regulator,
   threshold, how a suppressed cell is marked) are open: [TASK-002](TASKS.md#TASK-002), before the first real upload. Real exports
   arrive through the frontend and are never committed to the repository ([DEC-011](DECISIONS.md#DEC-011)).
-- **Security:** row-level security in Cube. The AMS calls with `BI_API_KEY`; the BI calls back only the run's own supply route on
+- **Security:** row-level security in Cube; Cube's own database role reads `analytics` only, never `raw` or `staging`
+  ([TASK-007](TASKS.md#TASK-007)). The AMS calls with `BI_API_KEY`; the BI calls back only the run's own supply route on
   `AMS_CALLBACK_ORIGIN`, never follows a redirect, and forgets the token when the request ends.
 - **Authentication:** the BI's own accounts first, the institution's single sign-on later ([ROADMAP-005](ROADMAP.md#ROADMAP-005)).
 - **Observability:** structured JSON logs.

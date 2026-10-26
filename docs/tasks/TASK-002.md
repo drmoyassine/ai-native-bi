@@ -10,10 +10,6 @@ last_updated: '2026-10-26'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
-roadmap_item:
-  id: ROADMAP-002
-  name: 'Phase 1: the pipeline end to end, from files to the AMS'
-  url: /ROADMAP.md#ROADMAP-002
 related_decisions:
   - id: DEC-005
     name: 'Warehouse: raw and analytics on PostgreSQL, raw files on S3'
@@ -26,7 +22,11 @@ related_decisions:
     url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-26T21:22:32.764Z'
+roadmap_item:
+  id: ROADMAP-008
+  name: First real data
+  url: /ROADMAP.md#ROADMAP-008
 ---
 # TASK-002 — Settle the privacy rules for student data
 

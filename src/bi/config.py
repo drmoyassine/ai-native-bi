@@ -32,6 +32,10 @@ class Env(BaseModel):
     """Cube's address (e.g. http://cube:4000); without it the worker has no source and every request ends no_source."""
     CUBE_API_SECRET: Annotated[str, StringConstraints(min_length=32)] | None = None
     """Cube's CUBEJS_API_SECRET, to sign the worker's tokens (HS256: at least 32 characters)."""
+    CUBE_DB_USER: Annotated[str, StringConstraints(pattern=r'^[a-z_][a-z0-9_]{0,62}$')] = 'bi_cube'
+    """The database role Cube connects as: it may read analytics only (TASK-007)."""
+    CUBE_DB_PASSWORD: Annotated[str, StringConstraints(min_length=16)] | None = None
+    """Its password. When set, the API creates the role at start (with BI_DATABASE_ADMIN_URL) and grants it analytics."""
     RAW_FILES_URL: Annotated[str, StringConstraints(min_length=1)] = 'file:///data/raw-files'
     """Where loaded files are kept unchanged: a folder (file://) or a bucket (s3://, with S3_ENDPOINT_URL for Garage)."""
     S3_ENDPOINT_URL: Annotated[str, StringConstraints(min_length=1)] | None = None

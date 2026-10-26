@@ -14,6 +14,13 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-26 — Phase 1 closed
+
+Pull request #4 merged (phases 0 and 1). Cube now connects as its own role, which reads `analytics` only (TASK-007): rule 5 holds
+in the database, not only in Cube's model. Learned: in compose, Cube must wait for the API (which creates and grants its role) and the
+worker for Cube's readiness (`/readyz`), or the first queries fail while Cube starts. The privacy rules and small-cell suppression
+(TASK-002, TASK-008) now sit under ROADMAP-008 "First real data": they gate real data, not the pipeline.
+
 ## 2026-10-26 — Phase 1: the pipeline end to end, on made-up files
 
 A file now goes all the way: raw (dlt, cells as text, the file kept unchanged), dbt (staging, analytics, data tests), Cube

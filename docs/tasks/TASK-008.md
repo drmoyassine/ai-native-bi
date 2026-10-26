@@ -8,10 +8,6 @@ last_updated: '2026-10-26'
 generated:
   by: agent/claude-code
   at: '2026-10-26T18:14:30.345Z'
-roadmap_item:
-  id: ROADMAP-002
-  name: 'Phase 1: the pipeline end to end, from files to the AMS'
-  url: /ROADMAP.md#ROADMAP-002
 depends_on:
   - id: TASK-002
     name: Settle the privacy rules for student data
@@ -22,7 +18,11 @@ related_decisions:
     url: /DECISIONS.md#DEC-011
 modified:
   by: agent/claude-code
-  at: '2026-10-26T18:14:30.345Z'
+  at: '2026-10-26T21:22:32.764Z'
+roadmap_item:
+  id: ROADMAP-008
+  name: First real data
+  url: /ROADMAP.md#ROADMAP-008
 ---
 # TASK-008 — Suppress small cells in answers
 
