@@ -14,6 +14,13 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-26 — Phase 0: the scaffold runs on Python
+
+ROADMAP-001 done (TASK-001, DEC-003). The AMS adapter is now `src/bi`: FastAPI, Pydantic, Procrastinate, httpx, psycopg, with the
+same behaviour as the TypeScript scaffold, which was removed. Learned on the way: a supply must leave out absent fields rather than send
+`null` (the AMS's schema refuses null for optional fields), so `SupplyBody.wire()` drops top-level None and keeps null cells. Node
+stays only for VEF.
+
 ## 2026-10-26 — Product direction recorded
 
 Recorded the product as an AI-native BI platform that works on its own and with the AMS, from the Institutional Effectiveness Data

@@ -6,7 +6,7 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
 
 ## Rules
 
-1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `packages/contract` mirrors the AMS's
+1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `src/bi/contract.py` mirrors the AMS's
    `packages/shared/src/collection.ts`. Change the AMS first, then mirror it here. Never add a field the AMS does not know. Changes
    the BI needs are listed in `docs/ams-contract-proposals.md`.
 2. **Separate products, separate storage** (AMS DEC-017 and AMS DEC-034). The BI has its own database, even when it shares the AMS's
@@ -18,9 +18,9 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
    the `raw` or `analytics` tables. Queries are structured, never SQL. Nothing student-level leaves the BI.
 6. **A person approves what the agent builds.** An integration, a KPI or a dashboard is not live until approved. The agent's code
    runs in a sandbox, credentials live in the secret store (never in code, the repository or logs), and access to sources is read-only.
-7. Stack: Python (target, from phase 0): FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for
-   integrations, SQL transforms, Cube for the metric layer, forward-only SQL migrations, pytest, structured JSON logs. The current
-   scaffold is still TypeScript (Hono, Zod, pg-boss, Vitest) until phase 0 ports it.
+7. Stack (DEC-003): Python 3.12, FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for integrations,
+   SQL transforms, Cube for the metric layer, forward-only SQL migrations in `src/bi/migrations` (never edit an applied one),
+   pytest, ruff, mypy strict, structured JSON logs. Node is only for VEF.
 
 ## Project memory (VEF)
 
@@ -30,5 +30,9 @@ vibe-engineering-framework (see `AGENTS.md`). Change them with the `/tasks`, `/r
 
 ## Checks
 
-Until the port: `pnpm build && pnpm typecheck && pnpm lint && pnpm test` (tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default
-`postgres://postgres:postgres@localhost:5432/postgres`). Always: `pnpm exec vef check`.
+```bash
+uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
+pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
+```
+
+Tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default `postgres://postgres:postgres@localhost:5432/postgres`.

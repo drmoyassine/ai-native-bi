@@ -38,8 +38,7 @@ consumer among others (see "The AMS" below).
 | Consumers | The BI's own dashboards (the KPI canvas, generative UI), the AMS, Tableau and Power BI (Cube's SQL API), third-party apps and AI agents | |
 
 The back end is Python ([DEC-003](DECISIONS.md#DEC-003)): FastAPI, Pydantic, Procrastinate, dlt, pytest. The UI is TypeScript/React;
-Cube is its own Node service. Today's code is still the TypeScript scaffold of the AMS adapter until [ROADMAP-001](ROADMAP.md#ROADMAP-001)
-ports it.
+Cube is its own Node service. Today the code is the AMS adapter, in Python since [ROADMAP-001](ROADMAP.md#ROADMAP-001).
 
 ## Data model
 
@@ -47,7 +46,7 @@ ports it.
   (AMS DEC-017 and AMS DEC-034), with the schemas `raw` (sources as they are) and `analytics` (conformed, student grain), plus S3 for raw
   files and documents.
 - **Metric registry**: the Cube model; one definition per KPI, with steward, version and lineage.
-- **AMS requests**: `collect_request` (migration `0001`), one row per AMS run and attempt, holding the request and its outcome
+- **AMS requests**: `collect_request` (migration `0001`; the job queue is Procrastinate's schema, migration `0002`), one row per AMS run and attempt, holding the request and its outcome
   (`queued`, `running`, `supplied`, `no_source`, `refused`, `failed`). The callback token is cleared when the request ends.
 
 ## Key patterns

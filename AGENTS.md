@@ -33,11 +33,9 @@ vef check
 3. **Run the build + tests** after non-trivial changes; read the whole output.
 4. **Migrations are forward-only.** Destructive changes (drops, mass updates) need explicit owner approval.
 
-Until the Python port (ROADMAP-001):
-
 ```bash
-pnpm install && pnpm build && pnpm typecheck && pnpm lint && pnpm test   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
-pnpm exec vef check
+uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
+pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
 ```
 
 ## Decision discipline

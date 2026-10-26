@@ -78,7 +78,7 @@ id: ROADMAP-001
 title: 'Phase 0: port the scaffold to Python'
 description: The AMS adapter (accept, queue, callback) on FastAPI, Pydantic and Procrastinate, with the same behaviour and tests
 phase: '0'
-status: Deferred
+status: Completed
 priority: P0
 tags:
   - stack
@@ -96,7 +96,7 @@ related_tasks:
     url: /TASKS.md#TASK-001
 modified:
   by: agent/claude-code
-  at: '2026-10-26T13:23:31.090Z'
+  at: '2026-10-26T13:36:30.998Z'
 ---
 
 ---

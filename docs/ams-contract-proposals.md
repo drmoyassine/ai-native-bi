@@ -26,7 +26,7 @@ existing `form` and `manual` items is the AMS's decision.
 
 ## 3. The contract mirror in Python
 
-The BI moves to Python (FastAPI, Pydantic). Proposal: the AMS publishes its contract schemas as JSON Schema (generated from its Zod
+The BI is now Python (FastAPI, Pydantic; its mirror is `src/bi/contract.py`). Proposal: the AMS publishes its contract schemas as JSON Schema (generated from its Zod
 schemas), and the BI generates its Pydantic models from them, with a test that fails when the two drift.
 
 ## 4. Names in queries

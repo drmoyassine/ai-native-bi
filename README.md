@@ -12,20 +12,23 @@ through the contract in `docs/ams-bi-contract-v0.md` (owned by the AMS; this is 
 
 ## Status
 
-Before phase 0 (`ROADMAP.md`, ROADMAP-001): the code is a TypeScript scaffold of the AMS adapter only, to be ported to Python (FastAPI). No
-source, warehouse or metric layer exists yet.
+Phase 0 is done (ROADMAP-001): the AMS adapter runs on Python. Next is phase 1 (ROADMAP-002). No source, warehouse or metric layer
+exists yet.
 
-Stack (target): Python, FastAPI, Pydantic, Procrastinate, dlt, SQL transforms, Cube, PostgreSQL 16 + S3, pytest, Docker Compose.
-Stack (today's scaffold): TypeScript, Hono on Node, PostgreSQL 16, pg-boss, Zod, Vitest, Docker Compose.
+Stack: Python 3.12, FastAPI, Pydantic, Procrastinate, httpx, psycopg, PostgreSQL 16, pytest, ruff, mypy, uv, Docker Compose. Coming:
+dlt, SQL transforms, Cube, S3. Node is used only for the project-memory tool (VEF).
 
-## Layout (today's scaffold)
+## Layout
 
 | Path | What |
 |---|---|
-| `packages/contract` | The contract v0 as Zod schemas, mirroring the AMS's `packages/shared/src/collection.ts` |
-| `packages/core` | Accepting a request, the source registry, the callback, migrations (`packages/core/migrations`, forward-only SQL) |
-| `apps/api` | `GET /healthz`, `POST /ams/collect` and `POST /ams/collect/<endpoint>` |
-| `apps/worker` | The `collect` queue: find a source, ask it, call the AMS back |
+| `src/bi/contract.py` | The contract v0 as Pydantic models, mirroring the AMS's `packages/shared/src/collection.ts` |
+| `src/bi/collect.py` | Accepting a request: the key, the body, the callback address; kept once per attempt |
+| `src/bi/queue.py`, `callback.py`, `sources.py` | The `collect` job: find a source, ask it, call the AMS back; retries |
+| `src/bi/api.py`, `main_api.py` | `GET /healthz`, `POST /ams/collect` and `POST /ams/collect/<endpoint>`; `python -m bi.main_api` |
+| `src/bi/main_worker.py` | The worker; `python -m bi.main_worker` |
+| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue |
+| `tests/` | pytest, against a real PostgreSQL |
 
 ## How an AMS request flows (async)
 
@@ -34,7 +37,7 @@ Stack (today's scaffold): TypeScript, Hono on Node, PostgreSQL 16, pg-boss, Zod,
 2. The worker finds a source for it (by `query.metric` or `endpoint`). No source: the request ends `no_source` and the AMS is not
    called; a source never invents values. No source is registered yet.
 3. The worker POSTs the supply to the callback with the run's one-time token: 200 supplied, 401/409 ended, 422 refused (with the
-   issues), a network error is retried by the queue (5 tries, backoff).
+   issues), a network error or a failing source is retried by the queue (5 retries, after 1, 2, 4, 8 and 16 minutes).
 
 The contract also allows a sync **200** answer with the supply in the body; the BI does not use it yet.
 
@@ -49,5 +52,6 @@ docker compose -f compose.together.yaml up --build   # with the AMS (AMS_DIR, de
 ## Check
 
 ```bash
-pnpm install && pnpm build && pnpm typecheck && pnpm lint && pnpm test   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
+uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
+pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
 ```
