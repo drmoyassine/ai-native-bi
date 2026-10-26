@@ -1,0 +1,55 @@
+# Governed enrollment KPIs (DEC-004), over analytics.enrollment (dbt). Every read of a KPI goes through Cube.
+cubes:
+  - name: enrollment
+    sql_table: analytics.enrollment
+    title: Enrollment
+    description: Students on each term's enrollment roster, one row per student and term (the current snapshot of each term).
+    meta:
+      steward: registrar
+      definition_version: 1
+
+    dimensions:
+      - name: key
+        sql: "{CUBE}.student_id || '|' || {CUBE}.term_code"
+        type: string
+        primary_key: true
+        public: false
+      - name: program
+        sql: program
+        type: string
+        title: Program
+      - name: level
+        sql: level
+        type: string
+        title: Level
+      - name: status
+        sql: status
+        type: string
+        title: Enrollment status
+      - name: term_code
+        sql: term_code
+        type: string
+        title: Term code
+      - name: term_label
+        sql: term_label
+        type: string
+        title: Term
+      - name: term_start
+        sql: term_start
+        type: time
+        title: Term start
+
+    measures:
+      - name: headcount
+        type: count_distinct
+        sql: student_id
+        title: Headcount
+        description: >
+          Distinct students on the term's roster. A test definition (DEC-011) until the registrar, its steward, defines the KPI.
+        meta:
+          metric: enrollment_headcount
+      - name: as_of
+        type: max
+        sql: "CAST(TO_CHAR({CUBE}.as_of, 'YYYYMMDD') AS INTEGER)"
+        title: Data as of (yyyymmdd)
+        description: The latest date the data is true as of (the uploads' as-of dates); goes into every supply's asOf.

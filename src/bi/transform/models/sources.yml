@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Files as loaded by bi.ingest; every cell is text, every row carries its file (_bi_file_sha256) and load time.
+    tables:
+      - name: enrollment
+        description: >
+          Enrollment exports, one row per student and term. Test shape (DEC-011) until real exports arrive: Student ID, Term Code,
+          Term, Term Start, Term End, Program, Level, Status.

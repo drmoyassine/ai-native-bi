@@ -1,20 +1,34 @@
 # CLAUDE.md
 
-**AI-native BI** — the institution's BI product. It supplies evidence to the AMS (drmoyassine/ams) through a versioned contract.
+**AI-native BI** — the institution's AI-native business intelligence platform: sources, warehouse, a governed metric layer (Cube)
+and consumers, built mostly by an agent. It works on its own and with the AMS (drmoyassine/ams), which requests through a versioned
+contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VISION.md`, `ROADMAP.md` and `DECISIONS.md`.
 
 ## Rules
 
-1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `packages/contract` mirrors the AMS's
+1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `src/bi/contract.py` mirrors the AMS's
    `packages/shared/src/collection.ts`. Change the AMS first, then mirror it here. Never add a field the AMS does not know.
    The copy is not edited by hand: the AMS's `contract-sync` workflow opens a pull request (`ams-contract-sync`) with the new
-   `docs/ams-bi-contract-v0.md` and `docs/ams-source/`; mirror the change into `packages/contract` on that pull request.
-2. **Separate products, separate storage** (AMS DEC-017, DEC-034). The BI has its own database, even when it shares the AMS's
+   `docs/ams-bi-contract-v0.md` and `docs/ams-source/`; mirror the change into `src/bi/contract.py` on that pull request. Changes
+   the BI needs are listed in `docs/ams-contract-proposals.md`.
+2. **Separate products, separate storage** (AMS DEC-017 and AMS DEC-034). The BI has its own database, even when it shares the AMS's
    PostgreSQL server in `compose.together.yaml`. Never read or write the AMS's database; talk to it only over the contract.
 3. **No invented data.** A source answers only with data it has; no data means no supply. Every supply carries `asOf` and `lineage`.
 4. **Call back only the AMS.** The callback address must be the run's own supply route on `AMS_CALLBACK_ORIGIN`; never follow a
    redirect; forget the token when the request ends.
-5. Same stack and habits as the AMS: TypeScript strict, Hono, Zod at every boundary, pg-boss, forward-only SQL migrations in
-   `packages/core/migrations`, Vitest, structured JSON logs.
+5. **Every read of a KPI goes through Cube.** Consumers (the canvas, the AMS adapter, the API, the MCP server, BI tools) never read
+   the `raw` or `analytics` tables. Queries are structured, never SQL. Nothing student-level leaves the BI.
+6. **A person approves what the agent builds.** An integration, a KPI or a dashboard is not live until approved. The agent's code
+   runs in a sandbox, credentials live in the secret store (never in code, the repository or logs), and access to sources is read-only.
+7. Stack (DEC-003): Python 3.12, FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for integrations,
+   dbt for transforms, Cube for the metric layer, forward-only SQL migrations in `src/bi/migrations` (never edit an applied one),
+   pytest, ruff, mypy strict, structured JSON logs. Node is only for VEF.
+
+## Project memory (VEF)
+
+Vision, roadmap, tasks and decisions live in `docs/vision/`, `docs/roadmap/`, `docs/tasks/` and `docs/decisions/`, managed by
+vibe-engineering-framework (see `AGENTS.md`). Change them with the `/tasks`, `/roadmap` and `/decisions` skills or `vef create` /
+`vef update`; never edit the generated root ledgers (`VISION.md`, `ROADMAP.md`, `TASKS.md`, `DECISIONS.md`) by hand.
 
 ## Requests to and from the AMS
 
@@ -31,5 +45,10 @@ The two repositories talk through GitHub Issues, bridged by `.github/workflows/i
 
 ## Checks
 
-`pnpm build && pnpm typecheck && pnpm lint && pnpm test` (tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default
-`postgres://postgres:postgres@localhost:5432/postgres`).
+```bash
+uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest   # tests need PostgreSQL (TEST_DATABASE_ADMIN_URL)
+pnpm install && pnpm exec vef check                                                              # project memory (Node, VEF only)
+```
+
+Tests need PostgreSQL: `TEST_DATABASE_ADMIN_URL`, default `postgres://postgres:postgres@localhost:5432/postgres`. `tests/test_cube.py`
+also needs Cube reading the database `bi_cube_test` (`CUBE_TEST_URL`, `CUBE_TEST_SECRET`; CI starts it, see `.github/workflows/ci.yml`).

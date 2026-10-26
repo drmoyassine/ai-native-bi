@@ -1,0 +1,15 @@
+# The BI's transforms (DEC-010): raw (as loaded, all text) -> staging (typed, the current snapshot) -> analytics (conformed, read by Cube).
+name: bi
+version: '1.0.0'
+profile: bi
+model-paths: [models]
+macro-paths: [macros]
+
+models:
+  bi:
+    staging:
+      +schema: staging
+      +materialized: view
+    analytics:
+      +schema: analytics
+      +materialized: table

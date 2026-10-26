@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "layout": "per-item",
+  "canonical": {
+    "vision": {
+      "directory": "docs/vision",
+      "ledger": "VISION.md"
+    },
+    "roadmap": {
+      "directory": "docs/roadmap",
+      "ledger": "ROADMAP.md"
+    },
+    "tasks": {
+      "directory": "docs/tasks",
+      "ledger": "TASKS.md"
+    },
+    "decisions": {
+      "directory": "docs/decisions",
+      "ledger": "DECISIONS.md"
+    }
+  }
+}

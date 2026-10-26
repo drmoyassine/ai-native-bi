@@ -29,5 +29,29 @@ services:
     environment:
       DATABASE_URL: postgres://bi:${BI_DB_PASSWORD:?set BI_DB_PASSWORD}@postgres:5432/bi
       AMS_CALLBACK_ORIGIN: http://app:3000
+      CUBE_API_URL: http://bi-cube:4000
+      RAW_FILES_URL: file:///data/raw-files
+    volumes: ["biraw:/data/raw-files"]
     depends_on:
       bi-api: { condition: service_healthy }
+      bi-cube: { condition: service_started }
+
+  # The governed metric layer (DEC-004): the worker reads every KPI through it. Not published: only the BI's services reach it.
+  bi-cube:
+    image: cubejs/cube:v1.8.13
+    environment:
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: postgres
+      CUBEJS_DB_NAME: bi
+      CUBEJS_DB_USER: bi
+      CUBEJS_DB_PASS: ${BI_DB_PASSWORD}
+      CUBEJS_API_SECRET: ${CUBE_API_SECRET:?set CUBE_API_SECRET}
+      CUBEJS_DEV_MODE: "false"
+      # One Cube instance: its cache and queue in memory. Several instances or pre-aggregations need Cube Store.
+      CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
+    volumes: ["./cube:/cube/conf:ro"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+volumes:
+  biraw:

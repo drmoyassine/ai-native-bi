@@ -1,0 +1,13 @@
+# Filled from DATABASE_URL by bi.transform (never a password in a file).
+bi:
+  target: default
+  outputs:
+    default:
+      type: postgres
+      host: "{{ env_var('BI_DBT_HOST') }}"
+      port: "{{ env_var('BI_DBT_PORT') | as_number }}"
+      user: "{{ env_var('BI_DBT_USER') }}"
+      password: "{{ env_var('BI_DBT_PASSWORD') }}"
+      dbname: "{{ env_var('BI_DBT_DBNAME') }}"
+      schema: analytics
+      threads: 4
