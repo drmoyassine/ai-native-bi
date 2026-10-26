@@ -27,6 +27,7 @@ Navigation hub for AI-native BI documentation.
 | [docs/ams-bi-contract-v0.md](docs/ams-bi-contract-v0.md) | The AMS–BI contract (a copy; the AMS owns it) |
 | [docs/endpoints.md](docs/endpoints.md) | The contract's routes: who calls, who serves |
 | [docs/ams-contract-proposals.md](docs/ams-contract-proposals.md) | Contract changes to raise in the AMS |
+| [docs/agent-spec.md](docs/agent-spec.md) | Spec: the agent's runtime, loop and chat (proposed) |
 
 Structured items live canonically in `docs/vision/`, `docs/roadmap/`, `docs/tasks/`, and `docs/decisions/`. The linked root ledgers are generated, committed views; run `vef setup`, then `vef check`, after direct item changes.
 
