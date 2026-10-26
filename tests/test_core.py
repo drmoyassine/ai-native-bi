@@ -219,3 +219,33 @@ async def test_the_queue_runs_a_deferred_request_on_the_migrated_schema(pool: As
             await queue.run_worker_async(queues=[COLLECT_QUEUE], wait=False, install_signal_handlers=False)
     assert [c['auth'] for c in calls] == ['Bearer queued']
     assert await row(pool, id, 'status') == ('supplied',)
+
+
+def unreachable() -> httpx.AsyncClient:
+    def down(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError('connect ECONNREFUSED')
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(down))
+
+
+async def run_once(pool: AsyncConnectionPool, id: str, client: httpx.AsyncClient, retry: CollectRetry) -> None:
+    queue = create_queue(database_url('bi_test'), deps(pool, client), retry=retry)
+    async with queue.open_async():
+        await enqueue_collect(queue, id)
+        await queue.run_worker_async(queues=[COLLECT_QUEUE], wait=False, install_signal_handlers=False)
+
+
+async def test_a_failed_job_keeps_its_token_while_retries_remain(pool: AsyncConnectionPool) -> None:
+    id = await accepted(pool, callbackToken='retrying')
+    async with unreachable() as client:
+        await run_once(pool, id, client, CollectRetry())
+    assert await row(pool, id, 'status, callback_token, finished_at') == ('running', 'retrying', None)
+
+
+async def test_a_job_out_of_retries_ends_failed_and_forgets_its_token(pool: AsyncConnectionPool) -> None:
+    id = await accepted(pool, callbackToken='last')
+    async with unreachable() as client:
+        await run_once(pool, id, client, CollectRetry(max_retries=0))
+    status, token, finished, error = await row(pool, id, 'status, callback_token, finished_at, last_error')
+    assert (status, token) == ('failed', None) and finished is not None
+    assert 'gave up after 1 attempt' in error and 'ECONNREFUSED' in error

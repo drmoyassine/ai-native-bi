@@ -37,7 +37,8 @@ dlt, SQL transforms, Cube, S3. Node is used only for the project-memory tool (VE
 2. The worker finds a source for it (by `query.metric` or `endpoint`). No source: the request ends `no_source` and the AMS is not
    called; a source never invents values. No source is registered yet.
 3. The worker POSTs the supply to the callback with the run's one-time token: 200 supplied, 401/409 ended, 422 refused (with the
-   issues), a network error or a failing source is retried by the queue (5 retries, after 1, 2, 4, 8 and 16 minutes).
+   issues), a network error or a failing source is retried by the queue (5 retries, after 1, 2, 4, 8 and 16 minutes); after the
+   last one the request ends `failed` with the reason, and the token is forgotten.
 
 The contract also allows a sync **200** answer with the supply in the body; the BI does not use it yet.
 

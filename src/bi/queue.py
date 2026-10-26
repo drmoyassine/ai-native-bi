@@ -79,8 +79,9 @@ async def process_collect(deps: CollectDeps, id: str) -> str:
 class CollectRetry(BaseRetryStrategy):
     """Five retries of a job that raised (the AMS unreachable, a source that failed): 1, 2, 4, 8 and 16 minutes after each failure."""
 
-    max_retries = 5
-    first_wait_seconds = 60
+    def __init__(self, max_retries: int = 5, first_wait_seconds: int = 60) -> None:
+        self.max_retries = max_retries
+        self.first_wait_seconds = first_wait_seconds
 
     def get_retry_decision(self, *, exception: BaseException, job: Job) -> RetryDecision | None:
         if job.attempts >= self.max_retries:
@@ -88,16 +89,34 @@ class CollectRetry(BaseRetryStrategy):
         return RetryDecision(retry_in={'seconds': self.first_wait_seconds * 2**job.attempts})
 
 
-def create_queue(conninfo: str, deps: CollectDeps | None = None) -> procrastinate.App:
+async def give_up(pool: AsyncConnectionPool, id: str, attempts: int, error: BaseException) -> None:
+    """Ends a request the queue will not try again: `failed`, with the reason, and the token forgotten (CLAUDE.md rule 4)."""
+    message = f'gave up after {attempts} attempt{"s" if attempts != 1 else ""}: {error}'
+    async with pool.connection() as conn:
+        await conn.execute(
+            """update collect_request set status = 'failed', last_error = %s, finished_at = now(), callback_token = null
+               where id = %s and status = 'running'""",
+            [message, id],
+        )
+
+
+def create_queue(conninfo: str, deps: CollectDeps | None = None, retry: CollectRetry | None = None) -> procrastinate.App:
     """The job queue on the BI's database (migration 0002). The API only defers jobs (`deps` None); the worker also runs them."""
     app = procrastinate.App(connector=procrastinate.PsycopgConnector(conninfo=conninfo))
     if deps is not None:
+        strategy = retry or CollectRetry()
 
-        async def collect(id: str) -> None:
-            outcome = await process_collect(deps, id)
+        async def collect(context: procrastinate.JobContext, id: str) -> None:
+            try:
+                outcome = await process_collect(deps, id)
+            except Exception as e:
+                if strategy.get_retry_decision(exception=e, job=context.job) is None:
+                    await give_up(deps.pool, id, context.job.attempts + 1, e)
+                    log('error', 'collect gave up', id=id, attempts=context.job.attempts + 1, error=str(e))
+                raise
             log('info', 'collect', id=id, outcome=outcome)
 
-        app.task(name=COLLECT_TASK, queue=COLLECT_QUEUE, retry=CollectRetry())(collect)
+        app.task(name=COLLECT_TASK, queue=COLLECT_QUEUE, retry=strategy, pass_context=True)(collect)
     return app
 
 
