@@ -160,8 +160,9 @@ async def test_before_anything_is_loaded_the_real_cube_means_no_data_not_failure
             )  # fmt: skip
             assert await tools.chart_rows(cube, chart) == []
         outcome, calls = await work(
-            pool, cube_env, collect_request({'label': 'Fall 2026', 'start': '2026-08-24', 'end': '2026-12-18'}, 'none')
+            pool, cube_env, collect_request({'label': 'Spring 2027', 'start': '2027-01-18', 'end': '2027-05-14'}, 'none')
         )
+        # A period no other test asks for, so Cube has not cached its answer and really reads the (missing) table.
         assert outcome == 'no_data' and calls == []  # no supply, and not a failure to retry
     finally:
         async with pool.connection() as conn:
