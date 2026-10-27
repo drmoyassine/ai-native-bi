@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Resp
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, tools, uploads
+from . import accounts, mapping, tools, uploads
 from .accounts import User
 from .agent.catalog import datasets
 from .agent.routes import AgentContext, create_agent_router
@@ -44,6 +44,8 @@ class AppContext:
     """The app's own address (PUBLIC_URL), shown with personal access tokens as the MCP server's base."""
     throttle: accounts.Throttle = field(default_factory=accounts.Throttle)
     """How many failed sign-ins refuse the next (TASK-010)."""
+    enqueue_rebuild: Callable[[str], Awaitable[None]] | None = None
+    """Rebuilds a dataset's analytics after its column mapping is approved."""
     proxy_hops: int = 0
     """Proxies in front of the app that append the client's address to X-Forwarded-For (0: the connection's own address is the client)."""
 
@@ -61,6 +63,10 @@ def client_ip(request: Request, hops: int) -> str:
 class ChangePassword(BaseModel):
     current_password: str
     new_password: str
+
+
+class MappingBody(BaseModel):
+    mapping: dict[str, str | None]
 
 
 class SignIn(BaseModel):
@@ -170,6 +176,36 @@ def create_router(ctx: AppContext) -> APIRouter:
     @router.get('/uploads')
     async def list_uploads(user: Signed) -> dict[str, Any]:
         return {'uploads': await uploads.recent(ctx.pool)}
+
+    @router.get('/datasets/{dataset}/mapping')
+    async def get_mapping(dataset: str, user: Signed) -> dict[str, Any]:
+        if dataset not in datasets():
+            raise HTTPException(404, f'unknown dataset "{dataset}"')
+        columns = await mapping.raw_columns(ctx.pool, dataset)
+        kept = await mapping.stored(ctx.pool, dataset)
+        proposed, _ = mapping.propose(dataset, columns)
+        return {
+            'dataset': dataset,
+            'parts': [{'name': f.name, 'required': f.required} for f in mapping.fields(dataset)],
+            'columns': columns,
+            'mapping': kept['mapping'] if kept else proposed,
+            'status': kept['status'] if kept else None,
+            'error': kept['error'] if kept else None,
+        }
+
+    @router.put('/datasets/{dataset}/mapping')
+    async def put_mapping(dataset: str, body: MappingBody, user: Signed) -> dict[str, str]:
+        if dataset not in datasets():
+            raise HTTPException(404, f'unknown dataset "{dataset}"')
+        try:
+            mapping.check(dataset, body.mapping, await mapping.raw_columns(ctx.pool, dataset))
+        except mapping.MappingError as e:
+            raise HTTPException(422, str(e)) from e
+        await mapping.save(ctx.pool, dataset, body.mapping, 'approved', f'approved by {user.email}', user.id)
+        if ctx.enqueue_rebuild is not None:
+            await ctx.enqueue_rebuild(dataset)
+        log('info', 'mapping approved', dataset=dataset, user=user.id)
+        return {'status': 'approved'}
 
     @router.get('/members')
     async def members(user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:

@@ -124,3 +124,10 @@ first slice from real file exports, one API and MCP server); phases as ROADMAP-0
 ## 2026-10-26 — Framework adopted
 
 Adopted `vibe-engineering-framework` through `vef setup`; `vef check` confirmed deterministic core enforcement. Framework docs (VISION, ROADMAP, TASKS, DECISIONS) are the public reading surfaces over canonical records. Claude Code skills (`/tasks`, `/roadmap`, `/decisions`, `/bugs`, `/apply`) were installed in `.claude/skills/`.
+
+## 2026-10-27 — Columns are discovered, not fixed
+
+A real .xlsb export failed in dbt (`term_code` does not exist): the staging model was written for the made-up test shape. Now raw keeps the
+file's own columns, `bi.mapping` matches them to the parts a dataset needs (own name, then the names exports use), a person approves a match
+that is not exact (Uploads page), and dbt reads the approved mapping (DEC-026). A file whose layout cannot be read says which, instead of
+a dbt error. Discovering the dataset itself and building new ones stays with agent step 2b (TASK-013).

@@ -51,6 +51,7 @@ export interface Upload {
   repeat: boolean | null;
   tests: number | null;
   error: string | null;
+  note: string | null;
   created_at: string;
   finished_at: string | null;
   name: string;
@@ -86,4 +87,13 @@ export interface Usage {
   person: { used: number; cap: number };
   institution: { used: number; cap: number };
   month_start: string;
+}
+
+export interface ColumnMapping {
+  dataset: string;
+  parts: { name: string; required: boolean }[];
+  columns: string[];
+  mapping: Record<string, string | null>;
+  status: 'proposed' | 'approved' | null;
+  error: string | null;
 }
