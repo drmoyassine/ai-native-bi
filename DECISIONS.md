@@ -950,4 +950,193 @@ modified:
   at: '2026-10-26T22:07:12.855Z'
 ---
 
+---
+
+## DEC-021 — The MCP server is the official SDK's MCPServer, mounted in the API at /mcp
+
+---
+title: The MCP server is the official SDK's MCPServer, mounted in the API at /mcp
+status: accepted
+context: >-
+  Outside agents need the governed metrics (DEC-009). The official MCP Python SDK (mcp 2.x) renamed its FastMCP class to
+  MCPServer; a separate fastmcp package also exists.
+decision: >-
+  The MCP server is the official mcp SDK's MCPServer (2.x), stateless streamable HTTP with JSON responses, mounted in
+  the API at /mcp, its session manager run in the API's lifespan; DNS-rebinding protection allows only the app's own
+  host (PUBLIC_URL). Not the standalone fastmcp package, and no tools generated from REST routes.
+rationale: >-
+  One deployment and one domain; the official SDK's resource-server auth fits the identity plan; tools are designed for
+  a model and privacy-filtered, not mirrored from routes.
+consequences: mcp 2.x brings httpx2 beside httpx; the SDK's session manager runs once per app instance.
+tags:
+  - mcp
+  - api
+id: DEC-021
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:18.699Z'
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-009
+    name: One general-purpose API and MCP server on Cube
+    url: /DECISIONS.md#DEC-009
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:35.488Z'
+related_tasks:
+  - id: TASK-016
+    name: 'MCP step 3a: shared tools, personal access tokens, /mcp'
+    url: /TASKS.md#TASK-016
+  - id: TASK-017
+    name: 'MCP step 3b: connect staging to Claude Code'
+    url: /TASKS.md#TASK-017
+---
+
+---
+
+## DEC-022 — One principal behind many issuers; personal access tokens first
+
+---
+title: One principal behind many issuers; personal access tokens first
+status: accepted
+context: >-
+  The BI must act as a person for its app, MCP clients and BI tools, with rights that come from the AMS when the two run
+  together, from the institution's SSO, or from the BI's own accounts when it runs alone.
+decision: >-
+  Every request resolves to one principal (issuer, subject, email, name, role viewer/steward/admin, data scope); tools
+  see only the principal. A token verifier dispatches to the configured issuers: the BI's personal access tokens (step
+  3a; hashed, shown once, expiring, revocable), then the AMS as OpenID Connect issuer (contract request, issue 10), the
+  institution's SSO and service identities. Roles and scope are read from each token, never copied.
+rationale: The tools stay the same whichever issuer signs a person in; revoking in one place takes effect at the next token.
+consequences: The AMS must issue tokens for the BI (proposal 5); a limited data scope is refused until Cube enforces it.
+tags:
+  - mcp
+  - identity
+  - sso
+id: DEC-022
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:19.375Z'
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+  - id: ROADMAP-005
+    name: Single sign-on with the institution
+    url: /ROADMAP.md#ROADMAP-005
+related_decisions:
+  - id: DEC-009
+    name: One general-purpose API and MCP server on Cube
+    url: /DECISIONS.md#DEC-009
+  - id: DEC-014
+    name: 'The app: the BI''s own accounts, a cookie session, a React app served by the API'
+    url: /DECISIONS.md#DEC-014
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:37.643Z'
+related_tasks:
+  - id: TASK-016
+    name: 'MCP step 3a: shared tools, personal access tokens, /mcp'
+    url: /TASKS.md#TASK-016
+  - id: TASK-018
+    name: 'MCP step 3c: the AMS as identity provider, OAuth for MCP clients'
+    url: /TASKS.md#TASK-018
+  - id: TASK-020
+    name: 'MCP step 3e: the institution SSO as a direct issuer'
+    url: /TASKS.md#TASK-020
+---
+
+---
+
+## DEC-023 — Data scope is enforced in Cube's security context, for every consumer
+
+---
+title: Data scope is enforced in Cube's security context, for every consumer
+status: accepted
+context: >-
+  A person may be allowed only some units' or programs' figures; the MCP server, the chat, charts and AMS answers must
+  all honour it.
+decision: >-
+  A principal's data scope goes into Cube's security context (the JWT the BI signs for Cube), and the Cube model's query
+  rewrite adds the scope filter to every query. Until the scope ids exist in the warehouse, every principal's scope is
+  "all" and any other scope is refused, never ignored.
+rationale: One place to enforce it, which no tool can forget.
+consequences: Needs the org-unit or program dimension (contract open question 6).
+tags:
+  - mcp
+  - cube
+  - privacy
+id: DEC-023
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:20.100Z'
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-004
+    name: Cube is the governed layer and the only read path for KPIs
+    url: /DECISIONS.md#DEC-004
+  - id: DEC-017
+    name: The model sees schemas, profiles and suppressed aggregates, never rows
+    url: /DECISIONS.md#DEC-017
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:36.926Z'
+related_tasks:
+  - id: TASK-019
+    name: 'MCP step 3d: data scope in Cube security context'
+    url: /TASKS.md#TASK-019
+---
+
+---
+
+## DEC-024 — The chat agent and the MCP server share one tool implementation
+
+---
+title: The chat agent and the MCP server share one tool implementation
+status: accepted
+context: The agent spec required the same tools outside the app; two copies would drift, including their privacy rules.
+decision: >-
+  The governed tools live once in src/bi/tools as plain functions taking a ToolContext; their docstrings are what a
+  model reads. The chat agent wraps them for Pydantic AI and the MCP server registers them with MCPServer, adding the
+  access log and rate limits.
+rationale: The same privacy, the same answers and the same descriptions whichever door an agent comes through.
+consequences: A change to a tool changes both doors; tests cover the shared functions and each wrapper.
+tags:
+  - mcp
+  - agent
+  - privacy
+id: DEC-024
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:20.911Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-017
+    name: The model sees schemas, profiles and suppressed aggregates, never rows
+    url: /DECISIONS.md#DEC-017
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:34.731Z'
+related_tasks:
+  - id: TASK-016
+    name: 'MCP step 3a: shared tools, personal access tokens, /mcp'
+    url: /TASKS.md#TASK-016
+---
+
 <!-- End VEF generated items. -->

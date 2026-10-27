@@ -53,6 +53,11 @@ class Env(BaseModel):
     """The monthly share of each person."""
     SUPPRESSION_THRESHOLD: Annotated[int, Field(ge=1)] = 5
     """Counts under this are hidden from the agent (and, with TASK-008, from answers). The value comes from the privacy rules (TASK-002)."""
+    PUBLIC_URL: Annotated[str, AfterValidator(origin_of)] | None = None
+    """The app's own address (e.g. https://bi.example.edu): the MCP server's base URL and the only host its requests may name."""
+    MCP_CALLS_PER_MINUTE: Annotated[int, Field(gt=0)] = 60
+    """Calls of MCP tools a person may make in a minute (docs/mcp-spec.md section 7)."""
+    MCP_CALLS_PER_DAY: Annotated[int, Field(gt=0)] = 2000
     ADMIN_EMAIL: Annotated[str, StringConstraints(min_length=3)] | None = None
     """With ADMIN_PASSWORD: the administrator the API creates at start if that email has no account yet (see admin_from_env)."""
     ADMIN_PASSWORD: SecretStr | None = None

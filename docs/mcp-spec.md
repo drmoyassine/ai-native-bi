@@ -1,6 +1,6 @@
 # Spec: the MCP server — governed metrics for outside agents (ROADMAP-004)
 
-Status: **proposed, 2026-10-27.** Decisions below become DEC records once approved (§ 11). Builds on DEC-004 (Cube is the only read
+Status: **approved 2026-10-27; step 3a built (TASK-016).** The decisions of § 11 are DEC-021 to DEC-024; steps 3b to 3e are TASK-017 to TASK-020. Builds on DEC-004 (Cube is the only read
 path), DEC-009 (one general-purpose API and MCP server on Cube), DEC-012 (one chart definition), DEC-013 (drafts and publishing),
 DEC-017 (the model sees schemas, profiles and suppressed aggregates, never rows) and `docs/agent-spec.md` (the same tools, defined once).
 Identity depends on the contract request [#10](https://github.com/drmoyassine/ai-native-bi/issues/10) (proposal 5 in

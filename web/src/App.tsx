@@ -4,9 +4,10 @@ import { Chat } from './Chat';
 import { ChartPage } from './ChartPage';
 import { Login } from './Login';
 import { Providers } from './Providers';
+import { Tokens } from './Tokens';
 import { Uploads } from './Uploads';
 
-type Page = 'chat' | 'chart' | 'uploads' | 'models';
+type Page = 'chat' | 'chart' | 'uploads' | 'models' | 'tokens';
 
 export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -50,6 +51,9 @@ export function App() {
           <button className={page === 'uploads' ? 'active' : ''} onClick={() => setPage('uploads')}>
             Uploads
           </button>
+          <button className={page === 'tokens' ? 'active' : ''} onClick={() => setPage('tokens')}>
+            Access tokens
+          </button>
           {user.is_admin && (
             <button className={page === 'models' ? 'active' : ''} onClick={() => setPage('models')}>
               Models
@@ -68,6 +72,7 @@ export function App() {
         {page === 'chart' && <ChartPage />}
         {page === 'uploads' && <Uploads datasets={datasets} />}
         {page === 'models' && user.is_admin && <Providers />}
+        {page === 'tokens' && <Tokens user={user} />}
       </main>
     </>
   );

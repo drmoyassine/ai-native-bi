@@ -14,6 +14,15 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-27 — MCP step 3a: the governed tools for outside agents
+
+TASK-016 (DEC-021 to DEC-024): the tools moved to `src/bi/tools` and are shared by the chat and the MCP server at `/mcp`; people make
+personal access tokens on the Access tokens page; calls are rate-limited and logged. Learned on the way: in `mcp` 2.x tool annotations
+are snake_case (`read_only_hint`), `AuthSettings` needs `issuer_url` even with only a token verifier (we give the BI's own address and
+advertise no OAuth until the AMS issues tokens), the client takes an `httpx2` client so tests run it in-process with `httpx2`'s ASGI
+transport, and the session manager must run in the host app's lifespan because a mounted app's own lifespan does not run (and only once
+per instance). Verified with the SDK's real client, mutation checks, and a browser-made token over real HTTP against real Cube.
+
 ## 2026-10-27 — The MCP server, specified; person identity asked of the AMS
 
 `docs/mcp-spec.md` (proposed): the MCP server is the official MCP SDK's `MCPServer` mounted in the API at `/mcp`, sharing the chat

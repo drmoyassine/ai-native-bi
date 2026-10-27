@@ -17,6 +17,7 @@ from .config import admin_from_env, load_env, storage
 from .cube import CubeClient
 from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
+from .mcp.server import McpContext
 from .queue import create_queue, enqueue_collect, enqueue_load, enqueue_turn
 
 
@@ -49,6 +50,7 @@ async def main() -> None:
                 enqueue_load=lambda id: enqueue_load(queue, id),
                 cube=cube,
                 cookie_secure=env.APP_COOKIE_SECURE,
+                public_url=env.PUBLIC_URL,
                 agent=AgentContext(
                     pool=pool,
                     database_url=env.DATABASE_URL,
@@ -67,6 +69,14 @@ async def main() -> None:
                 enqueue=lambda id: enqueue_collect(queue, id),
                 app=context,
                 web_dir=env.WEB_DIR,
+                mcp=McpContext(
+                    pool=pool,
+                    cube=cube,
+                    suppression_threshold=env.SUPPRESSION_THRESHOLD,
+                    public_url=env.PUBLIC_URL,
+                    calls_per_minute=env.MCP_CALLS_PER_MINUTE,
+                    calls_per_day=env.MCP_CALLS_PER_DAY,
+                ),
             )
             app = create_app(deps)
             log('info', 'bi api listening', port=env.PORT)
