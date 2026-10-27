@@ -1,6 +1,6 @@
 # AMS ↔ BI contract, v0 (draft)
 
-Status: **draft v0, 2026-10-19; sections 3.1, 3.3 and 3.6 rewritten 2026-10-20 (DEC-031, TASK-089); the collection run, the AMS's request to the BI and the BI's callback built 2026-10-21 (DEC-032, TASK-090).** Written so the BI work can start in parallel with the AMS.
+Status: **draft v0, 2026-10-19; sections 3.1, 3.3 and 3.6 rewritten 2026-10-20 (DEC-031, TASK-089); the collection run, the AMS's request to the BI and the BI's callback built 2026-10-21 (DEC-032, TASK-090); a person's identity for the BI (6.2) built 2026-10-27 (DEC-035).** Written so the BI work can start in parallel with the AMS.
 Everything marked **[exists]** is in the AMS today (the data and the services behind it; for the run, the call to the BI and the callback route also the code); **[planned]** is decided but not
 built; **[open]** needs an answer. v0 becomes **v1 at the freeze** (see "Freeze"): after that it changes only by addition.
 Source decisions: DEC-032 (collection runs, the call to the BI, its callback and retries), DEC-031 (the evidence item: type, definition, collection method, schedule), DEC-017 (separate products, separate storage), DEC-019 (evidence may be shared with the BI, whose AI may
@@ -169,6 +169,7 @@ All are routes with `requires(...)` or, for the callback, the per-run token (the
 |---|---|---|---|---|
 | AMS | BI | `POST {BI_BASE_URL}/ams/collect` | The request for one run (3.6); answered 200 with the supply or 202 | **[exists]** |
 | BI | AMS | `POST /api/bi/v0/runs/{id}/supply` | Answer a run with rows, a file or an address (4.2); the run's one-time token | **[exists]** |
+| A client of the BI (the BI app, an MCP client) | AMS | `GET /api/auth/oauth2/authorize`, `POST /api/auth/oauth2/token`, `/userinfo`, `/introspect`, `/revoke`, `GET /api/auth/jwks`, the discovery documents | Sign a person in to the BI; the BI verifies the tokens with the keys (6.2) | **[exists]** |
 | BI | AMS | `GET /api/bi/v0/runs?updatedSince=` | Collection runs (3.6) with the item's definition, type, method settings, scope, champion, due | **[planned: not built]** the AMS asks the BI for each run itself (above), so the BI has nothing to poll for; it stays for a BI that wants a list |
 | BI | AMS | `GET /api/bi/v0/datasets/{evidenceItemId}/specification` | Dataset specification (columns, grain) | [planned] |
 | BI | AMS | `GET /api/bi/v0/evidence?updatedSince=` | Item metadata (3.1), latest version summary | [planned] |
@@ -182,7 +183,9 @@ The earlier draft's `POST /api/bi/v0/runs/{id}/supplied` (mark a run supplied by
 
 Idempotency: every POST takes an `Idempotency-Key`; a repeat returns the first result **[planned]**; the callback is idempotent by its token (a second call with the same token is a 401, and the first supply stands). Pagination: cursor, `updatedSince` ordering. Errors: the AMS's existing problem format (`error`, `message`, `issues`).
 
-## 6. Identity and security **[callback token exists; the service identity is open: to build]**
+## 6. Identity and security **[callback token exists; person identity (6.2) exists; the service identity is open: to build]**
+
+### 6.1 Service to service
 
 - **The callback token [exists].** A run's callback is authenticated by its per-run one-time token and nothing else: a signed-in session, even an administrator's, is not a credential for it. The token is 32 random bytes (base64url), shown to the BI once, in the request of 3.6; the AMS stores only its SHA-256 hash and compares in constant time; it expires after 14 days; it works for the run it was made for and no other; it is cleared by the database the moment the run is supplied, skipped or failed (single use). Every failure is a 401 with no reason. The call from the AMS to the BI carries `BI_API_KEY` as a bearer credential, over HTTPS only.
 - **What the AMS sends.** The definition, columns, period and query of the item; never an evidence file or row (DEC-013, DEC-019). The scheduler does not see `restricted` items (it acts as a system identity, which the row-level rules treat as nobody), so it asks the BI for none of them.
@@ -196,10 +199,89 @@ Idempotency: every POST takes an `Idempotency-Key`; a repeat returns the first r
 - Files to the BI over HTTPS only; the BI's use of them (indexing, AI) is governed by DEC-019 and the BI's own policy.
 - Rates and size limits per route; a refused request returns the reason.
 
-**Co-deployment (DEC-034).** Both products may run in one Compose project (the BI repository's `compose.together.yaml`): one PostgreSQL
-server and one Garage store, but the BI has its own database, role and bucket and never reads the AMS's. On that private network the
-AMS calls the BI over plain http only to the one host named `BI_PRIVATE_HOST` (a single-label service name, e.g. `BI_BASE_URL=http://bi-api:4000`),
-and the BI calls back the AMS's internal address (`APP_PUBLIC_URL=http://app:3000`). Nothing else in this contract changes.
+### 6.2 A person's identity: the AMS signs people in to the BI **[exists: DEC-035]**
+
+The BI serves people (its own app, MCP clients such as Claude, later BI tools) with that person's rights. When the BI runs with the
+AMS, those rights come from the AMS: one account, revoked in one place. The AMS is the BI's **authorization server**: OAuth 2.1
+authorization code with PKCE, plus OpenID Connect. The BI checks every token itself against the AMS's published keys; it never
+reads the AMS's data and holds no shared secret for this.
+
+Sign-in setups the BI may use (the BI chooses; the claims below are the same wherever the AMS issues them):
+1. **Standalone**: the BI's own accounts. Nothing from the AMS.
+2. **The AMS as identity provider** (this section): the BI accepts tokens the AMS issues for a person.
+3. **Institution single sign-on**: the institution's provider is **federated through the AMS** (the AMS already signs people in with
+   OIDC, and SAML is proven, TASK-006), so the BI still sees only the AMS as issuer and gets `bi_role` and `bi_scope`. A BI that
+   trusts the institution's provider directly gets identity only: role and scope come from the AMS alone.
+4. **Service to service**: 6.1, unchanged.
+
+**Issuer and discovery.** Issuer `{APP_URL}/api/auth`. Metadata at `{APP_URL}/api/auth/.well-known/openid-configuration`, and at the
+root for clients that look there (RFC 8414): `{APP_URL}/.well-known/oauth-authorization-server/api/auth` and
+`{APP_URL}/.well-known/openid-configuration/api/auth`. Keys (JWKS) at `{APP_URL}/api/auth/jwks`; tokens are signed **EdDSA (Ed25519)**.
+Endpoints: `/api/auth/oauth2/authorize`, `/token`, `/userinfo`, `/introspect`, `/revoke`, `/end-session`.
+
+**Clients.** Only the clients an administrator lists in the AMS's `OAUTH_CLIENTS` setting exist; there is **no self-registration**
+(dynamic client registration is off) and no consent screen (a listed client is trusted). A client with a secret is confidential
+(`client_secret_post`); without one it is public. **PKCE (S256) is required for every client.** Redirect addresses are exact, https
+(http only to localhost), without a fragment. An MCP client such as Claude is listed as a public client with its callback address
+(Claude: `https://claude.ai/api/mcp/auth_callback`) and given its client id. A client removed from the setting is disabled at the
+next start.
+
+**Tokens.** The client asks with `resource={BI_OAUTH_AUDIENCE}` (the BI's resource identifier, e.g. `https://bi.example.org`), scopes
+`openid profile email` and `offline_access` for a refresh token.
+- **Access token**: a JWT (`typ: at+jwt`) with `aud` = the BI, `iss`, `sub`, `client_id`, `scope`, **10 minutes**.
+- **ID token**: `aud` = the client id, **1 hour**.
+- **Refresh token**: **30 days**, rotated on each use: the used one stops working, and replaying it ends the whole chain (the client must sign the person in again).
+
+**Claims** (in the access token, the ID token and userinfo):
+
+| Claim | Meaning |
+|---|---|
+| `sub` | The person's stable id in the AMS's sign-in (never reused) |
+| `ams_user_id` | The person's AMS user id (uuid) |
+| `ams_institution_id` | Their institution (uuid) |
+| `email`, `name` | As the AMS holds them |
+| `bi_role` | `viewer`, `steward` or `admin`: the highest of `bi_scope` |
+| `bi_scope` | `[{ "type": "institution" \| "org_unit" \| "program", "id": "<uuid>", "role": "<bi role>" }]`: what they may see, with their role on each |
+
+An `org_unit` entry covers its sub-units and their programs, as in the AMS. The ids are the AMS's org unit and program ids (the
+same the AMS's other reads use); the org chart read that lets the BI resolve them is open question 6.
+
+**Role mapping** (the AMS's role assignments, read fresh for every token and every refresh):
+
+| AMS role (at its scope) | BI role |
+|---|---|
+| `admin` at the institution | `admin` |
+| `admin` at a unit or program, `lead` | `steward` |
+| `engagement_lead`, `co_lead`, `contributor`, `reviewer`, `viewer` | `viewer` |
+| `external_reviewer` | none |
+
+A role on an engagement counts on the engagement's subject (the institution or the program). Expired assignments do not count.
+
+**Refusal and deprovisioning.** A person who is unknown to the AMS, inactive, or has no role that maps to a BI role gets **no token**:
+the token request is answered `403 {"error":"access_denied"}`. The claims are read again at every refresh, so a person disabled in the
+AMS loses the BI at their next refresh (at most 10 minutes after, the life of the access token), and a changed role shows at the
+next refresh. The BI may call `/oauth2/introspect` for a live check and `/oauth2/revoke` at sign-out.
+
+**Audit.** Each sign-in to a client is kept by the issuer (who, which client, when: the refresh-token records). An audit event per
+sign-in in the AMS's audit trail is **[planned]**.
+
+**Settings (AMS).** `BI_OAUTH_AUDIENCE` (empty: none of this is enabled) and `OAUTH_CLIENTS`, a JSON list:
+`[{"id":"bi-app","name":"BI","secret":"<32+ characters>","redirectUris":["https://bi.example.org/auth/callback"]},
+{"id":"claude","name":"Claude","redirectUris":["https://claude.ai/api/mcp/auth_callback"]}]`.
+
+**[planned]**: dynamic client registration for MCP clients (needs a consent screen in the AMS); a BI role granted explicitly in the
+AMS instead of derived; the audit event per sign-in.
+
+### 6.3 General rules
+**Co-deployment (DEC-034, revised 2026-10-27).** Both products may run in one Compose project (the BI repository's
+`compose.together.yaml`) on **one PostgreSQL database** and one Garage store. Each product owns its schemas and roles: the AMS
+lives in `ams` (and its job queue in `pgboss`); the BI owns its own schemas (its tables in `bi`, its job queue in a schema of its
+own, never `pgboss`) and `public`, which is **reserved for the BI's analytic data**. No role of one product has a privilege on the
+other's schemas: the AMS's migration 0070 lets only `ams_app` and `ams_worker` use `ams`, and leaves `public` empty and closed
+until the BI grants its own role. Neither product queries the other's schemas; they talk only through this contract. The AMS
+calls the BI over **https** wherever it runs; plain http is allowed only to the one host named `BI_PRIVATE_HOST` (a single-label
+service name, e.g. `BI_BASE_URL=http://bi-api:4000`), because only a private network keeps the key and tokens off the wire. The
+BI calls back the AMS's internal address (`APP_PUBLIC_URL=http://app:3000`). Nothing else in this contract changes.
 
 ## 7. What the BI team can build now
 
@@ -236,6 +318,7 @@ beside v1 with an overlap. M4 (reports) and M5/M6 do not change this boundary an
 5. Webhook delivery guarantees the BI needs (at-least-once with retries is proposed).
 6. Does the BI need a read of **org units, programs and courses** (for scope) from the AMS, or does it own that dimension
    and the AMS maps to it? Proposed: the AMS exposes its org chart read-only (`GET /api/bi/v0/org`), and a unit may carry
-   an external id the BI uses.
+   an external id the BI uses. Since DEC-035 the person's `bi_scope` names AMS org unit and program ids, so this read is needed for
+   the BI to resolve them.
 7. ~~Does a failed BI call retry by itself, and how often (TASK-090)?~~ Answered by DEC-032: yes, after 15 minutes, 1 hour, 4 hours and 12 hours, five attempts, then a person; a late run is announced once. Still open: how are the dataset's `sourceKind` / `sourceConfig` (3.3) and the item's
    `method: bi` reconciled (proposed in 3.3; the runs do not read `sourceConfig` yet)?
