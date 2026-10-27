@@ -9,7 +9,7 @@ status: In Progress
 priority: P1
 tags:
   - agent
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -40,8 +40,8 @@ related_decisions:
     name: Secrets in an encrypted table behind a small interface; budgets; language
     url: /DECISIONS.md#DEC-020
 modified:
-  by: agent/claude-code
-  at: '2026-10-26T22:07:12.855Z'
+  by: process:vef-cli
+  at: '2026-10-27T05:09:48.166Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -58,4 +58,8 @@ related_tasks:
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 
-Spec proposed 2026-10-26 in docs/agent-spec.md and revised the same day for any model provider: the runtime (Pydantic AI in a worker job, the model per mode a setting), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost, and delivery in four steps (2a ask, 2b build from a file, 2c connect a system, 2d define a KPI). Decisions are recorded once it is approved.
+Spec in docs/agent-spec.md and decisions DEC-015 to DEC-020: the runtime (Pydantic AI in a worker job, the model per mode a setting), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost. Delivery is in four steps.
+
+- 2a, ask questions and get charts (TASK-012): done and merged (PR 8). Chat over SSE, five providers with fetched model lists and a tool-call test, encrypted secret store, governed read tools with small counts hidden, budgets, the Models page. No live provider has been called yet; that is the first thing to verify with real keys.
+- 2b, build an integration from an uploaded file, with the sandbox and the approvals page (TASK-013): next.
+- 2c, connect a source system (TASK-014), and 2d, define a KPI (TASK-015): after 2b.

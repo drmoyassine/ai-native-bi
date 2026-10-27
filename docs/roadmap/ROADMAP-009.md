@@ -8,7 +8,7 @@ priority: P0
 tags:
   - app
   - ui
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T21:39:41.703Z'
@@ -37,9 +37,9 @@ related_tasks:
     name: Manage accounts in the app
     url: /TASKS.md#TASK-011
 modified:
-  by: agent/claude-code
-  at: '2026-10-26T21:39:41.703Z'
+  by: process:vef-cli
+  at: '2026-10-27T05:09:48.788Z'
 ---
 # ROADMAP-009 — The app shell: sign-in, uploads, a first chart
 
-The home for real data (uploads), for the agent (its chat comes next, ROADMAP-003) and for charts (the builder, ROADMAP-004).
+The home for real data (uploads), for the agent (its chat, step 2a of ROADMAP-003, is in the app) and for charts (the builder, ROADMAP-004).
