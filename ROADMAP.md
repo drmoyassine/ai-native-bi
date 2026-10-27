@@ -243,7 +243,7 @@ tags:
   - api
   - mcp
   - ui
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -262,9 +262,11 @@ related_decisions:
     name: 'Charts and dashboards: private drafts, approved to publish'
     url: /DECISIONS.md#DEC-013
 modified:
-  by: agent/claude-code
-  at: '2026-10-26T17:54:58.321Z'
+  by: process:vef-cli
+  at: '2026-10-27T06:37:40.690Z'
 ---
+
+The MCP server is specified in docs/mcp-spec.md (proposed 2026-10-27): the official MCP SDK's MCPServer mounted in the API at /mcp, the chat agent's governed read tools shared, one principal behind several issuers (BI personal access tokens first, then the AMS and the institution's SSO), and data scope enforced in Cube. Person identity from the AMS is requested in issue 10 (proposal 5 in docs/ams-contract-proposals.md). Decisions are recorded once the spec is approved.
 
 ---
 

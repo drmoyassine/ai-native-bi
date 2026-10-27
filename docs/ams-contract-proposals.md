@@ -33,3 +33,16 @@ schemas), and the BI generates its Pydantic models from them, with a test that f
 
 The BI's mirror accepted only lowercase names of 64 characters; the AMS (`NAME` in `packages/shared/src/evidence.ts`) accepts
 `^[A-Za-z][A-Za-z0-9_.-]{0,99}$`, as contract 3.1 says. The mirror was wrong and now follows the AMS; nothing to raise.
+
+## 5. A person's identity, role and data scope ([#10](https://github.com/drmoyassine/ai-native-bi/issues/10), sent as `for-ams`)
+
+Contract §6 defines the BI only as a service identity in the AMS. The BI's app, its MCP server (`docs/mcp-spec.md`) and later BI tools
+must act as a *person*, with that person's rights, and those rights should come from the AMS when the two run together. The BI must
+support a range of sign-in setups with one claim vocabulary: its own accounts (standalone), the AMS as identity provider, the
+institution's SSO (federated by the AMS or trusted directly), and the existing service identity for machine calls.
+
+Proposal: the AMS is an OpenID Connect issuer (discovery and published signing keys) that issues short-lived tokens with the BI as
+audience, carrying a stable subject, email, name, the person's BI role (`viewer`, `steward`, `admin`) and data scope (stable org-unit or
+program ids, see contract open question 6); MCP clients sign people in through it (OAuth 2.1 authorization code with PKCE); a person
+disabled in the AMS is refused at the next token. Open: the AMS role mapping, whether the AMS federates the institution's SSO, client
+registration for MCP clients (dynamic or pre-registered), token lifetimes.
