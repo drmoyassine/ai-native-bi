@@ -1,5 +1,6 @@
 """Who an MCP call acts for (docs/mcp-spec.md section 5). One principal, whichever issuer signed the person in: the tools see only this.
-Step 3a has one issuer, the BI's own personal access tokens; the AMS's and the institution's tokens are added later (issue 10)."""
+Two issuers today: the BI's own personal access tokens, and an OpenID Connect issuer such as the AMS (contract 6.2), whose tokens carry
+the person's BI role and scope."""
 
 from __future__ import annotations
 
@@ -9,8 +10,11 @@ import secrets
 from dataclasses import dataclass
 from typing import Any
 
+import jwt
 from mcp.server.auth.provider import AccessToken
 from psycopg_pool import AsyncConnectionPool
+
+from .oidc import OidcIssuer
 
 PREFIX = 'bi_pat_'
 EXPIRY_DAYS = (7, 30, 90, 365)
@@ -110,15 +114,82 @@ async def verify_pat(pool: AsyncConnectionPool, token: str) -> Principal | None:
     )
 
 
-class PrincipalVerifier:
-    """The MCP SDK's TokenVerifier: dispatches a bearer token to the issuer it belongs to. Step 3a knows one issuer (the BI's own
-    tokens); a token of any other shape is refused until its issuer is configured."""
+async def link_identity(pool: AsyncConnectionPool, issuer: str, subject: str, email: str, name: str) -> str:
+    """The local person for an issuer's subject, made the first time it is seen. The issuer is trusted to say who has an email, so a
+    BI account with the same email is that person (their drafts and log entries stay theirs); roles are never taken from it."""
+    async with pool.connection() as conn, conn.transaction():
+        row = await (
+            await conn.execute(
+                'update external_identity set last_seen_at = now() where issuer = %s and subject = %s returning user_id::text',
+                [issuer, subject],
+            )
+        ).fetchone()
+        if row:
+            await conn.execute('update app_user set name = %s where id = %s and name <> %s', [name, row[0], name])
+            return str(row[0])
+        user = await (await conn.execute('select id::text from app_user where lower(email) = lower(%s)', [email])).fetchone()
+        if user is None:
+            user = await (
+                await conn.execute(
+                    'insert into app_user (email, name, password_hash) values (%s, %s, null) returning id::text', [email, name]
+                )
+            ).fetchone()
+        assert user is not None
+        await conn.execute(
+            'insert into external_identity (issuer, subject, user_id) values (%s, %s, %s) on conflict do nothing',
+            [issuer, subject, user[0]],
+        )
+    return str(user[0])
 
-    def __init__(self, pool: AsyncConnectionPool) -> None:
+
+def scope_of(entries: Any) -> str:
+    """'all' when the person may see the institution; 'limited' for org units or programs only (refused until Cube enforces it)."""
+    if not isinstance(entries, list):
+        return 'none'
+    if any(isinstance(e, dict) and e.get('type') == 'institution' for e in entries):
+        return 'all'
+    return 'limited' if entries else 'none'
+
+
+async def verify_oidc(pool: AsyncConnectionPool, issuer: OidcIssuer, token: str) -> Principal | None:
+    claims = await issuer.verify(token)
+    if claims is None:
+        return None
+    role, email = claims.get('bi_role'), claims.get('email')
+    if role not in ROLES or not isinstance(email, str) or '@' not in email:
+        return None  # the issuer would not issue such a token; refuse rather than guess a role
+    subject = str(claims['sub'])
+    name = str(claims.get('name') or email)
+    user_id = await link_identity(pool, issuer.name, subject, email, name)
+    client = str(claims.get('client_id') or claims.get('azp') or 'unknown')
+    return Principal(
+        issuer=issuer.name, subject=user_id, email=email, name=name, role=role, scope=scope_of(claims.get('bi_scope')),
+        client_id=f'{issuer.name}:{client}',
+    )  # fmt: skip
+
+
+class PrincipalVerifier:
+    """The MCP SDK's TokenVerifier: dispatches a bearer token to the issuer it belongs to. A personal access token goes to the BI's
+    own table; a JWT goes to the configured issuer named in its `iss` (and is then checked properly); anything else is refused."""
+
+    def __init__(self, pool: AsyncConnectionPool, issuers: list[OidcIssuer] | None = None) -> None:
         self.pool = pool
+        self.issuers = {i.issuer.rstrip('/'): i for i in issuers or []}
+
+    async def principal(self, token: str) -> Principal | None:
+        if token.startswith(PREFIX):
+            return await verify_pat(self.pool, token)
+        if not self.issuers or token.count('.') != 2:
+            return None
+        try:  # only to choose the issuer: the chosen issuer then checks the signature, audience and expiry
+            claimed = jwt.decode(token, options={'verify_signature': False}).get('iss')
+        except jwt.PyJWTError:
+            return None
+        issuer = self.issuers.get(str(claimed).rstrip('/'))
+        return await verify_oidc(self.pool, issuer, token) if issuer else None
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        principal = await verify_pat(self.pool, token)
+        principal = await self.principal(token)
         if principal is None:
             return None
         return AccessToken(

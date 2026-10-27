@@ -1,6 +1,6 @@
 # Spec: the MCP server — governed metrics for outside agents (ROADMAP-004)
 
-Status: **approved 2026-10-27; step 3a built (TASK-016).** The decisions of § 11 are DEC-021 to DEC-024; steps 3b to 3e are TASK-017 to TASK-020. Builds on DEC-004 (Cube is the only read
+Status: **approved 2026-10-27; steps 3a (TASK-016) and 3c (TASK-018, DEC-025) built.** The decisions of § 11 are DEC-021 to DEC-024; steps 3b, 3d and 3e are TASK-017, TASK-019 and TASK-020. The AMS answered issue 10 with contract 6.2 (AMS DEC-035), summarised in § 5. Builds on DEC-004 (Cube is the only read
 path), DEC-009 (one general-purpose API and MCP server on Cube), DEC-012 (one chart definition), DEC-013 (drafts and publishing),
 DEC-017 (the model sees schemas, profiles and suppressed aggregates, never rows) and `docs/agent-spec.md` (the same tools, defined once).
 Identity depends on the contract request [#10](https://github.com/drmoyassine/ai-native-bi/issues/10) (proposal 5 in
@@ -105,6 +105,17 @@ is refused at the next token: the AMS stops issuing, the BI rejects revoked PATs
   AMS's sign-in (authorization code with PKCE) and comes back with an AMS token for the BI. Client registration (dynamic or
   pre-registered) is the AMS's answer to #10, question 3.
 
+### The AMS as issuer (contract 6.2, built in step 3c)
+
+Agreed with the AMS (AMS DEC-035) and built (DEC-025): issuer `{AMS APP_URL}/api/auth` (BI setting `AMS_OAUTH_ISSUER`), keys at
+`/api/auth/jwks`, EdDSA; access tokens (`typ` at+jwt) live 10 minutes and name the BI's MCP address in `aud` (BI `OAUTH_AUDIENCE`,
+default `PUBLIC_URL/mcp`; the AMS's `BI_OAUTH_AUDIENCE` must be the same); claims `sub`, `email`, `name`, `bi_role`
+(`viewer`, `steward`, `admin`) and `bi_scope` (institution, org-unit and program ids with a role each). An institution entry is scope
+`all`; anything narrower is refused until § "Data scope in Cube" is built. A person disabled in the AMS gets no new token, so loses the
+BI within 10 minutes. MCP clients are **pre-registered** in the AMS (`OAUTH_CLIENTS`; Claude's callback is
+`https://claude.ai/api/mcp/auth_callback`); dynamic registration is planned on the AMS side. The institution's SSO is federated through
+the AMS, so the BI sees one issuer; trusting the institution directly would give identity only, without role or scope.
+
 ### Data scope in Cube
 
 Scope is enforced **in Cube**, not in each tool: the principal's scope goes into Cube's security context for the request (the JWT the
@@ -159,7 +170,7 @@ as-of date, never guess a hidden count, never combine overlapping queries to rec
 |---|---|---|
 | **3a** | Tools moved to `src/bi/tools/`; principal and `TokenVerifier`; personal access tokens and their page; `/mcp` mounted; access log; limits | A real MCP client lists and calls the tools with a PAT; refusals tested |
 | **3b** | Staging: `PUBLIC_URL`, a token, `.mcp.json`, the network allowance | This project's Claude Code session queries staging through MCP |
-| **3c** | AMS issuer and OAuth (after #10) | A person signs in through the AMS from an MCP client and gets their role |
+| **3c** | AMS issuer and OAuth (after #10) — **built** (TASK-018) | A person signs in through the AMS from an MCP client and gets their role |
 | **3d** | Scope in Cube's security context (after the org dimension) | A scoped person sees only their units' figures, in MCP and in the app |
 | **3e** | Institution SSO, direct, if the AMS does not federate it | An institution token is accepted with mapped role and scope |
 

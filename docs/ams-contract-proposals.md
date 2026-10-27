@@ -34,7 +34,7 @@ schemas), and the BI generates its Pydantic models from them, with a test that f
 The BI's mirror accepted only lowercase names of 64 characters; the AMS (`NAME` in `packages/shared/src/evidence.ts`) accepts
 `^[A-Za-z][A-Za-z0-9_.-]{0,99}$`, as contract 3.1 says. The mirror was wrong and now follows the AMS; nothing to raise.
 
-## 5. A person's identity, role and data scope ([#10](https://github.com/drmoyassine/ai-native-bi/issues/10), sent as `for-ams`)
+## 5. A person's identity, role and data scope ([#10](https://github.com/drmoyassine/ai-native-bi/issues/10)): answered, contract 6.2 (AMS DEC-035)
 
 Contract §6 defines the BI only as a service identity in the AMS. The BI's app, its MCP server (`docs/mcp-spec.md`) and later BI tools
 must act as a *person*, with that person's rights, and those rights should come from the AMS when the two run together. The BI must
@@ -46,3 +46,16 @@ audience, carrying a stable subject, email, name, the person's BI role (`viewer`
 program ids, see contract open question 6); MCP clients sign people in through it (OAuth 2.1 authorization code with PKCE); a person
 disabled in the AMS is refused at the next token. Open: the AMS role mapping, whether the AMS federates the institution's SSO, client
 registration for MCP clients (dynamic or pre-registered), token lifetimes.
+
+**Answered 2026-10-27** in contract 6.2 (AMS DEC-035): the AMS is an OAuth 2.1 / OpenID Connect issuer (`{APP_URL}/api/auth`, EdDSA
+keys at `/api/auth/jwks`, PKCE required), access tokens of 10 minutes with `aud` = the BI's resource (`BI_OAUTH_AUDIENCE`), claims
+`sub`, `email`, `name`, `bi_role` and `bi_scope` (institution, org-unit and program ids with a role each), the AMS role mapping,
+refusal and deprovisioning at the next refresh. Clients are pre-registered by an AMS admin (`OAUTH_CLIENTS`; no dynamic registration
+yet); the institution's SSO is federated through the AMS. Built on the BI side as TASK-018 (DEC-025). Still open: the org chart read
+(contract open question 6) that resolves scope ids, and dynamic client registration.
+
+## 6. Co-deployment on one database (contract 6.3, AMS DEC-034 revised)
+
+Not a request: the AMS revised the rule. When both run together they share **one PostgreSQL database**: the AMS in `ams` (and
+`pgboss`), the BI in schemas of its own (its tables in `bi`, its job queue in its own schema) and `public` for its analytic data.
+The BI today uses its own database with its tables in `public`; moving to this layout is TASK-021.

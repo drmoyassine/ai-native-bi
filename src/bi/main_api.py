@@ -13,12 +13,23 @@ from .agent.routes import AgentContext
 from .agent.secrets import DbSecretStore
 from .api import AppDeps, create_app
 from .app import AppContext
-from .config import admin_from_env, load_env, storage
+from .config import Env, admin_from_env, load_env, storage
 from .cube import CubeClient
 from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
+from .mcp.oidc import OidcIssuer
 from .mcp.server import McpContext
 from .queue import create_queue, enqueue_collect, enqueue_load, enqueue_turn
+
+
+def oidc_issuers(env: Env, http: httpx.AsyncClient) -> list[OidcIssuer]:
+    """The AMS as issuer when configured (contract 6.2); its tokens must name the MCP server (OAUTH_AUDIENCE, or PUBLIC_URL/mcp)."""
+    if not env.AMS_OAUTH_ISSUER:
+        return []
+    audience = env.OAUTH_AUDIENCE or (f'{env.PUBLIC_URL}/mcp' if env.PUBLIC_URL else None)
+    if audience is None:
+        raise SystemExit('AMS_OAUTH_ISSUER needs OAUTH_AUDIENCE or PUBLIC_URL (the address tokens must be issued for)')
+    return [OidcIssuer(issuer=env.AMS_OAUTH_ISSUER.rstrip('/'), audience=audience, http=http, name='ams')]
 
 
 async def main() -> None:
@@ -76,6 +87,7 @@ async def main() -> None:
                     public_url=env.PUBLIC_URL,
                     calls_per_minute=env.MCP_CALLS_PER_MINUTE,
                     calls_per_day=env.MCP_CALLS_PER_DAY,
+                    issuers=oidc_issuers(env, http),
                 ),
             )
             app = create_app(deps)

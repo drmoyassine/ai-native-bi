@@ -90,8 +90,9 @@ hidden-small-counts read (`/app/api/drafts/<id>/data`), so the chat shows nothin
 Agents outside the BI reach the governed metrics through an MCP server at `/mcp` on the API ([DEC-021](DECISIONS.md#DEC-021),
 `docs/mcp-spec.md`): the official SDK's `MCPServer`, stateless streamable HTTP. Its tools are the chat agent's, defined once in
 `src/bi/tools` ([DEC-024](DECISIONS.md#DEC-024)), with the same privacy. Every call acts as one principal, whichever issuer signed the
-person in ([DEC-022](DECISIONS.md#DEC-022)): today the BI's personal access tokens, next the AMS as identity provider and the
-institution's SSO. Data scope will be enforced in Cube's security context for every consumer ([DEC-023](DECISIONS.md#DEC-023)). Calls
+person in ([DEC-022](DECISIONS.md#DEC-022)): the BI's personal access tokens, and the AMS's access tokens (contract 6.2,
+[DEC-025](DECISIONS.md#DEC-025)), whose `bi_role` and `bi_scope` come from the person's AMS roles; the institution's SSO is federated
+through the AMS. Data scope will be enforced in Cube's security context for every consumer ([DEC-023](DECISIONS.md#DEC-023)). Calls
 are rate-limited per person and recorded in an access log.
 
 ### The app

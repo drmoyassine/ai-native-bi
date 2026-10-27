@@ -53,8 +53,10 @@ def create_app(deps: AppDeps) -> FastAPI:
 
     app = FastAPI(title='AI-native BI', docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     if mcp is not None:
-        # An exact route, ahead of every other: the MCP app keeps its own middleware (bearer authentication) and its own route.
-        app.router.routes.insert(0, Route('/mcp', endpoint=mcp[1]))
+        # Exact routes, ahead of every other, for each path the MCP app serves (/mcp, and its protected-resource metadata): the MCP app
+        # keeps its own middleware (bearer authentication) and its own routing.
+        for path in sorted({r.path for r in mcp[1].routes if isinstance(r, Route)}):
+            app.router.routes.insert(0, Route(path, endpoint=mcp[1]))
 
     @app.get('/healthz')
     async def healthz() -> dict[str, bool]:

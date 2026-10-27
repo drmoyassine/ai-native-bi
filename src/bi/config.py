@@ -58,6 +58,11 @@ class Env(BaseModel):
     MCP_CALLS_PER_MINUTE: Annotated[int, Field(gt=0)] = 60
     """Calls of MCP tools a person may make in a minute (docs/mcp-spec.md section 7)."""
     MCP_CALLS_PER_DAY: Annotated[int, Field(gt=0)] = 2000
+    AMS_OAUTH_ISSUER: Annotated[str, StringConstraints(pattern=r'^https?://\S+$')] | None = None
+    """The AMS as the BI's authorization server (contract 6.2), its issuer: {AMS APP_URL}/api/auth. Its access tokens then act for a
+    person on the MCP server, with the role and scope they carry; MCP clients are told to sign in there."""
+    OAUTH_AUDIENCE: Annotated[str, StringConstraints(pattern=r'^https?://\S+$')] | None = None
+    """The resource the issuer's tokens must name (`aud`; the AMS's BI_OAUTH_AUDIENCE). Default: PUBLIC_URL/mcp, the MCP server."""
     ADMIN_EMAIL: Annotated[str, StringConstraints(min_length=3)] | None = None
     """With ADMIN_PASSWORD: the administrator the API creates at start if that email has no account yet (see admin_from_env)."""
     ADMIN_PASSWORD: SecretStr | None = None

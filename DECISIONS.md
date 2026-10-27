@@ -231,7 +231,7 @@ consequences: >-
   transform tool (dbt or SQLMesh) is still to choose (TASK-003).
 tags:
   - warehouse
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -249,9 +249,12 @@ related_tasks:
   - id: TASK-004
     name: Load files into raw and analytics
     url: /TASKS.md#TASK-004
+  - id: TASK-021
+    name: Co-deployment on one database, in the BI's own schemas
+    url: /TASKS.md#TASK-021
 modified:
   by: agent/claude-code
-  at: '2026-10-26T17:33:38.583Z'
+  at: '2026-10-27T11:29:31.698Z'
 ---
 
 ---
@@ -1038,17 +1041,17 @@ related_decisions:
     url: /DECISIONS.md#DEC-014
 modified:
   by: agent/claude-code
-  at: '2026-10-27T06:57:37.643Z'
+  at: '2026-10-27T11:29:53.682Z'
 related_tasks:
   - id: TASK-016
     name: 'MCP step 3a: shared tools, personal access tokens, /mcp'
     url: /TASKS.md#TASK-016
-  - id: TASK-018
-    name: 'MCP step 3c: the AMS as identity provider, OAuth for MCP clients'
-    url: /TASKS.md#TASK-018
   - id: TASK-020
     name: 'MCP step 3e: the institution SSO as a direct issuer'
     url: /TASKS.md#TASK-020
+  - id: TASK-018
+    name: 'MCP step 3c: the AMS as identity provider, OAuth for MCP clients'
+    url: /TASKS.md#TASK-018
 ---
 
 ---
@@ -1137,6 +1140,58 @@ related_tasks:
   - id: TASK-016
     name: 'MCP step 3a: shared tools, personal access tokens, /mcp'
     url: /TASKS.md#TASK-016
+---
+
+---
+
+## DEC-025 — The AMS's access tokens act for a person on the MCP server
+
+---
+title: The AMS's access tokens act for a person on the MCP server
+status: accepted
+context: >-
+  Contract 6.2 (AMS DEC-035) makes the AMS the BI's authorization server, with bi_role and bi_scope in its access
+  tokens.
+decision: >-
+  With AMS_OAUTH_ISSUER set, the MCP server accepts the AMS's access tokens: EdDSA-signed JWTs of type at+jwt, from that
+  issuer, for the MCP server's address (OAUTH_AUDIENCE, default PUBLIC_URL/mcp), checked against the AMS's published
+  keys (cached, refetched at most once a minute for an unknown key id). ID tokens, other algorithms and tokens without a
+  known BI role or an email are refused. Role and scope come from each token; institution scope is all, anything
+  narrower is refused until Cube enforces it. Each AMS person gets a local record keyed by (issuer, subject), with no
+  password, which owns their drafts and log entries; a BI account with the same email becomes that record (the AMS is
+  trusted for email, never for a role stored here). MCP clients are told to sign in at the AMS through the
+  protected-resource metadata.
+rationale: One account and one place to revoke; the BI holds no secret and reads nothing of the AMS's.
+consequences: >-
+  The AMS must list each MCP client (OAUTH_CLIENTS) and set BI_OAUTH_AUDIENCE to the BI's MCP address; scoped people
+  wait for TASK-019.
+tags:
+  - mcp
+  - identity
+  - ams
+id: DEC-025
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T11:29:30.313Z'
+related_roadmap_items:
+  - id: ROADMAP-004
+    name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+    url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-022
+    name: One principal behind many issuers; personal access tokens first
+    url: /DECISIONS.md#DEC-022
+  - id: DEC-023
+    name: Data scope is enforced in Cube's security context, for every consumer
+    url: /DECISIONS.md#DEC-023
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T11:29:53.682Z'
+related_tasks:
+  - id: TASK-018
+    name: 'MCP step 3c: the AMS as identity provider, OAuth for MCP clients'
+    url: /TASKS.md#TASK-018
 ---
 
 <!-- End VEF generated items. -->

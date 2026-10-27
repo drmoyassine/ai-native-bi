@@ -14,6 +14,15 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-27 — The AMS signs people in to the MCP server
+
+The AMS answered issue 10 with contract 6.2 (AMS DEC-035), and the BI built its side (TASK-018, DEC-025): the AMS's EdDSA access
+tokens act for a person on `/mcp`, with `bi_role` and `bi_scope` read from each token; an AMS person gets a local record keyed by
+(issuer, subject) and no password; MCP clients learn from the protected-resource metadata to sign in at the AMS. Learned on the way:
+`mcp` 2.x warns unless `AuthSettings.validate_token_resource` is set, and it must be False when the verifier checks the audience
+itself; PyJWT's `PyJWK` loads the AMS's OKP keys directly. The AMS also revised co-deployment (contract 6.3: one database, each
+product in its own schemas), which the BI does not follow yet (TASK-021).
+
 ## 2026-10-27 — MCP step 3a: the governed tools for outside agents
 
 TASK-016 (DEC-021 to DEC-024): the tools moved to `src/bi/tools` and are shared by the chat and the MCP server at `/mcp`; people make
