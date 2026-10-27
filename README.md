@@ -25,8 +25,8 @@ Verified against a server that speaks the OpenAI protocol and with scripted mode
 
 The MCP server, step 3a (ROADMAP-004, TASK-016, `docs/mcp-spec.md`): agents outside the BI (Claude Code, Claude, other assistants) use
 the same governed tools as the chat at `PUBLIC_URL/mcp`, as a person, with a personal access token made on the app's Access tokens
-page. Every call is rate-limited and logged; small counts stay hidden. Sign-in through the AMS and the institution's SSO comes next
-(issue 10). This repository's `.mcp.json` connects Claude Code to the staging server; it reads the token from the `BI_TOKEN`
+page. Every call is rate-limited and logged; small counts stay hidden. With `AMS_OAUTH_ISSUER` set, people sign in with their AMS account instead
+(contract 6.2): the AMS's tokens carry their BI role and scope, and the institution's SSO is federated through the AMS. This repository's `.mcp.json` connects Claude Code to the staging server; it reads the token from the `BI_TOKEN`
 environment variable (never commit a token), and a cloud session also needs the staging host allowed in its network settings.
 
 Stack: Python 3.12, FastAPI, Pydantic, Procrastinate, dlt, dbt, Cube, httpx, psycopg, PostgreSQL 16, pytest, ruff, mypy, uv, Docker

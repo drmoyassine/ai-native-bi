@@ -8,7 +8,7 @@ priority: P0
 tags:
   - warehouse
   - cube
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -45,9 +45,12 @@ related_tasks:
   - id: TASK-007
     name: A read-only database role for Cube
     url: /TASKS.md#TASK-007
+  - id: TASK-021
+    name: Co-deployment on one database, in the BI's own schemas
+    url: /TASKS.md#TASK-021
 modified:
   by: agent/claude-code
-  at: '2026-10-26T21:22:32.764Z'
+  at: '2026-10-27T11:29:31.698Z'
 ---
 # ROADMAP-002 — Phase 1: the pipeline end to end, from files to the AMS
 

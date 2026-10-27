@@ -41,9 +41,12 @@ related_decisions:
   - id: DEC-024
     name: The chat agent and the MCP server share one tool implementation
     url: /DECISIONS.md#DEC-024
+  - id: DEC-025
+    name: The AMS's access tokens act for a person on the MCP server
+    url: /DECISIONS.md#DEC-025
 modified:
   by: agent/claude-code
-  at: '2026-10-27T06:57:45.443Z'
+  at: '2026-10-27T11:29:30.313Z'
 related_tasks:
   - id: TASK-016
     name: 'MCP step 3a: shared tools, personal access tokens, /mcp'

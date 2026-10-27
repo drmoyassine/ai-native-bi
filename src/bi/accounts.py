@@ -79,11 +79,11 @@ async def sign_in(pool: AsyncConnectionPool, email: str, password: str) -> tuple
                 [email.strip()],
             )
         ).fetchone()
-        try:
-            _HASHER.verify(row[4] if row else _DUMMY_HASH, password)
+        try:  # the same work whether or not the account exists or has a password, so timing tells nothing
+            _HASHER.verify(row[4] if row and row[4] else _DUMMY_HASH, password)
         except (VerifyMismatchError, VerificationError, InvalidHashError):
             return None
-        if row is None:
+        if row is None or row[4] is None:  # a person signed in by another issuer (the AMS) has no password here
             return None
         token = secrets.token_urlsafe(32)
         expires = dt.datetime.now(dt.UTC) + dt.timedelta(hours=SESSION_HOURS)

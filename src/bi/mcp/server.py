@@ -6,7 +6,7 @@ and recorded in the access log. Nothing here decides what data may leave: that i
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -24,6 +24,7 @@ from starlette.applications import Starlette
 from .. import tools
 from ..charts import ChartDefinition, ChartQuery
 from ..cube import CubeClient, CubeError
+from .oidc import OidcIssuer
 from .principal import Principal, PrincipalVerifier
 
 INSTRUCTIONS = """The institution's governed metrics (its business intelligence). Every number comes from a governed metric layer.
@@ -44,6 +45,8 @@ class McpContext:
     """The app's own address (PUBLIC_URL): the host MCP requests may name, and the base of the server's URL."""
     calls_per_minute: int = 60
     calls_per_day: int = 2000
+    issuers: list[OidcIssuer] = field(default_factory=list)
+    """OpenID Connect issuers whose access tokens act for a person (the AMS, contract 6.2); the first is advertised to MCP clients."""
 
 
 class Limited(ToolError):
@@ -61,15 +64,29 @@ def transport_security(public_url: str | None) -> TransportSecuritySettings:
     return TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=hosts, allowed_origins=origins)
 
 
+def auth_settings(ctx: McpContext) -> AuthSettings:
+    """With an issuer configured, MCP clients are told where to sign in: the server publishes its protected-resource metadata
+    (RFC 9728) naming the issuer as its authorization server, and a refusal points there. Without one, only personal access tokens
+    work and nothing is advertised."""
+    if ctx.issuers:
+        # The verifier checks each token's audience itself (src/bi/mcp/oidc.py), for every configured issuer.
+        return AuthSettings(
+            issuer_url=AnyHttpUrl(ctx.issuers[0].issuer),
+            resource_server_url=AnyHttpUrl(ctx.issuers[0].audience),
+            validate_token_resource=False,
+        )
+    return AuthSettings(issuer_url=AnyHttpUrl(ctx.public_url or 'http://localhost'), resource_server_url=None)
+
+
 def build_server(ctx: McpContext) -> tuple[MCPServer, Starlette]:
-    """The server and its ASGI app (one route, /mcp). The caller runs `server.session_manager.run()` for the app's lifetime."""
+    """The server and its ASGI app (/mcp, and the protected-resource metadata when an issuer is configured). The caller routes every
+    path of the app's routes to it and runs `server.session_manager.run()` for the app's lifetime."""
     server = MCPServer(
         name='ai-native-bi',
         title='AI-native BI: governed metrics',
         instructions=INSTRUCTIONS,
-        token_verifier=PrincipalVerifier(ctx.pool),
-        # The issuer of step 3a's tokens is the BI itself; no OAuth endpoints are advertised until the AMS issues tokens (issue 10).
-        auth=AuthSettings(issuer_url=AnyHttpUrl(ctx.public_url or 'http://localhost'), resource_server_url=None),
+        token_verifier=PrincipalVerifier(ctx.pool, ctx.issuers),
+        auth=auth_settings(ctx),
     )
 
     async def call(tool: str, arguments: dict[str, Any], run: Callable[[tools.ToolContext], Awaitable[dict[str, Any]]]) -> dict[str, Any]:
@@ -78,7 +95,10 @@ def build_server(ctx: McpContext) -> tuple[MCPServer, Starlette]:
             raise ToolError('not signed in')
         principal = Principal.from_claims(access.claims)
         if principal.scope != 'all':
-            raise ToolError('a limited data scope is not supported yet, so nothing is answered rather than too much')
+            raise ToolError(
+                'your access is limited to some units or programs, which the BI cannot enforce yet, so nothing is answered rather than '
+                'too much; ask for institution-wide access or wait for scoped access'
+            )
         await _check_limits(ctx, principal, tool, arguments)
         tc = tools.ToolContext(pool=ctx.pool, cube=ctx.cube, user_id=principal.subject, suppression_threshold=ctx.suppression_threshold)
         try:

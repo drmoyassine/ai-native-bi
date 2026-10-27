@@ -651,7 +651,7 @@ title: 'MCP step 3c: the AMS as identity provider, OAuth for MCP clients'
 description: >-
   Accept AMS-issued tokens (OIDC discovery, JWKS) and advertise the AMS as authorization server, once issue 10 is agreed
   and built
-status: pending
+status: completed
 priority: P1
 id: TASK-018
 last_updated: '2026-10-27'
@@ -666,10 +666,23 @@ related_decisions:
   - id: DEC-022
     name: One principal behind many issuers; personal access tokens first
     url: /DECISIONS.md#DEC-022
+  - id: DEC-025
+    name: The AMS's access tokens act for a person on the MCP server
+    url: /DECISIONS.md#DEC-025
 modified:
   by: agent/claude-code
-  at: '2026-10-27T06:57:36.211Z'
+  at: '2026-10-27T11:29:53.682Z'
 ---
+
+docs/mcp-spec.md section 10, step 3c (DEC-025; contract 6.2, AMS DEC-035). Done: src/bi/mcp/oidc.py checks the AMS's access tokens
+(EdDSA, at+jwt, issuer, audience, expiry) against its published keys, cached and refetched at most once a minute for an unknown
+key; the verifier dispatches a JWT to the issuer it names; migration 0007 (external_identity; app_user without a password); an AMS
+person's local record keyed by (issuer, subject), linked to a BI account with the same email; bi_role and bi_scope read from each
+token (institution = all, narrower refused); the protected-resource metadata names the AMS so MCP clients sign in there; settings
+AMS_OAUTH_ISSUER and OAUTH_AUDIENCE. Verified with a fake AMS publishing Ed25519 keys and the SDK's real MCP client: valid tokens
+work and are logged as ams:<client>; another audience, another issuer, expired, an unpublished key, an ID token, unsigned, no or
+unknown role, no email all refused; key rotation fetched once; mutation checks (ID tokens accepted, audience unchecked) failed the tests.
+Not yet on staging: the AMS's BI_OAUTH_AUDIENCE and OAUTH_CLIENTS (an AMS admin's settings) and the BI's AMS_OAUTH_ISSUER.
 
 ---
 
@@ -724,5 +737,40 @@ modified:
   by: agent/claude-code
   at: '2026-10-27T06:57:37.643Z'
 ---
+
+---
+
+## TASK-021 — Co-deployment on one database, in the BI's own schemas
+
+---
+title: Co-deployment on one database, in the BI's own schemas
+description: >-
+  Contract 6.3 (AMS DEC-034 revised) - with the AMS, one PostgreSQL database; the BI's tables in bi, its queue in its
+  own schema, public for analytic data
+status: pending
+priority: P1
+id: TASK-021
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T11:29:31.698Z'
+roadmap_item:
+  id: ROADMAP-002
+  name: 'Phase 1: the pipeline end to end, from files to the AMS'
+  url: /ROADMAP.md#ROADMAP-002
+related_decisions:
+  - id: DEC-005
+    name: 'Warehouse: raw and analytics on PostgreSQL, raw files on S3'
+    url: /DECISIONS.md#DEC-005
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T11:29:31.698Z'
+---
+
+Contract 6.3: when both run together they share one PostgreSQL database. The AMS lives in ams (and pgboss) and leaves public empty
+and closed until the BI grants its own role. The BI must keep its tables in a bi schema, its Procrastinate queue in a schema of its
+own (never pgboss), and its analytic data in public, with no privilege on the AMS's schemas. Today the BI has its own database with
+its tables in public. To do: the migrations' search_path and schema, Procrastinate's schema, dbt's target schemas, Cube's grants,
+compose.together.yaml, and a test that the BI's role cannot read ams. Standalone deployments can keep a database of their own.
 
 <!-- End VEF generated items. -->

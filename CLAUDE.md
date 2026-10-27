@@ -37,7 +37,8 @@ app; keys live in the `secret` table, encrypted with `BI_SECRETS_KEY`. Tests nee
 
 `src/bi/mcp/` serves `src/bi/tools/` at `/mcp` (spec: `docs/mcp-spec.md`, DEC-021 to DEC-024). A tool is written once in `src/bi/tools/`
 and reaches both the chat and MCP; never give MCP a tool the chat's privacy rules do not cover. Every call resolves to a principal from
-a bearer token (personal access tokens today); a scope other than `all` is refused until Cube enforces it. Tests use the SDK's real
+a bearer token: a personal access token, or an AMS access token (contract 6.2, `src/bi/mcp/oidc.py`) whose role and scope are read
+from the token, never stored; a scope other than `all` is refused until Cube enforces it. Tests use the SDK's real
 client in-process (`tests/test_mcp.py`); the SDK's session manager runs in the app's lifespan, once per app.
 
 ## Project memory (VEF)
