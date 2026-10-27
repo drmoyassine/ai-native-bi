@@ -69,6 +69,76 @@ async def ensure_admin(pool: AsyncConnectionPool, email: str, password: str, nam
     return True
 
 
+@dataclass(frozen=True)
+class Throttle:
+    """How many failed sign-ins in a window refuse the next one (TASK-010). Argon2id makes a guess slow; this limits how many are made."""
+
+    window_minutes: int = 15
+    per_email: int = 10
+    per_ip: int = 20
+
+
+def _key(email: str) -> str:
+    return email.strip().lower()[:200]
+
+
+async def blocked_for(pool: AsyncConnectionPool, email: str, ip: str, throttle: Throttle) -> int | None:
+    """Seconds until a sign-in may be tried again, or None when it may be tried now. Either the email or the address has had too many
+    failures in the window; the wait is until the oldest of those failures leaves the window."""
+    async with pool.connection() as conn:
+        row = await (
+            await conn.execute(
+                """with w as (select make_interval(mins => %(mins)s) as span)
+                   select
+                     (select count(*) from sign_in_failure where email = %(email)s and at > now() - (select span from w)),
+                     (select ceil(extract(epoch from min(at) + (select span from w) - now())) from sign_in_failure
+                        where email = %(email)s and at > now() - (select span from w)),
+                     (select count(*) from sign_in_failure where ip = %(ip)s and at > now() - (select span from w)),
+                     (select ceil(extract(epoch from min(at) + (select span from w) - now())) from sign_in_failure
+                        where ip = %(ip)s and at > now() - (select span from w))""",
+                {'mins': throttle.window_minutes, 'email': _key(email), 'ip': ip},
+            )
+        ).fetchone()
+    assert row is not None
+    waits = [
+        int(w) for count, w, limit in ((row[0], row[1], throttle.per_email), (row[2], row[3], throttle.per_ip)) if count >= limit and w
+    ]
+    return max(max(waits), 1) if waits else None
+
+
+async def record_failure(pool: AsyncConnectionPool, email: str, ip: str) -> None:
+    async with pool.connection() as conn:
+        await conn.execute('insert into sign_in_failure (email, ip) values (%s, %s)', [_key(email), ip])
+        await conn.execute("delete from sign_in_failure where at < now() - interval '1 day'")
+
+
+async def clear_failures(pool: AsyncConnectionPool, email: str) -> None:
+    async with pool.connection() as conn:
+        await conn.execute('delete from sign_in_failure where email = %s', [_key(email)])
+
+
+async def change_password(pool: AsyncConnectionPool, user_id: str, current: str, new: str, keep_token: str | None) -> None:
+    """Sets a new password for a person who proves the current one, and ends every other session of theirs (the one in use stays).
+    Raises AccountError with the reason; a person signed in by another issuer (the AMS) has no password here."""
+    if len(new) < MIN_PASSWORD:
+        raise AccountError(f'the new password must have at least {MIN_PASSWORD} characters')
+    if new == current:
+        raise AccountError('the new password must be different from the current one')
+    async with pool.connection() as conn, conn.transaction():
+        row = await (await conn.execute('select password_hash from app_user where id = %s for update', [user_id])).fetchone()
+        if row is None or row[0] is None:
+            raise AccountError('this account signs in through another service, so its password is not changed here')
+        try:
+            _HASHER.verify(row[0], current)
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            raise AccountError('the current password is wrong') from None
+        await conn.execute('update app_user set password_hash = %s where id = %s', [_HASHER.hash(new), user_id])
+        await conn.execute(
+            'delete from app_session where user_id = %s and (%s::text is null or token_hash <> %s)',
+            [user_id, _token_hash(keep_token) if keep_token else None, _token_hash(keep_token) if keep_token else ''],
+        )
+
+
 async def sign_in(pool: AsyncConnectionPool, email: str, password: str) -> tuple[User, str] | None:
     """The user and a new session token, or None (which of email or password was wrong is not said)."""
     async with pool.connection() as conn:

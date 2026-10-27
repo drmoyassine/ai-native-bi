@@ -24,7 +24,8 @@ services:
       CUBE_API_URL: http://bi-cube:4000
       RAW_FILES_URL: file:///data/raw-files
     volumes: ["biraw:/data/raw-files"]
-    ports: ["4000:4000"]
+    # Loopback only: the API is reached from outside through the reverse proxy and its HTTPS, never straight on the server's address.
+    ports: ["127.0.0.1:4000:4000"]
     depends_on:
       postgres: { condition: service_healthy }
 

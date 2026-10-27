@@ -63,6 +63,15 @@ class Env(BaseModel):
     person on the MCP server, with the role and scope they carry; MCP clients are told to sign in there."""
     OAUTH_AUDIENCE: Annotated[str, StringConstraints(pattern=r'^https?://\S+$')] | None = None
     """The resource the issuer's tokens must name (`aud`; the AMS's BI_OAUTH_AUDIENCE). Default: PUBLIC_URL/mcp, the MCP server."""
+    SIGN_IN_WINDOW_MINUTES: Annotated[int, Field(gt=0)] = 15
+    """Failed sign-ins are counted over this window (TASK-010)."""
+    SIGN_IN_MAX_FAILURES_PER_EMAIL: Annotated[int, Field(gt=0)] = 10
+    """This many failures for one email in the window refuse the next sign-in with 429."""
+    SIGN_IN_MAX_FAILURES_PER_IP: Annotated[int, Field(gt=0)] = 20
+    """The same for one client address, over all emails."""
+    TRUSTED_PROXY_HOPS: Annotated[int, Field(ge=0, le=5)] = 0
+    """How many proxies in front of the API append the client's address to X-Forwarded-For (Easypanel's router: 1). 0 trusts only the
+    connection's address, which behind a proxy is the proxy: the per-address limit then covers everyone at once."""
     ADMIN_EMAIL: Annotated[str, StringConstraints(min_length=3)] | None = None
     """With ADMIN_PASSWORD: the administrator the API creates at start if that email has no account yet (see admin_from_env)."""
     ADMIN_PASSWORD: SecretStr | None = None
