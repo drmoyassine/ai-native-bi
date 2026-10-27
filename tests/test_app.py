@@ -14,6 +14,7 @@ from bi import accounts
 from bi.api import AppDeps, create_app
 from bi.app import AppContext
 from bi.charts import ChartDefinition, cube_query, unknown_members
+from bi.cube import CubeClient, CubeError, CubeNoData
 from bi.uploads import Storage, process_upload
 
 from .conftest import AMS, PoolFactory, database_url
@@ -31,12 +32,15 @@ MEMBERS = [
 class FakeCube:
     def __init__(self) -> None:
         self.queries: list[dict[str, Any]] = []
+        self.fail: Exception | None = None
 
     async def meta(self) -> list[dict[str, Any]]:
         return MEMBERS
 
     async def load(self, query: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         self.queries.append(query)
+        if self.fail:
+            raise self.fail
         if query.get('timeDimensions', [{}])[0].get('granularity'):
             return [
                 {
@@ -176,6 +180,43 @@ async def test_charts_only_governed_members_and_returns_cubes_rows(app: tuple[ht
     rows = (await client.post('/app/api/charts/data', json=by_year, headers=APP)).json()['rows']
     assert rows == [{'enrollment.term_start': '2026-01-01T00:00:00.000', 'enrollment.headcount': '3'}]
     assert cube.queries[-1]['timeDimensions'] == [{'dimension': 'enrollment.term_start', 'granularity': 'year'}]
+
+
+async def test_nothing_loaded_yet_is_no_data_and_a_cube_failure_says_why_without_a_gateway_status(
+    app: tuple[httpx.AsyncClient, list[str], FakeCube],
+) -> None:
+    client, _, cube = app
+    await signed_in(client)
+    chart = {
+        'title': 'Headcount by level',
+        'query': {'measures': ['enrollment.headcount'], 'dimensions': ['enrollment.program']},
+        'visual': {'type': 'bar', 'x': 'enrollment.program'},
+    }
+    try:
+        cube.fail = CubeNoData('Cube answered 400: Error: relation "analytics.enrollment" does not exist')
+        res = await client.post('/app/api/charts/data', json=chart, headers=APP)
+        assert res.status_code == 200 and res.json() == {'rows': []}  # the page says "No data", not an outage
+        cube.fail = CubeError('Cube answered 500: out of memory')
+        res = await client.post('/app/api/charts/data', json=chart, headers=APP)
+        # Not 502/503/504: a proxy in front replaces those with its own page and the reason is lost.
+        assert res.status_code == 424 and 'out of memory' in res.json()['detail']
+    finally:
+        cube.fail = None
+
+
+async def test_the_cube_client_tells_a_missing_table_from_a_failure() -> None:
+    def cube(request: httpx.Request) -> httpx.Response:
+        if b'missing' in request.content:
+            return httpx.Response(400, json={'error': 'Error: relation "analytics.enrollment" does not exist'})
+        return httpx.Response(400, json={'error': 'Error: column "x" does not exist'})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(cube)) as http:
+        client = CubeClient(http, 'http://cube:4000', 's' * 32)
+        with pytest.raises(CubeNoData):
+            await client.load({'measures': ['missing']})
+        with pytest.raises(CubeError) as other:
+            await client.load({'measures': ['enrollment.headcount']})
+        assert not isinstance(other.value, CubeNoData)
 
 
 async def test_serves_the_web_app_beside_the_apis(app: tuple[httpx.AsyncClient, list[str], FakeCube]) -> None:

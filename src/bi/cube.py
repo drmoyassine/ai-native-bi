@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from typing import Any
 
@@ -12,6 +13,14 @@ import jwt
 
 class CubeError(RuntimeError):
     """Cube refused the query or could not be reached (the job is retried)."""
+
+
+class CubeNoData(CubeError):
+    """The warehouse table behind the query does not exist yet: nothing has been loaded for it. No data, not a failure (rule 3)."""
+
+
+# PostgreSQL's words when dbt has not built the table a cube reads: before the first file of a dataset is loaded.
+_NO_TABLE = re.compile(r'relation "[^"]+" does not exist', re.IGNORECASE)
 
 
 class CubeClient:
@@ -46,7 +55,8 @@ class CubeClient:
                 await asyncio.sleep(self._wait_s)
                 continue
             if res.status_code != 200 or 'error' in body:
-                raise CubeError(f'Cube answered {res.status_code}: {body.get("error", res.text[:200])}')
+                message = f'Cube answered {res.status_code}: {body.get("error", res.text[:200])}'
+                raise (CubeNoData if _NO_TABLE.search(message) else CubeError)(message)
             data: list[dict[str, Any]] = body.get('data', [])
             return data
 
