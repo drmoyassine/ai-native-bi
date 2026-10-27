@@ -85,3 +85,7 @@ main.wide { max-inline-size: 1280px; }
 tr.gone { opacity: 0.55; }
 @media (max-width: 720px) { .chat { grid-template-columns: 1fr; } }
 .thread > * { flex-shrink: 0; }
+.made { margin-block: 12px; }
+.made pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+label.inline { flex-direction: row; align-items: center; gap: 6px; margin-block: 12px; }
+code { font-size: 0.85em; }

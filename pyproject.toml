@@ -20,6 +20,7 @@ dependencies = [
   "pyyaml>=6",
   "pydantic-ai-slim[anthropic,openai]==2.61.0",
   "cryptography>=43",
+  "mcp==2.3.0",
 ]
 
 [dependency-groups]

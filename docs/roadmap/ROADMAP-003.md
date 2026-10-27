@@ -39,9 +39,12 @@ related_decisions:
   - id: DEC-020
     name: Secrets in an encrypted table behind a small interface; budgets; language
     url: /DECISIONS.md#DEC-020
+  - id: DEC-024
+    name: The chat agent and the MCP server share one tool implementation
+    url: /DECISIONS.md#DEC-024
 modified:
-  by: process:vef-cli
-  at: '2026-10-27T05:09:48.166Z'
+  by: agent/claude-code
+  at: '2026-10-27T06:57:20.911Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'

@@ -33,6 +33,13 @@ chart it proposes is read through `/app/api/drafts/<id>/data`, which hides them 
 app; keys live in the `secret` table, encrypted with `BI_SECRETS_KEY`. Tests need no model: they use scripted models and
 `tests/fake_openai.py` (an OpenAI-protocol server over real HTTP). Do not add a tool that returns rows about people.
 
+## The MCP server (ROADMAP-004)
+
+`src/bi/mcp/` serves `src/bi/tools/` at `/mcp` (spec: `docs/mcp-spec.md`, DEC-021 to DEC-024). A tool is written once in `src/bi/tools/`
+and reaches both the chat and MCP; never give MCP a tool the chat's privacy rules do not cover. Every call resolves to a principal from
+a bearer token (personal access tokens today); a scope other than `all` is refused until Cube enforces it. Tests use the SDK's real
+client in-process (`tests/test_mcp.py`); the SDK's session manager runs in the app's lifespan, once per app.
+
 ## Project memory (VEF)
 
 Vision, roadmap, tasks and decisions live in `docs/vision/`, `docs/roadmap/`, `docs/tasks/` and `docs/decisions/`, managed by

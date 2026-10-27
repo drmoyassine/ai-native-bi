@@ -23,6 +23,11 @@ admin adds model providers (Anthropic, OpenAI, OpenAI-compatible, OpenRouter, Ol
 fetched and each model is tested for tool calls before people can use it. Needs `BI_SECRETS_KEY` (`python3 scripts/make_env.py`).
 Verified against a server that speaks the OpenAI protocol and with scripted models; no live provider has been called yet.
 
+The MCP server, step 3a (ROADMAP-004, TASK-016, `docs/mcp-spec.md`): agents outside the BI (Claude Code, Claude, other assistants) use
+the same governed tools as the chat at `PUBLIC_URL/mcp`, as a person, with a personal access token made on the app's Access tokens
+page. Every call is rate-limited and logged; small counts stay hidden. Sign-in through the AMS and the institution's SSO comes next
+(issue 10).
+
 Stack: Python 3.12, FastAPI, Pydantic, Procrastinate, dlt, dbt, Cube, httpx, psycopg, PostgreSQL 16, pytest, ruff, mypy, uv, Docker
 Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web app and runs the project-memory tool (VEF).
 
@@ -41,9 +46,11 @@ Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web
 | `src/bi/metrics.py`, `cube.py` | The first source: the AMS's metric names onto Cube, and the Cube client |
 | `src/bi/app.py`, `accounts.py`, `uploads.py`, `charts.py` | The app's API (`/app/api`): sessions, uploads, governed members, chart data |
 | `src/bi/agent/` | The agent: providers and model lists, secret store, the turn loop (Pydantic AI), governed read tools, small-count hiding, the chat's routes |
+| `src/bi/tools/` | The governed tools, defined once: the chat agent and the MCP server both call them |
+| `src/bi/mcp/` | The MCP server at `/mcp`: the principal and token verifier, personal access tokens, rate limits, the access log |
 | `web/` | The web app (Vite, React, ECharts), built into the API image and served at `/`; `web/src/chart.ts` draws every chart |
 | `scripts/make_env.py` | `.env` from `.env.example` with every secret generated |
-| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue, `0003` `no_data`, `0004` the app, `0005` the agent |
+| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue, `0003` `no_data`, `0004` the app, `0005` the agent, `0006` the MCP server |
 | `tests/` | pytest, against a real PostgreSQL |
 
 ## How an AMS request flows (async)

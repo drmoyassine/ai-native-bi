@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -17,9 +18,11 @@ from fastapi import FastAPI, Path, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg_pool import AsyncConnectionPool
+from starlette.routing import Route
 
 from .app import AppContext, create_router
 from .collect import Refused, accept_collect, key_matches
+from .mcp.server import McpContext, build_server
 
 
 @dataclass
@@ -33,10 +36,25 @@ class AppDeps:
     """The app's API (/app/api); None serves the AMS's route only."""
     web_dir: str | None = None
     """The built web app (web/dist), served at /."""
+    mcp: McpContext | None = None
+    """The MCP server (docs/mcp-spec.md), at /mcp; None leaves it out."""
 
 
 def create_app(deps: AppDeps) -> FastAPI:
-    app = FastAPI(title='AI-native BI', docs_url=None, redoc_url=None, openapi_url=None)
+    mcp = build_server(deps.mcp) if deps.mcp else None
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if mcp is None:
+            yield
+            return
+        async with mcp[0].session_manager.run():  # mounted inside this app, so its own lifespan does not run
+            yield
+
+    app = FastAPI(title='AI-native BI', docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    if mcp is not None:
+        # An exact route, ahead of every other: the MCP app keeps its own middleware (bearer authentication) and its own route.
+        app.router.routes.insert(0, Route('/mcp', endpoint=mcp[1]))
 
     @app.get('/healthz')
     async def healthz() -> dict[str, bool]:

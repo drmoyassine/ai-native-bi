@@ -85,6 +85,15 @@ kept encrypted in the BI's own database ([DEC-020](DECISIONS.md#DEC-020)). The m
 profiles and aggregates with small counts hidden ([DEC-017](DECISIONS.md#DEC-017)), and a chart it proposes is drawn from the same
 hidden-small-counts read (`/app/api/drafts/<id>/data`), so the chat shows nothing the model was not allowed to see.
 
+### The MCP server
+
+Agents outside the BI reach the governed metrics through an MCP server at `/mcp` on the API ([DEC-021](DECISIONS.md#DEC-021),
+`docs/mcp-spec.md`): the official SDK's `MCPServer`, stateless streamable HTTP. Its tools are the chat agent's, defined once in
+`src/bi/tools` ([DEC-024](DECISIONS.md#DEC-024)), with the same privacy. Every call acts as one principal, whichever issuer signed the
+person in ([DEC-022](DECISIONS.md#DEC-022)): today the BI's personal access tokens, next the AMS as identity provider and the
+institution's SSO. Data scope will be enforced in Cube's security context for every consumer ([DEC-023](DECISIONS.md#DEC-023)). Calls
+are rate-limited per person and recorded in an access log.
+
 ### The app
 
 The web app (`web/`, [DEC-014](DECISIONS.md#DEC-014)) is a React single-page app built into the API image and served at `/`; its

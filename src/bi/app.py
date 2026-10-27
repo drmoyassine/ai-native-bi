@@ -13,15 +13,16 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Resp
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, uploads
+from . import accounts, tools, uploads
 from .accounts import User
 from .agent.catalog import datasets
 from .agent.routes import AgentContext, create_agent_router
 from .agent.suppress import count_measures, suppress_rows
-from .charts import ChartDefinition, cube_query, unknown_members
+from .charts import ChartDefinition
 from .cube import CubeClient, CubeError
 from .ingest import DATASET
 from .log import log
+from .mcp.routes import create_tokens_router
 
 COOKIE = 'bi_session'
 CSRF_HEADER = 'x-bi-app'
@@ -36,6 +37,8 @@ class AppContext:
     cookie_secure: bool = True
     agent: AgentContext | None = None
     """The agent's chat and admin routes (ROADMAP-003); None leaves them out."""
+    public_url: str | None = None
+    """The app's own address (PUBLIC_URL), shown with personal access tokens as the MCP server's base."""
 
 
 class SignIn(BaseModel):
@@ -125,21 +128,12 @@ def create_router(ctx: AppContext) -> APIRouter:
             raise HTTPException(502, str(e)) from e
 
     async def chart_rows(chart: ChartDefinition, client: CubeClient) -> list[dict[str, Any]]:
-        """The rows of a chart definition, from Cube; time members come back under their own name (not name.granularity)."""
         try:
-            unknown = unknown_members(chart, await client.meta())
-            if unknown:
-                raise HTTPException(422, f'not governed members: {", ".join(unknown)}')
-            rows = await client.load(cube_query(chart))
+            return await tools.chart_rows(client, chart)
+        except tools.ToolError as e:
+            raise HTTPException(422, str(e)) from e
         except CubeError as e:
             raise HTTPException(502, str(e)) from e
-        time = chart.query.time
-        if time and time.granularity:  # Cube names the bucket `<dimension>.<granularity>`: the chart knows it as the dimension
-            key = f'{time.dimension}.{time.granularity}'
-            for r in rows:
-                if key in r:
-                    r[time.dimension] = r.pop(key)
-        return rows
 
     @router.post('/charts/data')
     async def chart_data(chart: ChartDefinition, user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:
@@ -169,4 +163,5 @@ def create_router(ctx: AppContext) -> APIRouter:
 
     if ctx.agent is not None:
         router.include_router(create_agent_router(ctx.agent, current_user))
+    router.include_router(create_tokens_router(ctx.pool, current_user, ctx.public_url))
     return router

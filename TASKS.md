@@ -572,4 +572,157 @@ modified:
   at: '2026-10-26T22:07:12.855Z'
 ---
 
+---
+
+## TASK-016 — MCP step 3a: shared tools, personal access tokens, /mcp
+
+---
+title: 'MCP step 3a: shared tools, personal access tokens, /mcp'
+description: >-
+  Tools moved to src/bi/tools and shared by the chat and MCP; personal access tokens and their page; the MCP server at
+  /mcp with the access log and rate limits
+status: completed
+priority: P1
+id: TASK-016
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:34.731Z'
+roadmap_item:
+  id: ROADMAP-004
+  name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+  url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-021
+    name: The MCP server is the official SDK's MCPServer, mounted in the API at /mcp
+    url: /DECISIONS.md#DEC-021
+  - id: DEC-022
+    name: One principal behind many issuers; personal access tokens first
+    url: /DECISIONS.md#DEC-022
+  - id: DEC-024
+    name: The chat agent and the MCP server share one tool implementation
+    url: /DECISIONS.md#DEC-024
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:34.731Z'
+---
+
+docs/mcp-spec.md section 10, step 3a. Done: src/bi/tools (shared by the chat agent and the MCP server); migration 0006 (access_token,
+access_log); src/bi/mcp (principal and token verifier, the MCPServer with six tools, rate limits, access log, token routes);
+/mcp mounted in the API with its session manager in the lifespan; the Access tokens page; PUBLIC_URL and MCP limits settings.
+Verified by: the SDK's real MCP client against the mounted app (tools, suppression, as-of date, drafts, another person's draft
+refused, rate limit, access log); refusals of no token, a wrong one, a JWT from an unconfigured issuer, an expired or revoked
+token, a disabled person and a foreign Host; mutation checks (revocation ignored, suppression off) made the tests fail; a
+browser-made token used over real HTTP against real Cube.
+
+---
+
+## TASK-017 — MCP step 3b: connect staging to Claude Code
+
+---
+title: 'MCP step 3b: connect staging to Claude Code'
+description: PUBLIC_URL on staging, a token, .mcp.json, and the staging host allowed in the cloud environment's network
+status: pending
+priority: P1
+id: TASK-017
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:35.488Z'
+roadmap_item:
+  id: ROADMAP-004
+  name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+  url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-021
+    name: The MCP server is the official SDK's MCPServer, mounted in the API at /mcp
+    url: /DECISIONS.md#DEC-021
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:35.488Z'
+---
+
+---
+
+## TASK-018 — MCP step 3c: the AMS as identity provider, OAuth for MCP clients
+
+---
+title: 'MCP step 3c: the AMS as identity provider, OAuth for MCP clients'
+description: >-
+  Accept AMS-issued tokens (OIDC discovery, JWKS) and advertise the AMS as authorization server, once issue 10 is agreed
+  and built
+status: pending
+priority: P1
+id: TASK-018
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:36.211Z'
+roadmap_item:
+  id: ROADMAP-004
+  name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+  url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-022
+    name: One principal behind many issuers; personal access tokens first
+    url: /DECISIONS.md#DEC-022
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:36.211Z'
+---
+
+---
+
+## TASK-019 — MCP step 3d: data scope in Cube security context
+
+---
+title: 'MCP step 3d: data scope in Cube security context'
+description: Scope claims into Cube's security context and a query rewrite on the org-unit or program dimension, for every consumer
+status: pending
+priority: P2
+id: TASK-019
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:36.926Z'
+roadmap_item:
+  id: ROADMAP-004
+  name: 'Phase 3: API, MCP server, charts and dashboards, document AI'
+  url: /ROADMAP.md#ROADMAP-004
+related_decisions:
+  - id: DEC-023
+    name: Data scope is enforced in Cube's security context, for every consumer
+    url: /DECISIONS.md#DEC-023
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:36.926Z'
+---
+
+---
+
+## TASK-020 — MCP step 3e: the institution SSO as a direct issuer
+
+---
+title: 'MCP step 3e: the institution SSO as a direct issuer'
+description: Accept the institution's OIDC tokens with mapped role and scope, if the AMS does not federate it
+status: pending
+priority: P2
+id: TASK-020
+last_updated: '2026-10-27'
+generated:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:37.643Z'
+roadmap_item:
+  id: ROADMAP-005
+  name: Single sign-on with the institution
+  url: /ROADMAP.md#ROADMAP-005
+related_decisions:
+  - id: DEC-022
+    name: One principal behind many issuers; personal access tokens first
+    url: /DECISIONS.md#DEC-022
+modified:
+  by: agent/claude-code
+  at: '2026-10-27T06:57:37.643Z'
+---
+
 <!-- End VEF generated items. -->
