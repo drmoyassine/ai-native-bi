@@ -57,6 +57,18 @@ async def create_user(pool: AsyncConnectionPool, email: str, name: str, password
     return User(id=row[0], email=email, name=name, is_admin=is_admin)
 
 
+async def ensure_admin(pool: AsyncConnectionPool, email: str, password: str, name: str) -> bool:
+    """Makes the administrator of the deployment (ADMIN_EMAIL, ADMIN_PASSWORD) when that email has no account yet; True if it did.
+    An existing account is never touched: not its password, its name or its rights, so changing the variables later changes nothing
+    and a person's own password change survives a restart."""
+    async with pool.connection() as conn:
+        exists = await (await conn.execute('select 1 from app_user where lower(email) = lower(%s)', [email.strip()])).fetchone()
+    if exists:
+        return False
+    await create_user(pool, email, name, password, is_admin=True)
+    return True
+
+
 async def sign_in(pool: AsyncConnectionPool, email: str, password: str) -> tuple[User, str] | None:
     """The user and a new session token, or None (which of email or password was wrong is not said)."""
     async with pool.connection() as conn:

@@ -66,7 +66,9 @@ python3 scripts/make_env.py   # .env with every secret generated (keeps values a
 docker compose up --build                            # the BI alone, API on :4000
 docker compose -f compose.together.yaml up --build   # with the AMS (AMS_DIR, default ../ams), see the file's header
 
-# The first account of the app (asks for the password), then open http://localhost:4000:
+# The first account of the app, then open http://localhost:4000. Either set ADMIN_EMAIL and ADMIN_PASSWORD (at least 12 characters) in
+# .env: the API makes that administrator at start if the email has no account yet, and never changes an existing account. Or ask for
+# one by hand (it asks for the password):
 docker compose exec bi-api python -m bi.main_user you@example.edu --name "Your Name" --admin
 
 # Or load a file from the command line (the folder of exports mounted read-only), then dbt rebuilds analytics:

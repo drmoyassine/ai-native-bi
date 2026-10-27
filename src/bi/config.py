@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Annotated
 from urllib.parse import urlsplit
 
-from pydantic import AfterValidator, BaseModel, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, Field, SecretStr, StringConstraints
 
 from .uploads import Storage
 
@@ -44,6 +44,7 @@ class Env(BaseModel):
     APP_COOKIE_SECURE: bool = True
     """The session cookie is sent over HTTPS only. false only for a local http:// address."""
     WEB_DIR: Annotated[str, StringConstraints(min_length=1)] | None = None
+    """The built web app to serve at / (the image sets it)."""
     BI_SECRETS_KEY: Annotated[str, StringConstraints(min_length=43, max_length=44)] | None = None
     """The key of the secret store (32 random bytes, base64url; scripts/make_env.py writes one). Without it: no provider keys."""
     AGENT_INSTITUTION_MONTHLY_TOKENS: Annotated[int, Field(gt=0)] = 100_000_000
@@ -52,7 +53,11 @@ class Env(BaseModel):
     """The monthly share of each person."""
     SUPPRESSION_THRESHOLD: Annotated[int, Field(ge=1)] = 5
     """Counts under this are hidden from the agent (and, with TASK-008, from answers). The value comes from the privacy rules (TASK-002)."""
-    """The built web app to serve at / (the image sets it)."""
+    ADMIN_EMAIL: Annotated[str, StringConstraints(min_length=3)] | None = None
+    """With ADMIN_PASSWORD: the administrator the API creates at start if that email has no account yet (see admin_from_env)."""
+    ADMIN_PASSWORD: SecretStr | None = None
+    """Kept as a secret value: it never shows in a repr or a validation error. At least 12 characters (checked when the account is made)."""
+    ADMIN_NAME: Annotated[str, StringConstraints(min_length=1)] = 'Administrator'
 
 
 def load_env(source: Mapping[str, str] | None = None) -> Env:
@@ -60,6 +65,16 @@ def load_env(source: Mapping[str, str] | None = None) -> Env:
     values = os.environ if source is None else source
     clean = {k: v for k, v in values.items() if k in Env.model_fields and v != ''}
     return Env.model_validate(clean)
+
+
+def admin_from_env(env: Env) -> tuple[str, str, str] | None:
+    """(email, password, name) of the administrator to make sure exists, or None when neither variable is set. Setting only one is a
+    mistake worth stopping for: a half-set pair would otherwise leave an app nobody can sign in to."""
+    if env.ADMIN_EMAIL is None and env.ADMIN_PASSWORD is None:
+        return None
+    if env.ADMIN_EMAIL is None or env.ADMIN_PASSWORD is None:
+        raise ValueError('set ADMIN_EMAIL and ADMIN_PASSWORD together, or neither')
+    return env.ADMIN_EMAIL, env.ADMIN_PASSWORD.get_secret_value(), env.ADMIN_NAME
 
 
 def storage(env: Env) -> Storage:

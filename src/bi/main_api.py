@@ -8,11 +8,12 @@ import httpx
 import uvicorn
 from psycopg_pool import AsyncConnectionPool
 
+from .accounts import AccountError, ensure_admin
 from .agent.routes import AgentContext
 from .agent.secrets import DbSecretStore
 from .api import AppDeps, create_app
 from .app import AppContext
-from .config import load_env, storage
+from .config import admin_from_env, load_env, storage
 from .cube import CubeClient
 from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
@@ -27,6 +28,12 @@ async def main() -> None:
         applied = await migrate(pool)
         if applied:
             log('info', 'migrated', applied=applied)
+        try:
+            admin = admin_from_env(env)
+            if admin and await ensure_admin(pool, *admin):
+                log('info', 'administrator created', email=admin[0])  # never the password
+        except (ValueError, AccountError) as e:
+            raise SystemExit(f'ADMIN_EMAIL / ADMIN_PASSWORD: {e}') from e
         if env.CUBE_DB_PASSWORD:
             if env.BI_DATABASE_ADMIN_URL:
                 await ensure_reader_role(env.BI_DATABASE_ADMIN_URL, env.CUBE_DB_USER, env.CUBE_DB_PASSWORD)
