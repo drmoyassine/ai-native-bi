@@ -29,6 +29,11 @@ page. Every call is rate-limited and logged; small counts stay hidden. With `AMS
 (contract 6.2): the AMS's tokens carry their BI role and scope, and the institution's SSO is federated through the AMS. This repository's `.mcp.json` connects Claude Code to the staging server; it reads the token from the `BI_TOKEN`
 environment variable (never commit a token), and a cloud session also needs the staging host allowed in its network settings.
 
+Hardening (TASK-010, TASK-011): repeated failed sign-ins are throttled (10 per email or 20 per client address in 15 minutes, then 429
+with a wait; behind a proxy set `TRUSTED_PROXY_HOPS`, Easypanel's router is 1); people change their own password on the Account page; and
+`compose.yaml` publishes the API on the server's loopback only (`127.0.0.1:4000`), so it is reached through the reverse proxy and its
+HTTPS, never straight on the server's address.
+
 Stack: Python 3.12, FastAPI, Pydantic, Procrastinate, dlt, dbt, Cube, httpx, psycopg, PostgreSQL 16, pytest, ruff, mypy, uv, Docker
 Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web app and runs the project-memory tool (VEF).
 
@@ -51,7 +56,7 @@ Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web
 | `src/bi/mcp/` | The MCP server at `/mcp`: the principal and token verifier, personal access tokens, rate limits, the access log |
 | `web/` | The web app (Vite, React, ECharts), built into the API image and served at `/`; `web/src/chart.ts` draws every chart |
 | `scripts/make_env.py` | `.env` from `.env.example` with every secret generated |
-| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue, `0003` `no_data`, `0004` the app, `0005` the agent, `0006` the MCP server |
+| `src/bi/migrations` | Forward-only SQL, applied by the API at start: `0001` the requests, `0002` Procrastinate's queue, `0003` `no_data`, `0004` the app, `0005` the agent, `0006` the MCP server, `0007` AMS identities, `0008` failed sign-ins |
 | `tests/` | pytest, against a real PostgreSQL |
 
 ## How an AMS request flows (async)

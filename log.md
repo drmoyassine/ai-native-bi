@@ -14,6 +14,16 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-27 — Hardening: sign-in throttling, change password, no raw port
+
+TASK-010 and part of TASK-011. Failed sign-ins are counted by the email typed and by client address; past 10 per email or 20 per
+address in 15 minutes the next attempt is refused with 429 before any password work, and a success clears the email's count. The
+client address behind a proxy is the entry the nearest trusted proxy appended to X-Forwarded-For (`TRUSTED_PROXY_HOPS`, Easypanel: 1);
+trusting the first entry would let a blocked client dodge the limit by prefixing a made-up address, which a test now pins. People
+change their own password on the Account page, which ends their other sessions. `compose.yaml` publishes port 4000 on the loopback
+only: staging's API had also been reachable over plain HTTP on the server's address. For staging, set TRUSTED_PROXY_HOPS=1 on the
+service, or the per-address limit would count everyone behind the router as one client.
+
 ## 2026-10-27 — "Error 502" on a fresh deployment was "no data yet"
 
 On staging the Chart page showed a bare "error 502". Two causes together: nothing had been loaded, so the analytics table Cube reads

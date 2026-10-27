@@ -375,9 +375,9 @@ Done 2026-10-26. Backend: accounts.py, app.py (/app/api), uploads.py (the load j
 id: TASK-010
 title: Throttle sign-in attempts
 description: Slow down or lock repeated failed sign-ins per email and per address
-status: pending
+status: completed
 priority: P1
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T21:39:41.703Z'
@@ -391,10 +391,18 @@ related_decisions:
     url: /DECISIONS.md#DEC-014
 modified:
   by: agent/claude-code
-  at: '2026-10-26T21:39:41.703Z'
+  at: '2026-10-27T12:17:26.214Z'
 ---
 
-Argon2id makes each guess slow, but nothing limits how many are tried. Needed before the app is reachable from outside the institution.
+Argon2id makes each guess slow, but nothing limited how many were tried. Done: failed sign-ins are recorded (migration 0008), by the
+email typed whether or not it exists and by client address; 10 failures for one email or 20 from one address in 15 minutes refuse
+the next attempt with 429 and Retry-After, before any password work; a successful sign-in clears that email's failures. Settings
+SIGN_IN_WINDOW_MINUTES, SIGN_IN_MAX_FAILURES_PER_EMAIL, SIGN_IN_MAX_FAILURES_PER_IP and TRUSTED_PROXY_HOPS: the client address is
+read from X-Forwarded-For only as far as the operator says proxies append (behind Easypanel's router: 1), the entry the nearest
+proxy appended, never a client-supplied one. Changing a password is held to the same limits. Verified through the real app over
+HTTP (lockout, window, per-address limit, trusted and spoofed forwarded addresses) with mutation checks, and in a browser.
+Trade-off: someone who knows an email can lock that account for the window by failing on purpose; the window is short and the
+per-address limit keeps one address from doing it to many.
 
 ---
 
@@ -404,9 +412,9 @@ Argon2id makes each guess slow, but nothing limits how many are tried. Needed be
 id: TASK-011
 title: Manage accounts in the app
 description: An admin invites, disables and resets accounts from the app instead of the command line
-status: pending
+status: in-progress
 priority: P2
-last_updated: '2026-10-26'
+last_updated: '2026-10-27'
 generated:
   by: agent/claude-code
   at: '2026-10-26T21:39:41.703Z'
@@ -420,8 +428,13 @@ related_decisions:
     url: /DECISIONS.md#DEC-014
 modified:
   by: agent/claude-code
-  at: '2026-10-26T21:39:41.703Z'
+  at: '2026-10-27T12:17:26.912Z'
 ---
+
+Done so far: a person changes their own password on the Account page (the current password, at least 12 characters, different from
+the current one; their sessions on other devices end; same throttle as sign-in), reached from their name in the header; a person
+signed in through the AMS has no password here and is told so. Still to do: an administrator creating, disabling and resetting
+people's accounts in the app instead of by command line (python -m bi.main_user).
 
 ---
 

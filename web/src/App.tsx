@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError, type User } from './api';
+import { Account } from './Account';
 import { Chat } from './Chat';
 import { ChartPage } from './ChartPage';
 import { Login } from './Login';
@@ -7,7 +8,7 @@ import { Providers } from './Providers';
 import { Tokens } from './Tokens';
 import { Uploads } from './Uploads';
 
-type Page = 'chat' | 'chart' | 'uploads' | 'models' | 'tokens';
+type Page = 'chat' | 'chart' | 'uploads' | 'models' | 'tokens' | 'account';
 
 export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -61,7 +62,9 @@ export function App() {
           )}
         </nav>
         <span className="who">
-          {user.name}
+          <button className="link" onClick={() => setPage('account')} title="Your account and password">
+            {user.name}
+          </button>
           <button className="link" onClick={() => void signOut()}>
             Sign out
           </button>
@@ -73,6 +76,7 @@ export function App() {
         {page === 'uploads' && <Uploads datasets={datasets} />}
         {page === 'models' && user.is_admin && <Providers />}
         {page === 'tokens' && <Tokens user={user} />}
+        {page === 'account' && <Account user={user} />}
       </main>
     </>
   );

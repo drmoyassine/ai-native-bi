@@ -6,7 +6,7 @@ site cannot send without the BI's consent (no CORS is allowed), so a forged form
 
 import datetime as dt
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
@@ -42,6 +42,25 @@ class AppContext:
     """The agent's chat and admin routes (ROADMAP-003); None leaves them out."""
     public_url: str | None = None
     """The app's own address (PUBLIC_URL), shown with personal access tokens as the MCP server's base."""
+    throttle: accounts.Throttle = field(default_factory=accounts.Throttle)
+    """How many failed sign-ins refuse the next (TASK-010)."""
+    proxy_hops: int = 0
+    """Proxies in front of the app that append the client's address to X-Forwarded-For (0: the connection's own address is the client)."""
+
+
+def client_ip(request: Request, hops: int) -> str:
+    """The client's address: the connection's own, or with `hops` trusted proxies in front, the address the first of them saw.
+    X-Forwarded-For is only trusted for as many entries as the operator says proxies append (a client can add more to the front)."""
+    if hops > 0:
+        parts = [p.strip() for p in request.headers.get('x-forwarded-for', '').split(',') if p.strip()]
+        if len(parts) >= hops:
+            return parts[-hops][:64]
+    return request.client.host if request.client else 'unknown'
+
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class SignIn(BaseModel):
@@ -71,10 +90,21 @@ def create_router(ctx: AppContext) -> APIRouter:
     async def sign_in(body: SignIn, request: Request, response: Response) -> dict[str, Any]:
         if request.headers.get(CSRF_HEADER) != '1':
             raise HTTPException(403, 'missing the X-BI-App header')
+        ip = client_ip(request, ctx.proxy_hops)
+        wait = await accounts.blocked_for(ctx.pool, body.email, ip, ctx.throttle)
+        if wait is not None:  # before any password work: refused attempts cost nothing and learn nothing
+            log('warning', 'sign-in throttled', email=body.email[:200], ip=ip, retry_after=wait)
+            raise HTTPException(
+                429,
+                f'Too many failed sign-in attempts. Try again in {max(1, round(wait / 60))} minutes.',
+                headers={'Retry-After': str(wait)},
+            )
         signed = await accounts.sign_in(ctx.pool, body.email, body.password)
         if signed is None:
-            log('info', 'sign-in refused', email=body.email[:200])
+            await accounts.record_failure(ctx.pool, body.email, ip)
+            log('info', 'sign-in refused', email=body.email[:200], ip=ip)
             raise HTTPException(401, 'wrong email or password')
+        await accounts.clear_failures(ctx.pool, body.email)
         user, token = signed
         response.set_cookie(
             COOKIE, token, max_age=accounts.SESSION_HOURS * 3600, httponly=True, secure=ctx.cookie_secure, samesite='strict', path='/'
@@ -85,6 +115,24 @@ def create_router(ctx: AppContext) -> APIRouter:
     async def sign_out(request: Request, response: Response, user: Signed) -> None:
         await accounts.sign_out(ctx.pool, request.cookies.get(COOKIE))
         response.delete_cookie(COOKIE, path='/', secure=ctx.cookie_secure, httponly=True, samesite='strict')
+
+    @router.post('/password', status_code=204)
+    async def change_password(body: ChangePassword, request: Request, user: Signed) -> None:
+        if request.headers.get(CSRF_HEADER) != '1':
+            raise HTTPException(403, 'missing the X-BI-App header')
+        ip = client_ip(request, ctx.proxy_hops)
+        wait = await accounts.blocked_for(ctx.pool, user.email, ip, ctx.throttle)  # a stolen session cannot guess the password either
+        if wait is not None:
+            raise HTTPException(429, 'Too many failed attempts. Try again later.', headers={'Retry-After': str(wait)})
+        try:
+            await accounts.change_password(ctx.pool, user.id, body.current_password, body.new_password, request.cookies.get(COOKIE))
+        except accounts.AccountError as e:
+            if 'current password is wrong' in str(e):
+                await accounts.record_failure(ctx.pool, user.email, ip)
+                raise HTTPException(403, str(e)) from e
+            raise HTTPException(422, str(e)) from e
+        await accounts.clear_failures(ctx.pool, user.email)
+        log('info', 'password changed', user=user.id)
 
     @router.get('/me')
     async def me(user: Signed) -> dict[str, Any]:

@@ -8,7 +8,7 @@ import httpx
 import uvicorn
 from psycopg_pool import AsyncConnectionPool
 
-from .accounts import AccountError, ensure_admin
+from .accounts import AccountError, Throttle, ensure_admin
 from .agent.routes import AgentContext
 from .agent.secrets import DbSecretStore
 from .api import AppDeps, create_app
@@ -62,6 +62,12 @@ async def main() -> None:
                 cube=cube,
                 cookie_secure=env.APP_COOKIE_SECURE,
                 public_url=env.PUBLIC_URL,
+                throttle=Throttle(
+                    window_minutes=env.SIGN_IN_WINDOW_MINUTES,
+                    per_email=env.SIGN_IN_MAX_FAILURES_PER_EMAIL,
+                    per_ip=env.SIGN_IN_MAX_FAILURES_PER_IP,
+                ),
+                proxy_hops=env.TRUSTED_PROXY_HOPS,
                 agent=AgentContext(
                     pool=pool,
                     database_url=env.DATABASE_URL,

@@ -41,6 +41,12 @@ a bearer token: a personal access token, or an AMS access token (contract 6.2, `
 from the token, never stored; a scope other than `all` is refused until Cube enforces it. Tests use the SDK's real
 client in-process (`tests/test_mcp.py`); the SDK's session manager runs in the app's lifespan, once per app.
 
+## Accounts and sign-in
+
+Failed sign-ins are throttled (`accounts.blocked_for`, `sign_in_failure`); a route that checks a password must go through the same limits.
+The client address is read from `X-Forwarded-For` only as far as `TRUSTED_PROXY_HOPS` says (the nearest proxy's entry, never the first):
+see `client_ip` in `src/bi/app.py` and `tests/test_hardening.py`. `compose.yaml` publishes the API on the loopback only.
+
 ## Project memory (VEF)
 
 Vision, roadmap, tasks and decisions live in `docs/vision/`, `docs/roadmap/`, `docs/tasks/` and `docs/decisions/`, managed by
