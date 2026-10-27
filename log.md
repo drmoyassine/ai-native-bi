@@ -14,6 +14,14 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-27 — "Error 502" on a fresh deployment was "no data yet"
+
+On staging the Chart page showed a bare "error 502". Two causes together: nothing had been loaded, so the analytics table Cube reads
+did not exist and Cube answered "relation does not exist"; and the app turned every Cube failure into HTTP 502, which Easypanel's
+proxy replaces with its own "service is not reachable" page, so the reason never reached the page. Now the Cube client tells a
+missing table (`CubeNoData`) from a failure: charts and the agent's tools answer it as no data, the AMS's collect answers it as no
+supply (rule 3) instead of a failure to retry, and a real Cube failure is a 424 that carries its reason through any proxy.
+
 ## 2026-10-27 — The AMS signs people in to the MCP server
 
 The AMS answered issue 10 with contract 6.2 (AMS DEC-035), and the BI built its side (TASK-018, DEC-025): the AMS's EdDSA access

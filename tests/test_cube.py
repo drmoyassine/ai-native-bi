@@ -137,3 +137,32 @@ async def test_the_agents_tools_work_on_the_real_cube(pool: AsyncConnectionPool,
         'enrollment.headcount'
     ]  # one student: under the threshold of 2
     assert result['suppressed_cells'] >= 1 and 'enrollment.as_of' not in str(result['rows'])
+
+
+async def test_before_anything_is_loaded_the_real_cube_means_no_data_not_failure(
+    pool: AsyncConnectionPool, cube_env: tuple[str, str]
+) -> None:
+    """A fresh deployment has no analytics table until its first file is loaded: charts show no data and the AMS gets no supply."""
+    from bi import tools
+    from bi.charts import ChartDefinition
+    from bi.cube import CubeNoData
+
+    async with pool.connection() as conn:
+        await conn.execute('alter table analytics.enrollment rename to enrollment_hidden')
+    try:
+        async with httpx.AsyncClient() as http:
+            cube = CubeClient(http, *cube_env)
+            with pytest.raises(CubeNoData):
+                await cube.load({'measures': ['enrollment.headcount'], 'dimensions': ['enrollment.level']}, fresh=True)
+            chart = ChartDefinition.model_validate(
+                {'title': 'By level', 'query': {'measures': ['enrollment.headcount'], 'dimensions': ['enrollment.level']},
+                 'visual': {'type': 'bar', 'x': 'enrollment.level'}}
+            )  # fmt: skip
+            assert await tools.chart_rows(cube, chart) == []
+        outcome, calls = await work(
+            pool, cube_env, collect_request({'label': 'Fall 2026', 'start': '2026-08-24', 'end': '2026-12-18'}, 'none')
+        )
+        assert outcome == 'no_data' and calls == []  # no supply, and not a failure to retry
+    finally:
+        async with pool.connection() as conn:
+            await conn.execute('alter table analytics.enrollment_hidden rename to enrollment')

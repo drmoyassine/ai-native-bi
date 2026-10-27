@@ -14,7 +14,7 @@ from psycopg_pool import AsyncConnectionPool
 from ..agent import catalog
 from ..agent.suppress import count_measures, suppress_rows
 from ..charts import ChartDefinition, ChartQuery, cube_query, query_to_cube, unknown_members, unknown_query_members
-from ..cube import CubeClient, CubeError
+from ..cube import CubeClient, CubeError, CubeNoData
 
 MAX_ROWS_TO_MODEL = 200
 
@@ -74,6 +74,8 @@ async def query_metric(ctx: ToolContext, query: ChartQuery) -> dict[str, Any]:
     cube_q = query_to_cube(query.model_copy(update={'measures': [*query.measures, as_of_member]}) if wants_as_of else query)
     try:
         raw = await cube.load(cube_q)
+    except CubeNoData:
+        raw = []  # nothing loaded yet: answered below as no data, never as made-up numbers
     except CubeError as e:
         return {'error': str(e)}
     as_of: str | None = None
@@ -128,7 +130,10 @@ async def chart_rows(cube: CubeClient, chart: ChartDefinition) -> list[dict[str,
     unknown = unknown_members(chart, await cube.meta())
     if unknown:
         raise ToolError(f'not governed members: {", ".join(unknown)}')
-    rows = await cube.load(cube_query(chart))
+    try:
+        rows = await cube.load(cube_query(chart))
+    except CubeNoData:
+        return []  # nothing loaded yet for this dataset: no data, not a failure
     time = chart.query.time
     if time and time.granularity:  # Cube names the bucket `<dimension>.<granularity>`: the chart knows it as the dimension
         key = f'{time.dimension}.{time.granularity}'

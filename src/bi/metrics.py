@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .contract import CollectRequest, DataColumn, Filter, SupplyBody
-from .cube import CubeClient
+from .cube import CubeClient, CubeNoData
 from .sources import CannotAnswer
 
 _OPERATORS = {'eq': 'equals', 'ne': 'notEquals', 'in': 'equals', 'gt': 'gt', 'gte': 'gte', 'lt': 'lt', 'lte': 'lte'}
@@ -120,7 +120,10 @@ class CubeMetricSource:
         value_key = value_column(dimensions, req.evidence.columns, req.query.metric)
         column = next((c for c in req.evidence.columns or [] if c.key == value_key), None)
         query = cube_query(metric, req)
-        data = await self._cube.load(query, fresh=True)  # an answer to the AMS reads the latest load, not Cube's cache
+        try:
+            data = await self._cube.load(query, fresh=True)  # an answer to the AMS reads the latest load, not Cube's cache
+        except CubeNoData:
+            return None  # nothing loaded yet for this dataset: no data, no supply (rule 3), not a failure to retry
         dates = sorted(str(r[metric.member(metric.as_of)]) for r in data if r.get(metric.member(metric.as_of)) is not None)
         if not dates:
             return None  # no rows, or only Cube's empty total (a count of 0 over nothing): no data, no supply

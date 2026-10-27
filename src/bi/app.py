@@ -25,6 +25,9 @@ from .log import log
 from .mcp.routes import create_tokens_router
 
 COOKIE = 'bi_session'
+# Cube failed (not a missing table: that is no data). 424 rather than 502: a proxy in front (Easypanel's) replaces a 502, 503 or 504
+# with its own "service is not reachable" page, which hides the reason from the page and reads like an outage.
+CUBE_FAILED = 424
 CSRF_HEADER = 'x-bi-app'
 
 
@@ -125,7 +128,7 @@ def create_router(ctx: AppContext) -> APIRouter:
         try:
             return {'members': await client.meta()}
         except CubeError as e:
-            raise HTTPException(502, str(e)) from e
+            raise HTTPException(CUBE_FAILED, str(e)) from e
 
     async def chart_rows(chart: ChartDefinition, client: CubeClient) -> list[dict[str, Any]]:
         try:
@@ -133,7 +136,7 @@ def create_router(ctx: AppContext) -> APIRouter:
         except tools.ToolError as e:
             raise HTTPException(422, str(e)) from e
         except CubeError as e:
-            raise HTTPException(502, str(e)) from e
+            raise HTTPException(CUBE_FAILED, str(e)) from e
 
     @router.post('/charts/data')
     async def chart_data(chart: ChartDefinition, user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:
@@ -157,7 +160,7 @@ def create_router(ctx: AppContext) -> APIRouter:
             try:
                 counts = count_measures(await client.meta())
             except CubeError as e:
-                raise HTTPException(502, str(e)) from e
+                raise HTTPException(CUBE_FAILED, str(e)) from e
             shown, hidden = suppress_rows(rows, chart.query.measures, counts, threshold)
             return {'rows': shown, 'suppressed_cells': hidden}
 
