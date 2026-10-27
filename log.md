@@ -14,6 +14,14 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-27 — The MCP server, specified; person identity asked of the AMS
+
+`docs/mcp-spec.md` (proposed): the MCP server is the official MCP SDK's `MCPServer` mounted in the API at `/mcp`, sharing the chat
+agent's governed read tools, with one principal behind several issuers and data scope enforced in Cube. Learned on the way: in `mcp`
+2.x the class once called `FastMCP` is `MCPServer`, and importing `mcp.server.fastmcp` fails; DNS-rebinding protection allows only
+localhost unless the public host is listed. Person identity, role and scope from the AMS is requested as issue 10 (`for-ams`) and
+recorded as proposal 5 in `docs/ams-contract-proposals.md`.
+
 ## 2026-10-27 — The administrator from the environment
 
 `ADMIN_EMAIL`, `ADMIN_PASSWORD` (and `ADMIN_NAME`) make the first administrator at API start when that email has no account yet; an
