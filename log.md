@@ -14,6 +14,14 @@ Chronological log of decisions, discoveries, and session learnings. This is the 
 
 ---
 
+## 2026-10-27 — The administrator from the environment
+
+`ADMIN_EMAIL`, `ADMIN_PASSWORD` (and `ADMIN_NAME`) make the first administrator at API start when that email has no account yet; an
+existing account is never touched, so a later change of the variables or of the person's own password changes nothing. Setting only
+one of the pair stops the start, and the password is a secret value that never shows in a repr, an error or the logs. Learned while
+deploying a staging stack on Easypanel: its log aggregation needs a licence with advanced monitoring, so the panel's own log viewer is
+the way to read container logs there.
+
 ## 2026-10-26 — Agent step 2a: ask questions, get charts
 
 TASK-012 (DEC-015 to DEC-020): the agent answers questions in a chat. Pydantic AI 2.61 runs the loop in a worker job; five provider
