@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bi-staging": {
+      "type": "http",
+      "url": "https://bi-staging.4ky7uo.easypanel.host/mcp",
+      "headers": {
+        "Authorization": "Bearer ${BI_TOKEN}"
+      }
+    }
+  }
+}
