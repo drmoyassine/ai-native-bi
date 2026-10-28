@@ -131,3 +131,10 @@ A real .xlsb export failed in dbt (`term_code` does not exist): the staging mode
 file's own columns, `bi.mapping` matches them to the parts a dataset needs (own name, then the names exports use), a person approves a match
 that is not exact (Uploads page), and dbt reads the approved mapping (DEC-026). A file whose layout cannot be read says which, instead of
 a dbt error. Discovering the dataset itself and building new ones stays with agent step 2b (TASK-013).
+
+## 2026-10-28 — Connect data: spec
+
+Uploads become one type of source. `docs/connect-data-spec.md` proposes sources with a connector interface (`spec`, `check`, `discover`,
+`read`, the Airbyte protocol's shape, built on dlt), discovery in layers (metadata at the source; header rows found in spreadsheets;
+profiles, sensitive columns and keys computed inside the BI; mapping by names, profiles and the agent), mappings per layout, and
+delivery in steps C1 to C5. Draft for review; decisions to be recorded once approved.
