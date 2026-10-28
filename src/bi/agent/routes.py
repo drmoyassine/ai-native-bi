@@ -19,6 +19,7 @@ from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models import Model
 
 from ..accounts import User
+from ..log import log
 from . import providers, store
 from .providers import KINDS, ProviderError
 from .render import render_messages
@@ -64,6 +65,7 @@ class ProviderPatch(BaseModel):
     base_url: str | None = None
     api_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)] | None = None
     enabled: bool | None = None
+    may_see_samples: bool | None = None
 
 
 class ModelAllow(BaseModel):
@@ -94,7 +96,15 @@ async def tokens_used(pool: AsyncConnectionPool, owner_id: str | None = None) ->
                 [month_start(), owner_id, owner_id],
             )
         ).fetchone()
-    return int(row[0]) if row else 0
+        setup = 0
+        if owner_id is None:  # the setup agent's calls (Connect data) belong to the institution, not to a person
+            found = await (
+                await conn.execute(
+                    'select coalesce(sum(input_tokens + output_tokens), 0) from setup_run where created_at >= %s', [month_start()]
+                )
+            ).fetchone()
+            setup = int(found[0]) if found else 0
+    return (int(row[0]) if row else 0) + setup
 
 
 def create_agent_router(ctx: AgentContext, current_user: Callable[..., Awaitable[User]]) -> APIRouter:
@@ -304,7 +314,7 @@ def create_agent_router(ctx: AgentContext, current_user: Callable[..., Awaitable
     def provider_json(r: tuple[Any, ...]) -> dict[str, Any]:
         return {
             'id': r[0], 'kind': r[1], 'name': r[2], 'base_url': r[3], 'has_key': r[4] is not None, 'enabled': r[5], 'fetched_at': r[6],
-            'fetch_error': r[7], 'models': r[8], 'allowed': r[9], 'data_path': providers.data_path(r[1], r[3]),
+            'fetch_error': r[7], 'models': r[8], 'allowed': r[9], 'data_path': providers.data_path(r[1], r[3]), 'may_see_samples': r[10],
         }  # fmt: skip
 
     async def one_provider(provider_id: str) -> dict[str, Any]:
@@ -313,7 +323,7 @@ def create_agent_router(ctx: AgentContext, current_user: Callable[..., Awaitable
                 await conn.execute(
                     """select p.id::text, p.kind, p.name, p.base_url, p.key_handle, p.enabled, p.fetched_at, p.fetch_error,
                               count(m.model_id) filter (where m.available),
-                              count(m.model_id) filter (where m.allowed_ask or m.allowed_build)
+                              count(m.model_id) filter (where m.allowed_ask or m.allowed_build), p.may_see_samples
                        from model_provider p left join provider_model m on m.provider_id = p.id where p.id::text = %s group by p.id""",
                     [provider_id],
                 )
@@ -375,9 +385,12 @@ def create_agent_router(ctx: AgentContext, current_user: Callable[..., Awaitable
         async with ctx.pool.connection() as conn:
             await conn.execute(
                 """update model_provider set name = coalesce(%s, name), base_url = coalesce(%s, base_url),
-                                              enabled = coalesce(%s, enabled) where id::text = %s""",
-                [body.name, base_url, body.enabled, provider_id],
+                                              enabled = coalesce(%s, enabled), may_see_samples = coalesce(%s, may_see_samples)
+                   where id::text = %s""",
+                [body.name, base_url, body.enabled, body.may_see_samples, provider_id],
             )
+        if body.may_see_samples is not None and body.may_see_samples != current['may_see_samples']:
+            log('info', 'provider sample rows switch', provider=provider_id, allowed=body.may_see_samples, admin=admin.id)
         error = await refresh(provider_id) if (body.api_key or body.base_url is not None) else None
         return {'provider': await one_provider(provider_id), 'fetch_error': error}
 

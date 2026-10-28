@@ -49,6 +49,7 @@ def create_connect_router(
     pool: AsyncConnectionPool,
     storage: files.Storage,
     enqueue_load: Callable[[str], Awaitable[None]],
+    enqueue_setup: Callable[[str], Awaitable[None]] | None,
     current_user: Callable[..., Awaitable[User]],
 ) -> APIRouter:
     router = APIRouter()
@@ -135,6 +136,22 @@ def create_connect_router(
         if not await store.requeue(pool, sync_id, header_row=body.row, keep_header=False):
             raise HTTPException(409, 'this sync cannot be read again now')
         await enqueue_load(sync_id)
+        return {'status': 'queued'}
+
+    @router.post('/syncs/{sync_id}/ask-agent', status_code=202)
+    async def ask_agent(sync_id: str, user: Signed) -> dict[str, str]:
+        admin(user)  # the setup agent may be sent a masked sample, which only an admin's setup work does (DEC-032)
+        found = await store.get_sync(pool, sync_id)
+        if found is None:
+            raise HTTPException(404, 'no such sync')
+        if found['status'] != 'review' or not found['dataset']:
+            raise HTTPException(409, 'the agent helps with a sync waiting for review that feeds a dataset')
+        if enqueue_setup is None:
+            raise HTTPException(503, 'the setup agent is not available')
+        if (found['agent'] or {}).get('state') in ('queued', 'running'):
+            raise HTTPException(409, 'the agent is already working on this')
+        await store.update_sync(pool, sync_id, agent={'state': 'queued', 'auto': False, 'by_admin': True, 'requested_by': user.id})
+        await enqueue_setup(sync_id)
         return {'status': 'queued'}
 
     @router.post('/syncs/{sync_id}/again')

@@ -450,3 +450,17 @@ async def test_a_proposed_charts_data_hides_small_counts_and_is_private_to_its_o
     assert by_program == {'BSME': 120, 'MSDS': None} and mine.json()['suppressed_cells'] == 1  # the 2 never reaches the page
     assert '"2"' not in mine.text and ': 2' not in mine.text
     assert (await rig.api.get(f'/app/api/drafts/{row[0]}/data')).status_code == 404  # another person's draft: not even an admin's
+
+
+async def test_a_provider_may_see_sample_rows_only_when_an_admin_says_so(rig: Rig) -> None:
+    provider = await add_anthropic(rig)
+    assert provider['may_see_samples'] is False  # off by default (DEC-032)
+    url = f'/app/api/admin/providers/{provider["id"]}'
+    assert (await rig.user.put(url, json={'may_see_samples': True}, headers=APP)).status_code == 403  # an admin only
+    on = await rig.api.put(url, json={'may_see_samples': True}, headers=APP)
+    assert on.status_code == 200 and on.json()['provider']['may_see_samples'] is True
+    assert (await rig.api.put(url, json={'name': 'Renamed'}, headers=APP)).json()['provider'][
+        'may_see_samples'
+    ] is True  # a rename keeps it
+    off = await rig.api.put(url, json={'may_see_samples': False}, headers=APP)
+    assert off.json()['provider']['may_see_samples'] is False

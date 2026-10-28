@@ -272,8 +272,14 @@ async def _propose(
     earlier = await mapping.latest_approved(pool, dataset, names)
     if earlier:  # a changed layout: start from what was approved before, and fill what it leaves out
         proposal = {p: earlier.get(p) or proposal.get(p) for p in proposal}
-    if (await mapping.stored(pool, layout_id, dataset)) is None:
+    stored = await mapping.stored(pool, layout_id, dataset)
+    if stored is None:
         await mapping.save(pool, layout_id, dataset, proposal, 'proposed', None)
+    elif stored['proposed_by'] == 'agent':  # the agent already looked at these columns: not asked twice unless a person asks
+        await store.update_sync(pool, row['id'], agent={'state': 'proposed', 'earlier': True, 'model': stored['model']})
+        return False
+    # The rules fell short: ask the setup agent (a job; the review shows the rules' proposal meanwhile). Samples only for an admin's work.
+    await store.update_sync(pool, row['id'], agent={'state': 'queued', 'auto': True, 'by_admin': bool(row.get('by_admin'))})
     return False
 
 
@@ -298,6 +304,9 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
         'parts': [],
         'mapping': None,
         'mapping_status': None,
+        'proposed_by': None,
+        'reasons': None,
+        'agent': row['agent'],
     }
     if row['layout_id'] is None:
         return out
@@ -317,6 +326,8 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
         kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
         if kept:
             out['mapping'], out['mapping_status'] = kept['mapping'], kept['status']
+            out['proposed_by'], out['reasons'] = kept['proposed_by'], kept['reasons']
+            out['model'] = kept['model']
     return out
 
 
@@ -330,7 +341,13 @@ async def approve(pool: AsyncConnectionPool, sync_id: str, chosen: dict[str, str
             found = await (await conn.execute('select columns from layout where id = %s', [row['layout_id']])).fetchone()
         names = [c['name'] for c in (found[0] if found else [])]
         mapping.check(row['dataset'], chosen or {}, names)
-        await mapping.save(pool, row['layout_id'], row['dataset'], chosen or {}, 'approved', f'approved by {email}', user_id)
+        kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
+        changed = kept is None or {p: c for p, c in (chosen or {}).items() if c} != {p: c for p, c in kept['mapping'].items() if c}
+        await mapping.save(
+            pool, row['layout_id'], row['dataset'], chosen or {}, 'approved', f'approved by {email}', user_id,
+            proposed_by='person' if changed else (kept or {}).get('proposed_by', 'rules'), reasons=(kept or {}).get('reasons'),
+            model=(kept or {}).get('model'),
+        )  # fmt: skip
     await store.approve_source(pool, row['source_id'], user_id)
     await store.requeue(pool, sync_id)
 

@@ -91,9 +91,9 @@ async def list_sources(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
         return [dict(zip(names, r, strict=True)) for r in await cur.fetchall()]
 
 
-SYNC_COLUMNS = sql.SQL("""y.id::text, y.source_id::text, y.stream_id::text, y.as_of, y.sheet, y.header_row, y.file_name,
+SYNC_COLUMNS = sql.SQL("""y.id::text, y.source_id::text, y.stream_id::text, y.user_id::text, y.as_of, y.sheet, y.header_row, y.file_name,
     y.incoming_url, y.status, y.sha256, y.layout_id, y.found_header_row, y.notes, y.profile, y.rows, y.repeat, y.tests, y.note, y.error,
-    y.created_at, y.finished_at, a.name as by_name""")
+    y.created_at, y.finished_at, y.agent, a.name as by_name, a.is_admin as by_admin""")
 
 
 async def get_source(pool: AsyncConnectionPool, source_id: str) -> dict[str, Any] | None:
@@ -115,7 +115,7 @@ async def get_source(pool: AsyncConnectionPool, source_id: str) -> dict[str, Any
             [source_id],
         )
         names = [c.name for c in cur.description or []]
-        source['syncs'] = [{k: v for k, v in zip(names, r, strict=True) if k != 'profile'} for r in await cur.fetchall()]
+        source['syncs'] = [{k: v for k, v in zip(names, r, strict=True) if k not in ('profile', 'agent')} for r in await cur.fetchall()]
     return source
 
 
@@ -134,7 +134,7 @@ async def get_sync(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | 
 
 async def update_sync(pool: AsyncConnectionPool, sync_id: str, **values: Any) -> None:
     sets = sql.SQL(', ').join(sql.SQL('{} = %s').format(sql.Identifier(k)) for k in values)
-    params = [Jsonb(v) if k in ('notes', 'profile') and v is not None else v for k, v in values.items()]
+    params = [Jsonb(v) if k in ('notes', 'profile', 'agent') and v is not None else v for k, v in values.items()]
     async with pool.connection() as conn:
         await conn.execute(sql.SQL('update sync set {} where id::text = %s').format(sets), [*params, sync_id])
 

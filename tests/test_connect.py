@@ -181,7 +181,7 @@ async def test_uploads_become_syncs_of_a_file_source_to_load_again() -> None:
     try:
         async with pool.connection() as conn:
             await conn.execute('create table schema_migration (name text primary key, applied_at timestamptz not null default now())')
-            await conn.execute("insert into schema_migration (name) values ('0010_connect.sql')")
+            await conn.execute("insert into schema_migration (name) values ('0010_connect.sql'), ('0011_setup_agent.sql')")
         await migrate(pool)  # everything before Connect data
         await accounts.create_user(pool, 'ie@example.edu', 'IE', 'a-long-password-0123')
         async with pool.connection() as conn:
@@ -190,8 +190,8 @@ async def test_uploads_become_syncs_of_a_file_source_to_load_again() -> None:
                    select id, 'enrollment', '2026-10-20', f, 'file:///x/' || f, s, 10, e from app_user,
                    (values ('a.xlsx', 'loaded', null), ('b.xlsb', 'failed', 'dbt build failed')) v(f, s, e)"""
             )
-            await conn.execute("delete from schema_migration where name = '0010_connect.sql'")
-        assert await migrate(pool) == ['0010_connect.sql']
+            await conn.execute("delete from schema_migration where name in ('0010_connect.sql', '0011_setup_agent.sql')")
+        assert await migrate(pool) == ['0010_connect.sql', '0011_setup_agent.sql']
         async with pool.connection() as conn:
             sources = await (await conn.execute('select name, slug, state from source')).fetchall()
             syncs = await (await conn.execute('select file_name, status, note, error from sync order by file_name')).fetchall()
@@ -226,3 +226,63 @@ async def test_the_file_is_kept_unchanged_every_column_is_kept_and_a_corrected_t
         'status'
     ] == 'loaded'
     assert query("select count(*), max(as_of) from analytics.enrollment where term_code = '202610'") == [(3, later)]  # the term is replaced
+
+
+async def test_asking_the_agent_is_for_an_admin_and_only_for_a_sync_waiting_for_review(pool: AsyncConnectionPool, tmp_path: Path) -> None:
+    import httpx
+
+    from bi.api import AppDeps, create_app
+    from bi.app import AppContext
+
+    asked: list[str] = []
+
+    async def enqueue(id: str) -> None:
+        pass
+
+    async def enqueue_setup(id: str) -> None:
+        asked.append(id)
+
+    storage = Storage(f'file://{tmp_path}/files')
+    await accounts.create_user(pool, 'person@example.edu', 'Person', 'a-long-password-0123')
+    api = create_app(
+        AppDeps(
+            pool=pool, api_key='k' * 16, ams_origin='https://ams.example.org', enqueue=enqueue,
+            app=AppContext(pool=pool, storage=storage, enqueue_load=enqueue, enqueue_setup=enqueue_setup, cube=None, cookie_secure=False),
+        )
+    )  # fmt: skip
+    path = export(tmp_path / 'ask.xlsx', export_rows())
+    book = openpyxl.load_workbook(path)
+    sheet = book.active
+    assert sheet is not None
+    sheet.cell(row=3, column=3, value='Semester Remark')  # a layout nobody approved
+    book.save(path)
+    ended = await load_now(pool, storage, database_url(DB), path, source_name='Ask agent', dataset='enrollment', as_of=AS_OF)
+    assert ended['status'] == 'review'
+    h = {'x-bi-app': '1'}
+    async with (
+        httpx.AsyncClient(transport=httpx.ASGITransport(app=api), base_url='http://bi') as admin,
+        httpx.AsyncClient(transport=httpx.ASGITransport(app=api), base_url='http://bi') as person,
+    ):
+        assert (
+            await admin.post('/app/api/session', json={'email': 'admin@example.edu', 'password': 'a-long-password-0123'}, headers=h)
+        ).status_code == 200
+        assert (
+            await person.post('/app/api/session', json={'email': 'person@example.edu', 'password': 'a-long-password-0123'}, headers=h)
+        ).status_code == 200
+        url = f'/app/api/syncs/{ended["id"]}/ask-agent'
+        waiting = await store.get_sync(pool, ended['id'])
+        assert waiting is not None and waiting['agent']['state'] == 'queued' and waiting['agent']['auto'] is True  # the rules fell short
+        assert (await admin.post(url, headers=h)).status_code == 409  # so the agent is already on its way
+        await store.update_sync(
+            pool, ended['id'], agent={'state': 'failed', 'error': 'down'}
+        )  # and when it has answered, an admin can ask again
+        assert (await person.post(url, headers=h)).status_code == 403  # a sample may go out, so an admin asks
+        assert (await admin.post('/app/api/syncs/00000000-0000-0000-0000-000000000000/ask-agent', headers=h)).status_code == 404
+        assert (await admin.post(url, headers=h)).status_code == 202 and asked == [ended['id']]
+        assert (await admin.post(url, headers=h)).status_code == 409  # already queued
+        row = await store.get_sync(pool, ended['id'])
+        assert row is not None and row['agent']['state'] == 'queued' and row['agent']['by_admin'] is True and row['agent']['requested_by']
+        loaded = await load_now(
+            pool, storage, database_url(DB), tmp_path / 'ask.xlsx', source_name='Registrar exports', dataset=None, as_of=AS_OF
+        )
+        assert (await admin.post(f'/app/api/syncs/{loaded["id"]}/ask-agent', headers=h)).status_code == 409  # not waiting for review

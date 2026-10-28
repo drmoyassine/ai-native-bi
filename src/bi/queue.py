@@ -13,7 +13,9 @@ from .agent import store as agent_store
 from .agent.secrets import SecretStore
 from .agent.turn import TurnDeps, process_turn
 from .callback import Ended, Supplied, Unfit, post_supply
+from .connect import store as connect_store
 from .connect.files import Storage, process_sync
+from .connect.setup_agent import process_setup
 from .contract import CollectRequest
 from .log import log
 from .sources import CannotAnswer, SourceRegistry
@@ -24,6 +26,7 @@ LOAD_QUEUE = 'load'
 LOAD_TASK = 'load'
 AGENT_QUEUE = 'agent'
 TURN_TASK = 'agent_turn'
+SETUP_TASK = 'setup_propose'
 REFRESH_TASK = 'refresh_models'
 
 
@@ -132,6 +135,8 @@ class AgentWorkerDeps:
     turn: TurnDeps
     secrets: SecretStore | None
     http: httpx.AsyncClient
+    institution_monthly_tokens: int | None = None
+    """The institution's monthly token budget, which the setup agent's calls count against (DEC-020)."""
 
 
 def create_queue(
@@ -159,11 +164,22 @@ def create_queue(
             log('info', 'model lists refreshed', providers=outcome, events_pruned=pruned)
 
         app.periodic(cron='0 */6 * * *')(app.task(name=REFRESH_TASK, queue=AGENT_QUEUE)(refresh_models))
+
+        async def setup_propose(sync_id: str) -> None:
+            # Never retried: process_setup records how it ended on the sync, and a failure leaves the rules' proposal standing.
+            outcome = await process_setup(agent.turn.pool, agent.turn.model_for, sync_id, agent.institution_monthly_tokens)
+            log('info', 'setup agent', sync=sync_id, outcome=outcome)
+
+        app.task(name=SETUP_TASK, queue=AGENT_QUEUE)(setup_propose)
     if load is not None:
 
         async def load_sync(id: str) -> None:
             outcome = await process_sync(load.pool, load.storage, load.database_url, id, load.suppression_threshold)
             log('info', 'sync', id=id, outcome=outcome)
+            if outcome == 'review' and agent is not None:  # the rules fell short: the setup agent is asked (DEC-035)
+                found = await connect_store.get_sync(load.pool, id)
+                if found is not None and (found['agent'] or {}).get('state') == 'queued':
+                    await app.configure_task(name=SETUP_TASK, queue=AGENT_QUEUE).defer_async(sync_id=id)
 
         app.task(name=LOAD_TASK, queue=LOAD_QUEUE)(load_sync)
     if deps is not None:
@@ -189,6 +205,10 @@ async def enqueue_collect(app: procrastinate.App, id: str) -> None:
 
 async def enqueue_load(app: procrastinate.App, id: str) -> None:
     await app.configure_task(name=LOAD_TASK, queue=LOAD_QUEUE).defer_async(id=id)
+
+
+async def enqueue_setup(app: procrastinate.App, sync_id: str) -> None:
+    await app.configure_task(name=SETUP_TASK, queue=AGENT_QUEUE).defer_async(sync_id=sync_id)
 
 
 async def enqueue_turn(app: procrastinate.App, run_id: str, conversation_id: str) -> None:
