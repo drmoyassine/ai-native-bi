@@ -67,7 +67,7 @@ to 1.31. Its destination and deployment pages do not bear on this spec.
   and puts values that do not fit in a variant column (`col__v_text`). Its only built-in detector is ISO timestamps.
 - **Naming**: dlt turns headers into identifiers (`snake_case` by default). Non-ASCII characters become `_` (an Arabic header ends up
   as `x`), and `+`, `*`, `@`, `-` and `|` are replaced. `sql_ci_v1`, `duck_case` and `direct` keep more of the name. We keep the header
-  as written beside the identifier (§ 9), whichever convention we choose.
+  as written beside the identifier (§ 8), whichever convention we choose.
 
 ### Control after discovery
 
