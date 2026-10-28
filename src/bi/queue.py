@@ -8,6 +8,7 @@ from procrastinate.jobs import Job
 from procrastinate.retry import BaseRetryStrategy, RetryDecision
 from psycopg_pool import AsyncConnectionPool
 
+from . import mapping
 from .agent import providers as agent_providers
 from .agent import store as agent_store
 from .agent.secrets import SecretStore
@@ -16,12 +17,13 @@ from .callback import Ended, Supplied, Unfit, post_supply
 from .contract import CollectRequest
 from .log import log
 from .sources import CannotAnswer, SourceRegistry
-from .uploads import Storage, process_upload
+from .uploads import Storage, process_upload, rebuild
 
 COLLECT_QUEUE = 'collect'
 COLLECT_TASK = 'collect'
 LOAD_QUEUE = 'load'
 LOAD_TASK = 'load'
+REBUILD_TASK = 'rebuild'
 AGENT_QUEUE = 'agent'
 TURN_TASK = 'agent_turn'
 REFRESH_TASK = 'refresh_models'
@@ -164,6 +166,18 @@ def create_queue(
             log('info', 'load', id=id, outcome=outcome)
 
         app.task(name=LOAD_TASK, queue=LOAD_QUEUE)(load_upload)
+
+        async def rebuild_dataset(dataset: str) -> None:
+            # Never retried: a mapping that cannot be built is recorded on it (column_mapping.error) for a person to change.
+            try:
+                built, note = await rebuild(load.pool, load.database_url, dataset)
+            except Exception as e:
+                await mapping.record_build(load.pool, dataset, str(e))
+                log('error', 'rebuild failed', dataset=dataset, error=str(e))
+                return
+            log('info', 'rebuild', dataset=dataset, models=built.models if built else None, note=note)
+
+        app.task(name=REBUILD_TASK, queue=LOAD_QUEUE)(rebuild_dataset)
     if deps is not None:
         strategy = retry or CollectRetry()
 
@@ -187,6 +201,10 @@ async def enqueue_collect(app: procrastinate.App, id: str) -> None:
 
 async def enqueue_load(app: procrastinate.App, id: str) -> None:
     await app.configure_task(name=LOAD_TASK, queue=LOAD_QUEUE).defer_async(id=id)
+
+
+async def enqueue_rebuild(app: procrastinate.App, dataset: str) -> None:
+    await app.configure_task(name=REBUILD_TASK, queue=LOAD_QUEUE).defer_async(dataset=dataset)
 
 
 async def enqueue_turn(app: procrastinate.App, run_id: str, conversation_id: str) -> None:

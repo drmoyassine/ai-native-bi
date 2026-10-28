@@ -48,7 +48,8 @@ Cube is its own Node service. Today the code is the AMS adapter, in Python since
   - **`raw`** (`src/bi/ingest.py`, dlt): one table per dataset, every cell as text exactly as written, every row with its file
     (`_bi_file_sha256`, `_bi_file_name`, `_bi_row`), its as-of date and load time. Appended, never changed;
   - **`staging`** (dbt views, `src/bi/transform`): typed, and the current snapshot: for each term, the latest upload replaces the
-    earlier ones;
+    earlier ones. Which raw column supplies each part is the dataset's column mapping (`src/bi/mapping.py`, [DEC-026](DECISIONS.md#DEC-026)):
+    discovered from the file's headers, approved by a person unless every needed part has its own name;
   - **`analytics`** (dbt tables): conformed, at student grain (`analytics.enrollment`: one row per student and term), with dbt tests.
 - **Metric registry**: the Cube model (`cube/model`); one definition per KPI, with steward, version and lineage. The worker's source
   maps the AMS's metric names onto it (`src/bi/metrics.py`).

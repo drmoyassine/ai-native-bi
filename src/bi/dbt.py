@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 import threading
@@ -38,13 +39,16 @@ def _profile_env(database_url: str) -> dict[str, str]:
     }
 
 
-def build(database_url: str, select: str | None = None) -> Built:
-    """`dbt build` (models and their tests) in dependency order; raises TransformError when anything fails."""
+def build(database_url: str, select: str | None = None, variables: dict[str, Any] | None = None) -> Built:
+    """`dbt build` (models and their tests) in dependency order, with `variables` for the models (the datasets' column mappings); raises
+    TransformError when anything fails."""
     with _LOCK, resources.as_file(resources.files('bi') / 'transform') as project, tempfile.TemporaryDirectory() as work:
         args = ['build', '--project-dir', str(project), '--profiles-dir', str(project)]
         args += ['--target-path', f'{work}/target', '--log-path', f'{work}/logs', '--quiet']
         if select:
             args += ['--select', select]
+        if variables:
+            args += ['--vars', json.dumps(variables)]
         with mock.patch.dict(os.environ, _profile_env(database_url)):
             result = dbtRunner().invoke(args)
     if result.exception is not None:
