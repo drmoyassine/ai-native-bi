@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 from pydantic import AfterValidator, BaseModel, Field, SecretStr, StringConstraints
 
-from .uploads import Storage
+from .connect.files import Storage
 
 
 def origin_of(value: str) -> str:

@@ -4,28 +4,18 @@ values as patterns ("999999999", "9999-99-99"). It never has a row, an identifie
 
 from __future__ import annotations
 
-import re
-from importlib import resources
 from typing import Any
 
-import yaml
 from psycopg import sql
 from psycopg_pool import AsyncConnectionPool
 
-# A column that names a person or an identifier is never shown as values, whatever it contains.
-ID_NAME = re.compile(r'(^|_)(id|ids|identifier|ssn|national|email|phone|mobile|name|dob|birth|birthdate|address|passport)($|_)', re.I)
-TEXT_TYPES = {'text', 'character varying', 'character', 'varchar'}
-NUMBER_TYPES = {'integer', 'bigint', 'smallint', 'numeric', 'double precision', 'real'}
-DATE_TYPES = {'date', 'timestamp without time zone', 'timestamp with time zone'}
-METADATA_ONLY = {'_bi_file_name', '_bi_file_sha256', '_bi_sheet'}
-MAX_CATEGORIES = 50
-PATTERN_SQL = "regexp_replace(regexp_replace(regexp_replace({col}, '[0-9]', '9', 'g'), '[A-Z]', 'A', 'g'), '[a-z]', 'a', 'g')"
+from .. import mapping
+from ..connect.profile import profile_table
 
 
 def datasets() -> list[str]:
-    """The datasets the transforms know (the raw sources of the dbt project): what an upload can be."""
-    text = (resources.files('bi') / 'transform' / 'models' / 'sources.yml').read_text('utf-8')
-    return sorted(t['name'] for s in yaml.safe_load(text)['sources'] if s['name'] == 'raw' for t in s['tables'])
+    """The datasets the metric layer is built on (bi.mapping): what a source can feed."""
+    return mapping.datasets()
 
 
 class CatalogError(ValueError):
@@ -34,126 +24,63 @@ class CatalogError(ValueError):
 
 async def _table_exists(pool: AsyncConnectionPool, schema: str, table: str) -> bool:
     async with pool.connection() as conn:
-        row = await (await conn.execute('select to_regclass(%s) is not null', [f'{schema}.{table}'])).fetchone()
+        row = await (await conn.execute('select to_regclass(%s) is not null', [f'{schema}."{table}"'])).fetchone()
     return bool(row and row[0])
 
 
+async def _rows(pool: AsyncConnectionPool, schema: str, table: str) -> int:
+    async with pool.connection() as conn:
+        row = await (await conn.execute(sql.SQL('select count(*) from {}').format(sql.Identifier(schema, table)))).fetchone()
+    return int(row[0]) if row else 0
+
+
+async def _streams(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            """select st.raw_table, st.dataset, s.name, s.type,
+                      (select max(as_of) from sync y where y.stream_id = st.id and y.status = 'loaded') as as_of,
+                      (select max(finished_at) from sync y where y.stream_id = st.id and y.status = 'loaded') as loaded_at,
+                      (select count(*) from sync y where y.stream_id = st.id and y.status = 'loaded') as syncs
+               from source_stream st join source s on s.id = st.source_id where s.state = 'live' order by s.name"""
+        )
+        names = [c.name for c in cur.description or []]
+        return [dict(zip(names, r, strict=True)) for r in await cur.fetchall()]
+
+
 async def list_datasets(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
+    """The datasets (built for the metric layer) and the sources' raw tables, with row counts and their last load."""
+    streams = await _streams(pool)
     out: list[dict[str, Any]] = []
     for name in datasets():
-        entry: dict[str, Any] = {'dataset': name, 'tables': {}}
-        for schema in ('raw', 'analytics'):
-            if await _table_exists(pool, schema, name):
-                async with pool.connection() as conn:
-                    n = await (
-                        await conn.execute(sql.SQL('select count(*) from {}.{}').format(sql.Identifier(schema), sql.Identifier(name)))
-                    ).fetchone()
-                entry['tables'][schema] = {'rows': n[0] if n else 0}
-        if 'raw' in entry['tables']:
-            async with pool.connection() as conn:
-                row = await (
-                    await conn.execute(
-                        sql.SQL('select max(_bi_as_of), max(_bi_loaded_at), count(distinct _bi_file_sha256) from raw.{}').format(
-                            sql.Identifier(name)
-                        )
-                    )
-                ).fetchone()
-            if row:
-                entry['last_load'] = {'as_of': row[0], 'loaded_at': row[1].isoformat() if row[1] else None, 'files': row[2]}
+        entry: dict[str, Any] = {'dataset': name, 'kind': 'dataset', 'tables': {},
+                                 'sources': [s['name'] for s in streams if s['dataset'] == name]}  # fmt: skip
+        if await _table_exists(pool, 'analytics', name):
+            entry['tables']['analytics'] = {'rows': await _rows(pool, 'analytics', name)}
+        out.append(entry)
+    for s in streams:
+        entry = {'dataset': s['raw_table'], 'kind': 'source', 'source': s['name'], 'type': s['type'], 'feeds': s['dataset'], 'tables': {}}
+        if await _table_exists(pool, 'raw', s['raw_table']):
+            entry['tables']['raw'] = {'rows': await _rows(pool, 'raw', s['raw_table'])}
+        if s['syncs']:
+            entry['last_load'] = {'as_of': s['as_of'].isoformat() if s['as_of'] else None,
+                                  'loaded_at': s['loaded_at'].isoformat() if s['loaded_at'] else None, 'syncs': s['syncs']}  # fmt: skip
         out.append(entry)
     return out
 
 
-def _short(pattern: str) -> str:
-    return pattern if len(pattern) <= 40 else pattern[:39] + '…'
-
-
-async def _profile_column(
-    pool: AsyncConnectionPool, schema: str, table: str, column: str, dtype: str, n_rows: int, non_null: int, distinct: int, threshold: int
-) -> dict[str, Any]:
-    out: dict[str, Any] = {
-        'name': column,
-        'type': dtype,
-        'null_rate': round(1 - non_null / n_rows, 4) if n_rows else None,
-        'distinct': distinct,
-    }
-    if column in METADATA_ONLY:
-        out['kind'] = 'metadata'
-        return out
-    identifier = bool(ID_NAME.search(column)) or (non_null >= 20 and distinct >= 0.9 * non_null)
-    tbl, col = sql.Identifier(schema, table), sql.Identifier(column)
-
-    async def rows(query: sql.Composed) -> list[tuple[Any, ...]]:
-        async with pool.connection() as conn:
-            return await (await conn.execute(query)).fetchall()
-
-    async def patterns() -> list[dict[str, Any]]:
-        pat = sql.SQL(PATTERN_SQL).format(col=sql.SQL('{}::text').format(col))
-        found = await rows(
-            sql.SQL('select {p} as p, count(*) from {t} where {c} is not null group by p order by count(*) desc limit 5').format(
-                p=pat, t=tbl, c=col
-            )
-        )
-        return [{'pattern': _short(p), 'rows': n} for p, n in found if n >= threshold]
-
-    if identifier:
-        out['kind'] = 'identifier'  # reported as a count and a shape; its values are never shown
-        if dtype in TEXT_TYPES or dtype in NUMBER_TYPES:
-            out['patterns'] = await patterns()
-    elif dtype in TEXT_TYPES:
-        if distinct <= MAX_CATEGORIES:
-            out['kind'] = 'category'
-            found = await rows(
-                sql.SQL('select {c}, count(*) from {t} where {c} is not null group by {c} order by count(*) desc').format(c=col, t=tbl)
-            )
-            shown = [(v, n) for v, n in found if n >= threshold and len(str(v)) <= 60]
-            out['values'] = [{'value': v, 'rows': n} for v, n in shown]
-            hidden = sum(n for v, n in found) - sum(n for v, n in shown)
-            if hidden:
-                out['other_rows'] = hidden  # rows whose value is rare (or long) and so not named
-        else:
-            out['kind'] = 'text'
-            out['patterns'] = await patterns()
-    elif dtype in NUMBER_TYPES or dtype in DATE_TYPES:
-        out['kind'] = 'number' if dtype in NUMBER_TYPES else 'date'
-        lo = await rows(sql.SQL('select min({c}), max({c}) from {t}').format(c=col, t=tbl))
-        if lo and lo[0][0] is not None:
-            out['min'], out['max'] = (v.isoformat() if hasattr(v, 'isoformat') else float(v) for v in lo[0])
-    elif dtype == 'boolean':
-        out['kind'] = 'boolean'
-        found = await rows(sql.SQL('select {c}, count(*) from {t} where {c} is not null group by {c}').format(c=col, t=tbl))
-        out['values'] = [{'value': v, 'rows': n} for v, n in found if n >= threshold]
-    else:
-        out['kind'] = 'other'
-    return out
-
-
 async def describe_dataset(pool: AsyncConnectionPool, name: str, threshold: int) -> dict[str, Any]:
-    if name not in datasets():
-        raise CatalogError(f'unknown dataset "{name}" (known: {", ".join(datasets())})')
-    result: dict[str, Any] = {'dataset': name, 'tables': {}}
-    for schema in ('raw', 'analytics'):
-        if not await _table_exists(pool, schema, name):
-            continue
-        async with pool.connection() as conn:
-            cols = await (
-                await conn.execute(
-                    """select column_name, data_type from information_schema.columns
-                       where table_schema = %s and table_name = %s and column_name not like '\\_dlt\\_%%' order by ordinal_position""",
-                    [schema, name],
-                )
-            ).fetchall()
-            counts_sql = sql.SQL('select count(*), {} from {}').format(
-                sql.SQL(', ').join(sql.SQL('count({c}), count(distinct {c})').format(c=sql.Identifier(c)) for c, _ in cols),
-                sql.Identifier(schema, name),
-            )
-            counts = (await (await conn.execute(counts_sql)).fetchone()) or (0,)
-        n_rows = counts[0]
-        profiles = [
-            await _profile_column(pool, schema, name, c, t, n_rows, counts[1 + 2 * i], counts[2 + 2 * i], threshold)
-            for i, (c, t) in enumerate(cols)
-        ]
-        result['tables'][schema] = {'rows': n_rows, 'columns': profiles}
-    if not result['tables']:
+    """The profile of a dataset (its analytics table) or of a source's raw table. Never a row."""
+    streams = {s['raw_table']: s for s in await _streams(pool)}
+    if name in datasets():
+        schema, extra = 'analytics', {'sources': [s['name'] for s in streams.values() if s['dataset'] == name]}
+    elif name in streams:
+        schema, extra = 'raw', {'source': streams[name]['name'], 'feeds': streams[name]['dataset']}
+    else:
+        known = [*datasets(), *streams]
+        raise CatalogError(f'unknown dataset "{name}" (known: {", ".join(known)})')
+    result: dict[str, Any] = {'dataset': name, **extra, 'tables': {}}
+    if await _table_exists(pool, schema, name):
+        result['tables'][schema] = await profile_table(pool, schema, name, threshold)
+    else:
         result['note'] = 'nothing has been loaded for this dataset yet'
     return result

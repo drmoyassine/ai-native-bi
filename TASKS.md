@@ -793,7 +793,7 @@ compose.together.yaml, and a test that the BI's role cannot read ams. Standalone
 ---
 title: 'Connect data C1: sources and files'
 description: Sources, the Connect data page, and files through the whole flow
-status: in-progress
+status: completed
 priority: P1
 id: TASK-022
 last_updated: '2026-10-28'
@@ -810,7 +810,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-027
 modified:
   by: agent/claude-code
-  at: '2026-10-28T09:17:34.526Z'
+  at: '2026-10-28T09:44:11.194Z'
 ---
 
 Spec docs/connect-data-spec.md § 11. The source, stream, layout and sync model; the Connect data page; the file type through the whole flow (header detection, profiles, sensitive columns, mappings per layout with plain part names, frozen contract, draft schema); raw on duck_case; uploads migrated. Done when the real xlsb loads: header found, mapping proposed with profiles, approved, analytics built.

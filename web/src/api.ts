@@ -40,21 +40,76 @@ export interface User {
   is_admin: boolean;
 }
 
-export interface Upload {
+export type SyncStatus = 'queued' | 'running' | 'review' | 'loaded' | 'failed' | 'stale';
+
+export interface SourceType {
+  type: string;
+  label: string;
+  hint: string;
+  available: boolean;
+  step?: string;
+}
+
+export interface SourceSummary {
   id: string;
-  dataset: string;
+  name: string;
+  type: string;
+  state: 'draft' | 'live' | 'paused';
+  dataset: string | null;
+  last_sync: string | null;
+  waiting: number;
+  last_status: SyncStatus | null;
+}
+
+export interface Sync {
+  id: string;
   as_of: string;
   sheet: string | null;
-  file_name: string;
-  status: 'queued' | 'running' | 'loaded' | 'failed';
+  file_name: string | null;
+  status: SyncStatus;
   rows: number | null;
   repeat: boolean | null;
   tests: number | null;
-  error: string | null;
   note: string | null;
+  error: string | null;
+  found_header_row: number | null;
   created_at: string;
-  finished_at: string | null;
+  by_name: string | null;
+}
+
+export interface Source {
+  id: string;
   name: string;
+  type: string;
+  state: 'draft' | 'live' | 'paused';
+  dataset: string | null;
+  approved_by: string | null;
+  syncs: Sync[];
+}
+
+export interface ReviewColumn {
+  name: string;
+  header: string;
+  kind: string | null;
+  summary: string | null;
+}
+
+export interface Part {
+  name: string;
+  label: string;
+  description: string;
+  required: boolean;
+}
+
+export interface Review {
+  sync: { id: string; status: SyncStatus; file_name: string; rows: number | null; note: string | null; error: string | null };
+  source: { id: string; name: string; state: string };
+  dataset: string | null;
+  header: { row: number | null; above_header?: string[]; guessed?: boolean; dropped_columns?: number; dropped_total_rows?: number };
+  columns: ReviewColumn[];
+  parts: Part[];
+  mapping: Record<string, string | null> | null;
+  mapping_status: 'proposed' | 'approved' | null;
 }
 
 export interface ModelChoice {

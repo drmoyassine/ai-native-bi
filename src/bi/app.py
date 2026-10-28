@@ -1,26 +1,26 @@
-"""The app's API under /app/api (ROADMAP-009), for the web app in web/: signing in, uploads, the governed members and chart data.
+"""The app's API under /app/api (ROADMAP-009), for the web app in web/: signing in, Connect data (bi.connect.routes), the governed
+members and chart data.
 
 Sessions: an HttpOnly, SameSite=Strict cookie. Every request that changes something must also carry `X-BI-App: 1`, which another
 site cannot send without the BI's consent (no CORS is allowed), so a forged form or link does nothing.
 """
 
-import datetime as dt
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, mapping, tools, uploads
+from . import accounts, mapping, tools
 from .accounts import User
-from .agent.catalog import datasets
 from .agent.routes import AgentContext, create_agent_router
 from .agent.suppress import count_measures, suppress_rows
 from .charts import ChartDefinition
+from .connect.files import Storage
+from .connect.routes import create_connect_router
 from .cube import CubeClient, CubeError
-from .ingest import DATASET
 from .log import log
 from .mcp.routes import create_tokens_router
 
@@ -34,7 +34,7 @@ CSRF_HEADER = 'x-bi-app'
 @dataclass
 class AppContext:
     pool: AsyncConnectionPool
-    storage: uploads.Storage
+    storage: Storage
     enqueue_load: Callable[[str], Awaitable[None]]
     cube: CubeClient | None
     cookie_secure: bool = True
@@ -44,8 +44,6 @@ class AppContext:
     """The app's own address (PUBLIC_URL), shown with personal access tokens as the MCP server's base."""
     throttle: accounts.Throttle = field(default_factory=accounts.Throttle)
     """How many failed sign-ins refuse the next (TASK-010)."""
-    enqueue_rebuild: Callable[[str], Awaitable[None]] | None = None
-    """Rebuilds a dataset's analytics after its column mapping is approved."""
     proxy_hops: int = 0
     """Proxies in front of the app that append the client's address to X-Forwarded-For (0: the connection's own address is the client)."""
 
@@ -63,10 +61,6 @@ def client_ip(request: Request, hops: int) -> str:
 class ChangePassword(BaseModel):
     current_password: str
     new_password: str
-
-
-class MappingBody(BaseModel):
-    mapping: dict[str, str | None]
 
 
 class SignIn(BaseModel):
@@ -142,70 +136,7 @@ def create_router(ctx: AppContext) -> APIRouter:
 
     @router.get('/me')
     async def me(user: Signed) -> dict[str, Any]:
-        return {'user': user.__dict__, 'datasets': datasets()}
-
-    @router.post('/uploads', status_code=202)
-    async def upload(
-        user: Signed,
-        file: Annotated[UploadFile, File()],
-        dataset: Annotated[str, Form()],
-        as_of: Annotated[dt.date, Form(alias='asOf')],
-        sheet: Annotated[str | None, Form()] = None,
-    ) -> dict[str, str]:
-        if not DATASET.match(dataset) or dataset not in datasets():
-            raise HTTPException(422, f'unknown dataset "{dataset}" (known: {", ".join(datasets())})')
-        if as_of > dt.date.today():
-            raise HTTPException(422, 'the as-of date is in the future')
-        try:
-            id = await uploads.receive(
-                ctx.pool,
-                ctx.storage,
-                user_id=user.id,
-                dataset=dataset,
-                as_of=as_of,
-                sheet=(sheet or '').strip() or None,
-                file_name=file.filename or '',
-                source=file.file,
-            )
-        except uploads.UploadError as e:
-            raise HTTPException(422, str(e)) from e
-        await ctx.enqueue_load(id)
-        log('info', 'upload received', id=id, dataset=dataset, user=user.id)
-        return {'id': id}
-
-    @router.get('/uploads')
-    async def list_uploads(user: Signed) -> dict[str, Any]:
-        return {'uploads': await uploads.recent(ctx.pool)}
-
-    @router.get('/datasets/{dataset}/mapping')
-    async def get_mapping(dataset: str, user: Signed) -> dict[str, Any]:
-        if dataset not in datasets():
-            raise HTTPException(404, f'unknown dataset "{dataset}"')
-        columns = await mapping.raw_columns(ctx.pool, dataset)
-        kept = await mapping.stored(ctx.pool, dataset)
-        proposed, _ = mapping.propose(dataset, columns)
-        return {
-            'dataset': dataset,
-            'parts': [{'name': f.name, 'required': f.required} for f in mapping.fields(dataset)],
-            'columns': columns,
-            'mapping': kept['mapping'] if kept else proposed,
-            'status': kept['status'] if kept else None,
-            'error': kept['error'] if kept else None,
-        }
-
-    @router.put('/datasets/{dataset}/mapping')
-    async def put_mapping(dataset: str, body: MappingBody, user: Signed) -> dict[str, str]:
-        if dataset not in datasets():
-            raise HTTPException(404, f'unknown dataset "{dataset}"')
-        try:
-            mapping.check(dataset, body.mapping, await mapping.raw_columns(ctx.pool, dataset))
-        except mapping.MappingError as e:
-            raise HTTPException(422, str(e)) from e
-        await mapping.save(ctx.pool, dataset, body.mapping, 'approved', f'approved by {user.email}', user.id)
-        if ctx.enqueue_rebuild is not None:
-            await ctx.enqueue_rebuild(dataset)
-        log('info', 'mapping approved', dataset=dataset, user=user.id)
-        return {'status': 'approved'}
+        return {'user': user.__dict__, 'datasets': mapping.datasets()}
 
     @router.get('/members')
     async def members(user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:
@@ -251,4 +182,5 @@ def create_router(ctx: AppContext) -> APIRouter:
     if ctx.agent is not None:
         router.include_router(create_agent_router(ctx.agent, current_user))
     router.include_router(create_tokens_router(ctx.pool, current_user, ctx.public_url))
+    router.include_router(create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, current_user))
     return router

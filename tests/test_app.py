@@ -14,11 +14,12 @@ from bi import accounts
 from bi.api import AppDeps, create_app
 from bi.app import AppContext
 from bi.charts import ChartDefinition, cube_query, unknown_members
+from bi.connect.files import Storage, process_sync
 from bi.cube import CubeClient, CubeError, CubeNoData
-from bi.uploads import Storage, process_upload
 
 from .conftest import AMS, PoolFactory, database_url
 from .fakes import FALL, students, xlsx
+from .test_connect import EXPORT, export, export_rows
 
 PASSWORD = 'a-long-password-0123'
 APP = {'x-bi-app': '1'}
@@ -109,54 +110,90 @@ async def test_a_change_needs_the_app_header_even_when_signed_in(
 ) -> None:
     client, queued, _ = app
     await signed_in(client)
-    path = xlsx(tmp_path / 'fall.xlsx', students(FALL, (1001, 'BSME', 'Bachelor')))
-    res = await client.post(
-        '/app/api/uploads', data={'dataset': 'enrollment', 'asOf': '2026-10-20'}, files={'file': ('fall.xlsx', path.read_bytes())}
-    )
-    assert res.status_code == 403 and queued == []
+    assert (await client.post('/app/api/sources', json={'name': 'No header', 'type': 'file'})).status_code == 403
+    assert queued == []
 
 
-async def test_takes_an_upload_and_refuses_what_it_cannot_load(app: tuple[httpx.AsyncClient, list[str], FakeCube], tmp_path: Path) -> None:
+async def test_connect_data_makes_a_file_source_takes_files_and_refuses_what_it_cannot_load(
+    app: tuple[httpx.AsyncClient, list[str], FakeCube], tmp_path: Path
+) -> None:
     client, queued, _ = app
     await signed_in(client)
+    listed = (await client.get('/app/api/sources')).json()
+    assert {t['type'] for t in listed['types'] if t['available']} == {'file'}  # the rest come in C2 to C5
+    assert {'oracle', 'postgres', 'api'} <= {t['type'] for t in listed['types']} and listed['datasets'][0]['name'] == 'enrollment'
+
+    async def make(body: dict[str, Any]) -> httpx.Response:
+        return await client.post('/app/api/sources', json=body, headers=APP)
+
+    assert (await make({'name': 'Banner DB', 'type': 'oracle'})).status_code == 422
+    assert (await make({'name': 'X', 'type': 'file', 'dataset': 'payroll'})).status_code == 422
+    made = await make({'name': 'Registrar exports', 'type': 'file', 'dataset': 'enrollment'})
+    assert made.status_code == 201
+    assert (await make({'name': 'registrar  EXPORTS', 'type': 'file'})).status_code == 422  # the same name
+    source = made.json()['id']
     data = xlsx(tmp_path / 'fall.xlsx', students(FALL, (1001, 'BSME', 'Bachelor'))).read_bytes()
 
-    async def post(name: str, dataset: str = 'enrollment', as_of: str = '2026-10-20', content: bytes = data) -> httpx.Response:
-        return await client.post('/app/api/uploads', data={'dataset': dataset, 'asOf': as_of}, files={'file': (name, content)}, headers=APP)
+    async def send(name: str, as_of: str = '2026-10-20', content: bytes = data, to: str = source) -> httpx.Response:
+        return await client.post(f'/app/api/sources/{to}/files', data={'asOf': as_of}, files={'file': (name, content)}, headers=APP)
 
-    assert (await post('notes.pdf')).status_code == 422
-    assert (await post('fall.xlsx', dataset='payroll')).status_code == 422
-    assert (await post('fall.xlsx', as_of=(dt.date.today() + dt.timedelta(days=1)).isoformat())).status_code == 422
-    assert (await post('empty.csv', content=b'')).status_code == 422
-    res = await post('../../etc/fall 2026.xlsx')
+    assert (await send('notes.pdf')).status_code == 422
+    assert (await send('fall.xlsx', as_of=(dt.date.today() + dt.timedelta(days=1)).isoformat())).status_code == 422
+    assert (await send('empty.csv', content=b'')).status_code == 422
+    assert (await send('fall.xlsx', to='00000000-0000-0000-0000-000000000000')).status_code == 422
+    res = await send('../../etc/fall 2026.xlsx')
     assert res.status_code == 202 and queued == [res.json()['id']]
     stored = list((tmp_path / 'files' / 'incoming').rglob('*.xlsx'))
     assert [p.name for p in stored] == ['fall 2026.xlsx'] and stored[0].read_bytes() == data
-    listed = (await client.get('/app/api/uploads')).json()['uploads']
-    assert listed[0]['status'] == 'queued' and listed[0]['name'] == 'IE Office'
+    seen = (await client.get(f'/app/api/sources/{source}')).json()
+    assert seen['state'] == 'draft' and seen['syncs'][0]['status'] == 'queued' and seen['syncs'][0]['by_name'] == 'IE Office'
 
 
-async def test_the_worker_loads_an_upload_or_says_why_it_failed(
+async def test_the_worker_loads_a_file_and_a_person_reviews_and_approves_another_layout(
     pool: AsyncConnectionPool, app: tuple[httpx.AsyncClient, list[str], FakeCube], tmp_path: Path
 ) -> None:
     client, queued, _ = app
     await signed_in(client)
     storage = Storage(f'file://{tmp_path}/files')
-    good = xlsx(tmp_path / 'good.xlsx', students(FALL, (1001, 'BSME', 'Bachelor'), (1002, 'BSCE', 'Bachelor'))).read_bytes()
-    dup = xlsx(tmp_path / 'dup.xlsx', students(FALL, (1001, 'BSME', 'Bachelor'), (1001, 'BSCE', 'Bachelor'))).read_bytes()
-    for name, content in (('good.xlsx', good), ('dup.xlsx', dup)):
-        res = await client.post(
-            '/app/api/uploads', data={'dataset': 'enrollment', 'asOf': '2026-10-20'}, files={'file': (name, content)}, headers=APP
-        )
-        assert res.status_code == 202
-    good_id, dup_id = queued
     db = database_url('bi_app_test')
-    assert await process_upload(pool, storage, db, good_id) == 'loaded'
-    assert await process_upload(pool, storage, db, good_id) == 'skipped'
-    assert await process_upload(pool, storage, db, dup_id) == 'failed'
-    by_id = {u['id']: u for u in (await client.get('/app/api/uploads')).json()['uploads']}
-    assert by_id[good_id]['status'] == 'loaded' and by_id[good_id]['rows'] == 2 and by_id[good_id]['tests'] > 0
-    assert by_id[dup_id]['status'] == 'failed' and 'unique' in by_id[dup_id]['error']
+    source = (await client.post('/app/api/sources', json={'name': 'Banner export', 'type': 'file', 'dataset': 'enrollment'},
+                                headers=APP)).json()['id']  # fmt: skip
+    data = export(tmp_path / 'banner.xlsx', export_rows()).read_bytes()
+    res = await client.post(f'/app/api/sources/{source}/files', data={'asOf': '2026-10-20'}, files={'file': ('banner.xlsx', data)},
+                            headers=APP)  # fmt: skip
+    sync = res.json()['id']
+    assert await process_sync(pool, storage, db, sync, 5) == 'review'
+    assert await process_sync(pool, storage, db, sync, 5) == 'skipped'  # not queued any more
+
+    review = (await client.get(f'/app/api/syncs/{sync}/review')).json()
+    assert review['header']['row'] == 3 and [c['header'] for c in review['columns']] == EXPORT
+    assert review['mapping']['student_id'] == 'Student Number' and review['mapping_status'] == 'proposed'
+    assert (await client.post(f'/app/api/syncs/{sync}/approve', json={'mapping': {'student_id': 'Student Number'}},
+                              headers=APP)).status_code == 422  # fmt: skip
+
+    async with pool.connection() as conn:  # only a BI admin approves (DEC-027)
+        await conn.execute("update app_user set is_admin = false where email = 'ie@example.edu'")
+    try:
+        refused = await client.post(f'/app/api/syncs/{sync}/approve', json={'mapping': review['mapping']}, headers=APP)
+        assert refused.status_code == 403
+    finally:
+        async with pool.connection() as conn:
+            await conn.execute("update app_user set is_admin = true where email = 'ie@example.edu'")
+    assert (await client.post(f'/app/api/syncs/{sync}/approve', json={'mapping': review['mapping']}, headers=APP)).status_code == 200
+    assert queued[-1] == sync
+    assert await process_sync(pool, storage, db, sync, 5) == 'loaded'
+    seen = (await client.get(f'/app/api/sources/{source}')).json()
+    assert seen['state'] == 'live' and seen['approved_by'] == 'IE Office' and seen['syncs'][0]['tests'] > 0
+    assert (await client.post(f'/app/api/syncs/{sync}/approve', json={'mapping': review['mapping']}, headers=APP)).status_code == 409
+
+    # A person picks another header row; a loaded sync can be loaded again (a repeat: nothing new in raw).
+    assert (await client.post(f'/app/api/syncs/{sync}/header', json={'row': 0}, headers=APP)).status_code == 422
+    assert (await client.post(f'/app/api/syncs/{sync}/again', headers=APP)).status_code == 200
+    assert await process_sync(pool, storage, db, sync, 5) == 'loaded'
+    assert (await client.post(f'/app/api/syncs/{sync}/header', json={'row': 1}, headers=APP)).status_code == 200
+    assert await process_sync(pool, storage, db, sync, 5) == 'review'  # row 1 is the title: a layout nobody approved
+    again = (await client.get(f'/app/api/syncs/{sync}/review')).json()
+    assert again['header']['row'] == 1 and again['header']['guessed'] is False
 
 
 async def test_charts_only_governed_members_and_returns_cubes_rows(app: tuple[httpx.AsyncClient, list[str], FakeCube]) -> None:

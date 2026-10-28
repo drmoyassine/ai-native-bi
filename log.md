@@ -160,3 +160,12 @@ Spec § 13: order files, APIs, Oracle, PostgreSQL, the rest; a BI admin approves
 incrementally with dlt's `scd2` merge and a slower full read for deletes; draft data in a `draft_<source>` schema; raw switches to
 `duck_case` naming. Tried on PostgreSQL: with dlt's default `snake_case`, two Arabic headers both became `x` and one column's values
 were lost without an error (today's upload path has this flaw; C1 fixes it). dlt 1.31.0 is the latest release and already in use.
+
+## 2026-10-28 — Connect data C1: file sources
+
+Uploads became Connect data (TASK-022, DEC-027 to DEC-031). A file source keeps each file, finds the table in its sheet (title rows,
+two-row headers, total rows; a person can pick the row), profiles the columns in PostgreSQL (kinds, personal data never shown as values,
+shapes and ranges), and matches them to the dataset's parts by name, label, alias and fit. A layout nobody approved waits in `draft`;
+a BI admin approves it on the source's page and it loads into `raw.<source>`, named as written. dbt unions every approved input from
+loaded syncs, so a file that fails the tests stays in raw but does not count. Migration 0010 turns uploads into syncs to load again.
+Walked through in a browser with a made-up export shaped like the real one (title rows, other names, an email and an Arabic column).

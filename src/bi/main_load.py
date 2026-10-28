@@ -1,55 +1,51 @@
-"""Loads one file and rebuilds analytics: `python -m bi.main_load FILE --dataset enrollment --as-of 2026-10-20 [--sheet NAME]`.
+"""Loads one file into a file source and rebuilds analytics, as an upload would:
+`python -m bi.main_load FILE --source "Banner enrollment" --dataset enrollment --as-of 2026-10-20 [--sheet NAME]`.
 
-The operator's path until the frontend takes uploads (DEC-011). Real exports hold student data: they stay outside the repository.
+An operator's path beside the Connect data page. Real exports hold student data: they stay outside the repository (DEC-011).
 """
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import datetime as dt
 import sys
 from pathlib import Path
 
-from . import dbt
+from psycopg_pool import AsyncConnectionPool
+
 from .config import load_env, storage
-from .ingest import IngestError, load_file
+from .connect.files import load_now
 from .log import log
 
 
+async def run(args: argparse.Namespace) -> int:
+    env = load_env()
+    async with AsyncConnectionPool(env.DATABASE_URL, open=False) as pool:
+        ended = await load_now(
+            pool,
+            storage(env),
+            env.DATABASE_URL,
+            args.file,
+            source_name=args.source,
+            dataset=args.dataset or None,
+            as_of=args.as_of,
+            sheet=args.sheet,
+            threshold=env.SUPPRESSION_THRESHOLD,
+        )
+    log('info' if ended['status'] in ('loaded', 'review') else 'error', 'sync', status=ended['status'], rows=ended['rows'],
+        tests=ended['tests'], note=ended['note'], error=ended['error'])  # fmt: skip
+    return 0 if ended['status'] in ('loaded', 'review') else 1
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog='python -m bi.main_load', description='Load a file into raw and rebuild analytics.')
+    parser = argparse.ArgumentParser(prog='python -m bi.main_load', description='Load a file into a file source and rebuild analytics.')
     parser.add_argument('file', type=Path)
-    parser.add_argument('--dataset', required=True, help='the raw table, e.g. enrollment')
+    parser.add_argument('--source', required=True, help='the file source, made if it does not exist, e.g. "Banner enrollment"')
+    parser.add_argument('--dataset', help='the dataset the source feeds, e.g. enrollment (none: kept in raw only)')
     parser.add_argument('--as-of', required=True, type=dt.date.fromisoformat, help='the date the data is true as of (yyyy-mm-dd)')
     parser.add_argument('--sheet', help='the sheet to load (default: the first)')
-    args = parser.parse_args(argv)
-    env = load_env()
-    files = storage(env)
-    try:
-        loaded = load_file(
-            args.file,
-            dataset=args.dataset,
-            as_of=args.as_of,
-            database_url=env.DATABASE_URL,
-            files_url=files.files_url,
-            sheet=args.sheet,
-            storage_options=files.options,
-        )
-        log(
-            'info',
-            'loaded',
-            dataset=loaded.dataset,
-            sha256=loaded.sha256,
-            rows=loaded.rows,
-            repeat=loaded.repeat,
-            stored_at=loaded.stored_at,
-        )
-        built = dbt.build(env.DATABASE_URL)
-        log('info', 'built', models=built.models, tests=built.tests)
-    except (IngestError, dbt.TransformError) as e:
-        log('error', 'load failed', error=str(e))
-        return 1
-    return 0
+    return asyncio.run(run(parser.parse_args(argv)))
 
 
 if __name__ == '__main__':

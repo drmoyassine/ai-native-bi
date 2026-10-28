@@ -19,9 +19,9 @@ from psycopg_pool import AsyncConnectionPool
 from bi import accounts
 from bi.api import AppDeps, create_app
 from bi.app import AppContext
+from bi.connect.files import Storage
 from bi.cube import CubeClient
 from bi.mcp.server import McpContext
-from bi.uploads import Storage
 
 from .agent_fakes import FakeCube
 from .conftest import AMS, PoolFactory

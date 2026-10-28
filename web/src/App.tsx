@@ -3,23 +3,21 @@ import { api, ApiError, type User } from './api';
 import { Account } from './Account';
 import { Chat } from './Chat';
 import { ChartPage } from './ChartPage';
+import { Connect } from './Connect';
 import { Login } from './Login';
 import { Providers } from './Providers';
 import { Tokens } from './Tokens';
-import { Uploads } from './Uploads';
 
-type Page = 'chat' | 'chart' | 'uploads' | 'models' | 'tokens' | 'account';
+type Page = 'chat' | 'chart' | 'connect' | 'models' | 'tokens' | 'account';
 
 export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [datasets, setDatasets] = useState<string[]>([]);
   const [page, setPage] = useState<Page>('chat');
 
   async function load() {
     try {
       const me = await api.get<{ user: User; datasets: string[] }>('/me');
       setUser(me.user);
-      setDatasets(me.datasets);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setUser(null);
       else throw err;
@@ -49,8 +47,8 @@ export function App() {
           <button className={page === 'chart' ? 'active' : ''} onClick={() => setPage('chart')}>
             Chart
           </button>
-          <button className={page === 'uploads' ? 'active' : ''} onClick={() => setPage('uploads')}>
-            Uploads
+          <button className={page === 'connect' ? 'active' : ''} onClick={() => setPage('connect')}>
+            Connect data
           </button>
           <button className={page === 'tokens' ? 'active' : ''} onClick={() => setPage('tokens')}>
             Access tokens
@@ -73,7 +71,7 @@ export function App() {
       <main className={page === 'chat' ? 'wide' : ''}>
         {page === 'chat' && <Chat />}
         {page === 'chart' && <ChartPage />}
-        {page === 'uploads' && <Uploads datasets={datasets} />}
+        {page === 'connect' && <Connect user={user} />}
         {page === 'models' && user.is_admin && <Providers />}
         {page === 'tokens' && <Tokens user={user} />}
         {page === 'account' && <Account user={user} />}

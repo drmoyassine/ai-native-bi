@@ -45,11 +45,13 @@ Cube is its own Node service. Today the code is the AMS adapter, in Python since
 - **Warehouse** ([DEC-005](DECISIONS.md#DEC-005)): PostgreSQL, the BI's own database also when it shares a server with the AMS
   (AMS DEC-017 and AMS DEC-034):
   - **files**, kept unchanged under their SHA-256 (`RAW_FILES_URL`: a volume today, a bucket such as Garage later), read-only;
-  - **`raw`** (`src/bi/ingest.py`, dlt): one table per dataset, every cell as text exactly as written, every row with its file
-    (`_bi_file_sha256`, `_bi_file_name`, `_bi_row`), its as-of date and load time. Appended, never changed;
-  - **`staging`** (dbt views, `src/bi/transform`): typed, and the current snapshot: for each term, the latest upload replaces the
-    earlier ones. Which raw column supplies each part is the dataset's column mapping (`src/bi/mapping.py`, [DEC-026](DECISIONS.md#DEC-026)):
-    discovered from the file's headers, approved by a person unless every needed part has its own name;
+  - **`raw`** (`src/bi/connect/`, dlt): one table per source stream (Connect data, [DEC-027](DECISIONS.md#DEC-027)), columns named as
+    written ([DEC-031](DECISIONS.md#DEC-031)), every cell as text, every row with its sync, layout and file (`_bi_sync_id`,
+    `_bi_layout`, `_bi_file_sha256`, `_bi_file_name`, `_bi_row`), its as-of date and load time. Appended, never changed. Data not yet
+    approved waits in **`draft`**, read by nothing but profiling ([DEC-028](DECISIONS.md#DEC-028));
+  - **`staging`** (dbt views, `src/bi/transform`): typed, and the current snapshot: for each term, the latest load replaces the
+    earlier ones. It reads every raw table and layout with an approved mapping (`src/bi/mapping.py`, [DEC-029](DECISIONS.md#DEC-029)),
+    from loaded syncs only;
   - **`analytics`** (dbt tables): conformed, at student grain (`analytics.enrollment`: one row per student and term), with dbt tests.
 - **Metric registry**: the Cube model (`cube/model`); one definition per KPI, with steward, version and lineage. The worker's source
   maps the AMS's metric names onto it (`src/bi/metrics.py`).
@@ -100,8 +102,10 @@ are rate-limited per person and recorded in an access log.
 
 The web app (`web/`, [DEC-014](DECISIONS.md#DEC-014)) is a React single-page app built into the API image and served at `/`; its
 API is `/app/api`. People sign in with the BI's own accounts (single sign-on later, [ROADMAP-005](ROADMAP.md#ROADMAP-005)); a
-session is an HttpOnly, SameSite=Strict cookie, and every write also carries `X-BI-App: 1`. An upload is kept under
-`incoming/`, then the worker's `load` job loads it and rebuilds analytics, and the app shows its status, rows and dbt tests. The
+session is an HttpOnly, SameSite=Strict cookie, and every write also carries `X-BI-App: 1`. On the Connect data page
+(`docs/connect-data-spec.md`) a person adds a source; for a file source, a file sent is kept under `incoming/`, then the worker's
+`load` job finds its table, profiles it, matches its columns to the dataset's parts, and either loads it (a layout already approved,
+or one whose parts all have their own names) and rebuilds analytics, or waits for a BI admin to review and approve it. The
 chart page builds a chart definition from Cube's governed members and draws its rows ([ROADMAP-009](ROADMAP.md#ROADMAP-009)). The
 chat (Ask) and, for admins, the Models page (providers, keys, which models people may use) belong to the agent above.
 

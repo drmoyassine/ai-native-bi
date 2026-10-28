@@ -75,6 +75,7 @@ async def test_migrates_once_and_creates_the_database_once(pool: AsyncConnection
         '0007_external_identity.sql',
         '0008_sign_in_failure.sql',
         '0009_column_mapping.sql',
+        '0010_connect.sql',
     ]
     assert await migrate(pool) == []
 
