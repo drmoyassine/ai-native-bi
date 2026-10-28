@@ -10,9 +10,8 @@ import psycopg
 import pytest
 from psycopg_pool import AsyncConnectionPool
 
-from bi import dbt
+from bi.connect.files import Storage, load_now, rebuild
 from bi.db import ensure_reader_role, grant_analytics
-from bi.ingest import load_file
 
 from .conftest import ADMIN, PoolFactory, database_url
 from .fakes import FALL, students, xlsx
@@ -43,19 +42,16 @@ def can_read(table: str) -> bool:
     return True
 
 
-def test_cube_reads_analytics_only_also_after_a_rebuild(pool: AsyncConnectionPool, tmp_path: Path) -> None:
+async def test_cube_reads_analytics_only_also_after_a_rebuild(pool: AsyncConnectionPool, tmp_path: Path) -> None:
     owner = database_url('bi_reader_test')
-    load_file(
-        xlsx(tmp_path / 'fall.xlsx', students(FALL, (1001, 'BSME', 'Bachelor'))),
-        dataset='enrollment',
-        as_of=dt.date(2026, 10, 20),
-        database_url=owner,
-        files_url=f'file://{tmp_path}/files',
-    )
-    dbt.build(owner)
+    path = xlsx(tmp_path / 'fall.xlsx', students(FALL, (1001, 'BSME', 'Bachelor')))
+    storage = Storage(f'file://{tmp_path}/files')
+    ended = await load_now(pool, storage, owner, path, source_name='Registrar', dataset='enrollment', as_of=dt.date(2026, 10, 20))
+    assert ended['status'] == 'loaded'
     assert can_read('analytics.enrollment')
-    assert not can_read('raw.enrollment')
+    assert not can_read('raw.registrar')
+    assert not can_read('sync')
     assert not can_read('staging.stg_enrollment')
     assert not can_read('collect_request')
-    dbt.build(owner)  # dbt replaces the table: the new one is readable too (default privileges)
+    await rebuild(pool, owner)  # dbt replaces the table: the new one is readable too (default privileges)
     assert can_read('analytics.enrollment')

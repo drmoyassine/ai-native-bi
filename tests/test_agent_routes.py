@@ -21,8 +21,8 @@ from bi.agent.secrets import DbSecretStore
 from bi.agent.turn import process_turn
 from bi.api import AppDeps, create_app
 from bi.app import AppContext
+from bi.connect.files import Storage
 from bi.cube import CubeClient
-from bi.uploads import Storage
 
 from .agent_fakes import FakeCube, scripted, turn_deps
 from .conftest import AMS, PoolFactory

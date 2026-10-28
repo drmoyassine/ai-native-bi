@@ -13,11 +13,10 @@ import psycopg
 import pytest
 from psycopg_pool import AsyncConnectionPool
 
-from bi import dbt
 from bi.collect import Accepted, accept_collect
+from bi.connect.files import Storage, load_now
 from bi.cube import CubeClient
 from bi.db import migrate
-from bi.ingest import load_file
 from bi.metrics import CubeMetricSource
 from bi.queue import CollectDeps, process_collect
 from bi.sources import SourceRegistry
@@ -35,17 +34,19 @@ async def pool(cube_env: tuple[str, str], tmp_path_factory: pytest.TempPathFacto
             admin.execute(f'create database {CUBE_DB}')
     with psycopg.connect(DB, autocommit=True) as conn:
         # A database for these tests only (Cube keeps its connection, so it is reset rather than dropped).
-        for schema in ('raw', 'staging', 'analytics', 'public'):
+        for schema in ('raw', 'draft', 'staging', 'analytics', 'public'):
             conn.execute(f'drop schema if exists {schema} cascade')
         conn.execute('create schema public')
     files = tmp_path_factory.mktemp('files')
     fall = students(FALL, (1001, 'BSME', 'Bachelor'), (1002, 'BSME', 'Bachelor'), (1003, 'BSCE', 'Bachelor'), (1004, 'MSDS', 'Master'))
     spring = students(SPRING, (1001, 'BSME', 'Bachelor'))
-    for name, rows in (('fall.xlsx', fall), ('spring.xlsx', spring)):
-        load_file(xlsx(files / name, rows), dataset='enrollment', as_of=dt.date(2026, 10, 20), database_url=DB, files_url=f'file://{files}')
-    dbt.build(DB)
     async with AsyncConnectionPool(DB, open=False) as p:
         await migrate(p)
+        for name, rows in (('fall.xlsx', fall), ('spring.xlsx', spring)):
+            path = xlsx(files / name, rows)
+            ended = await load_now(p, Storage(f'file://{files}'), DB, path, source_name='Registrar', dataset='enrollment',
+                                   as_of=dt.date(2026, 10, 20))  # fmt: skip
+            assert ended['status'] == 'loaded', ended
         yield p
 
 

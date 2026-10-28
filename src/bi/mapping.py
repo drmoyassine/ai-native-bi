@@ -1,39 +1,69 @@
-"""What a dataset needs from its files, and which of a file's columns supplies it. Files are not made to fit: the columns a file has are
-discovered when it is loaded (raw keeps them as written), matched to the parts the dataset needs by name, and a person approves any
-match that is not exact. The transform (transform/models/staging) reads the approved mapping as a dbt variable."""
+"""What a dataset needs, and which column of a layout supplies it (DEC-026, DEC-029). Data is not made to fit: the columns a stream has are
+discovered, matched to the parts the dataset needs by name and by what the columns hold, and a person approves any match that is not
+exact. Mappings are kept per layout, so files of several layouts can feed one dataset. The transforms read the approved mappings as
+the dbt variable `<dataset>_inputs`."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
-from psycopg import sql
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
+
+Expects = Literal['key', 'date', 'text']
 
 
 @dataclass(frozen=True)
 class Field:
     name: str
     required: bool
+    label: str
+    description: str
+    expects: Expects = 'text'
+    """What the column must hold: a key (an identifier or a code), a date, or any text that is not personal."""
     aliases: tuple[str, ...] = ()
     """Other names an export is likely to use (compared without case, spaces or punctuation)."""
 
 
-# The governed shape of each dataset the metric layer is built on. A dataset with no entry here is loaded to raw and nothing more.
+# The governed shape of each dataset the metric layer is built on. A stream that feeds no dataset is kept in raw and nothing more.
 SHAPES: dict[str, list[Field]] = {
     'enrollment': [
-        Field('student_id', True, ('studentid', 'studentnumber', 'studentno', 'sid', 'idbanner', 'id')),
-        Field('term_code', True, ('termcode', 'termid', 'semestercode', 'periodcode', 'term', 'semester')),
-        Field('term', False, ('termname', 'termlabel', 'termdescription', 'semestername')),
-        Field('term_start', True, ('termstart', 'termstartdate', 'startdate', 'semesterstart', 'begindate')),
-        Field('term_end', False, ('termend', 'termenddate', 'enddate', 'semesterend')),
-        Field('program', False, ('programme', 'major', 'programcode', 'programname', 'degreeprogram')),
-        Field('level', False, ('studentlevel', 'degreelevel', 'levelcode', 'academiclevel', 'classlevel')),
-        Field('status', False, ('enrollmentstatus', 'enrolmentstatus', 'registrationstatus', 'studentstatus')),
+        Field(
+            'student_id', True, 'Student ID', 'Identifies each student, such as a student number. Used to count students, never shown.',
+            'key', ('studentid', 'studentnumber', 'studentno', 'sid', 'idbanner', 'id', 'رقمالطالب', 'الرقمالجامعي'),
+        ),
+        Field(
+            'term_code', True, 'Term code', 'The code of the term (semester) the row is about, such as 202610.',
+            'key', ('termcode', 'termid', 'semestercode', 'periodcode', 'term', 'semester', 'رمزالفصل', 'الفصل'),
+        ),
+        Field(
+            'term', False, 'Term name', 'The term as people name it, such as Fall 2026.',
+            'text', ('termname', 'termlabel', 'termdescription', 'semestername', 'اسمالفصل'),
+        ),
+        Field(
+            'term_start', True, 'Term start date', 'The first day of the term.',
+            'date', ('termstart', 'termstartdate', 'startdate', 'semesterstart', 'begindate', 'بدايةالفصل'),
+        ),
+        Field(
+            'term_end', False, 'Term end date', 'The last day of the term.',
+            'date', ('termend', 'termenddate', 'enddate', 'semesterend', 'نهايةالفصل'),
+        ),
+        Field(
+            'program', False, 'Program', 'The program or major the student is enrolled in.',
+            'text', ('programme', 'major', 'programcode', 'programname', 'degreeprogram', 'البرنامج', 'التخصص'),
+        ),
+        Field(
+            'level', False, 'Level', 'The level of study, such as bachelor or master.',
+            'text', ('studentlevel', 'degreelevel', 'levelcode', 'academiclevel', 'classlevel', 'المستوى'),
+        ),
+        Field(
+            'status', False, 'Enrollment status', 'Whether the student is enrolled, withdrawn, and so on.',
+            'text', ('enrollmentstatus', 'enrolmentstatus', 'registrationstatus', 'studentstatus', 'الحالة'),
+        ),
     ]
-}
+}  # fmt: skip
 
 
 class MappingError(ValueError):
@@ -41,31 +71,49 @@ class MappingError(ValueError):
 
 
 def norm(name: str) -> str:
-    return re.sub(r'[^a-z0-9]', '', name.lower())
+    """A name compared without case, spaces or punctuation, in any script."""
+    return re.sub(r'[\W_]+', '', name.casefold())
 
 
 def fields(dataset: str) -> list[Field]:
     return SHAPES.get(dataset, [])
 
 
-def propose(dataset: str, columns: list[str]) -> tuple[dict[str, str | None], bool]:
-    """Matches the dataset's parts to the columns found: by the part's own name first (exact), then by the names exports use (a guess).
-    Returns the mapping (None where nothing matched) and whether every part that is needed matched by its own name."""
+def datasets() -> list[str]:
+    return sorted(SHAPES)
+
+
+def fits(field: Field, kind: str | None) -> bool:
+    """Whether a column of this kind (from its profile) can supply the part. Personal columns supply nothing unless a person says so."""
+    if kind is None:
+        return True
+    if kind == 'personal':
+        return False
+    if field.expects == 'date':
+        return kind == 'date'
+    return kind != 'date'
+
+
+def propose(dataset: str, columns: list[str], kinds: dict[str, str] | None = None) -> tuple[dict[str, str | None], bool]:
+    """Matches the dataset's parts to the columns found: by the part's own name or label first (exact), then by the names exports use (a
+    guess), never to a column whose profile does not fit the part. Returns the mapping (None where nothing matched) and whether every
+    needed part matched by its own name."""
+    kinds = kinds or {}
     by_norm: dict[str, str] = {}
     for c in columns:
         by_norm.setdefault(norm(c), c)
     mapping: dict[str, str | None] = {}
-    exact = True
     taken: set[str] = set()
+    exact = True
     for f in fields(dataset):  # first pass: own names, so a loose alias never takes a column another part names exactly
-        own = by_norm.get(norm(f.name))
-        if own:
+        own = by_norm.get(norm(f.name)) or by_norm.get(norm(f.label))
+        if own and fits(f, kinds.get(own)):
             mapping[f.name] = own
             taken.add(own)
     for f in fields(dataset):
         if f.name in mapping:
             continue
-        found = next((by_norm[a] for a in f.aliases if a in by_norm and by_norm[a] not in taken), None)
+        found = next((by_norm[a] for a in f.aliases if a in by_norm and by_norm[a] not in taken and fits(f, kinds.get(by_norm[a]))), None)
         mapping[f.name] = found
         if found:
             taken.add(found)
@@ -75,80 +123,83 @@ def propose(dataset: str, columns: list[str]) -> tuple[dict[str, str | None], bo
 
 
 def check(dataset: str, mapping: dict[str, str | None], columns: list[str]) -> None:
-    """Raises MappingError unless the mapping names every needed part, and only columns the data has."""
+    """Raises MappingError unless the mapping names every needed part, and only columns the data has, each at most once."""
     known = {f.name: f for f in fields(dataset)}
     for part, column in mapping.items():
         if part not in known:
             raise MappingError(f'"{part}" is not a part of the {dataset} dataset')
         if column is not None and column not in columns:
             raise MappingError(f'the data has no column "{column}"')
-    missing = [f.name for f in known.values() if f.required and not mapping.get(f.name)]
+    chosen = [c for c in mapping.values() if c]
+    if len(chosen) != len(set(chosen)):
+        raise MappingError('a column can supply only one part')
+    missing = [known[p].label for p in known if known[p].required and not mapping.get(p)]
     if missing:
         raise MappingError(f'no column is chosen for: {", ".join(missing)}')
 
 
-async def raw_columns(pool: AsyncConnectionPool, dataset: str) -> list[str]:
-    """The columns the latest file of this dataset has, as raw keeps them (the BI's own bookkeeping columns left out)."""
-    async with pool.connection() as conn:
-        cur = await conn.execute(
-            """select column_name from information_schema.columns
-               where table_schema = 'raw' and table_name = %s and column_name not like '\\_bi\\_%%' and column_name not like '\\_dlt\\_%%'
-               order by ordinal_position""",
-            [dataset],
-        )
-        every = [r[0] for r in await cur.fetchall()]
-        if not every:
-            return []
-        table = sql.Identifier('raw', dataset)
-        counts = sql.SQL(', ').join(sql.SQL('count({}) filter (where _bi_loaded_at = latest.at)').format(sql.Identifier(c)) for c in every)
-        query = sql.SQL('select {counts} from {table}, (select max(_bi_loaded_at) as at from {table}) latest').format(
-            counts=counts, table=table
-        )
-        row = await (await conn.execute(query)).fetchone()
-    return [c for c, n in zip(every, row or [], strict=False) if n]
-
-
-async def unreadable(pool: AsyncConnectionPool, dataset: str, mapping: dict[str, str | None]) -> list[str]:
-    """The files in raw that do not have a column the mapping reads for a part that is needed (an export with another layout)."""
-    needed = [mapping[f.name] for f in fields(dataset) if f.required and mapping.get(f.name)]
-    if not needed:
-        return []
-    blank = sql.SQL(' or ').join(sql.SQL('{} is null').format(sql.Identifier(c)) for c in needed if c)
-    query = sql.SQL('select distinct _bi_file_name from raw.{} where {} order by 1').format(sql.Identifier(dataset), blank)
-    async with pool.connection() as conn:
-        return [r[0] for r in await (await conn.execute(query)).fetchall()]
-
-
-async def stored(pool: AsyncConnectionPool, dataset: str) -> dict[str, Any] | None:
+async def stored(pool: AsyncConnectionPool, layout_id: str, dataset: str) -> dict[str, Any] | None:
     async with pool.connection() as conn:
         row = await (
-            await conn.execute('select mapping, status, approved_how, error, built_at from column_mapping where dataset = %s', [dataset])
+            await conn.execute(
+                'select mapping, status, approved_how from layout_mapping where layout_id = %s and dataset = %s', [layout_id, dataset]
+            )
         ).fetchone()
-    if row is None:
-        return None
-    return {'mapping': row[0], 'status': row[1], 'approved_how': row[2], 'error': row[3], 'built_at': row[4]}
+    return None if row is None else {'mapping': row[0], 'status': row[1], 'approved_how': row[2]}
 
 
 async def save(
-    pool: AsyncConnectionPool, dataset: str, mapping: dict[str, str | None], status: str, how: str | None, user_id: str | None = None
+    pool: AsyncConnectionPool,
+    layout_id: str,
+    dataset: str,
+    mapping: dict[str, str | None],
+    status: str,
+    how: str | None,
+    user_id: str | None = None,
 ) -> None:
     async with pool.connection() as conn:
         await conn.execute(
-            """insert into column_mapping (dataset, mapping, status, approved_by, approved_how, error)
-               values (%s, %s, %s, %s, %s, null)
-               on conflict (dataset) do update set mapping = excluded.mapping, status = excluded.status,
-                 approved_by = excluded.approved_by, approved_how = excluded.approved_how, error = null, updated_at = now()""",
-            [dataset, Jsonb(mapping), status, user_id, how],
+            """insert into layout_mapping (layout_id, dataset, mapping, status, approved_by, approved_how)
+               values (%s, %s, %s, %s, %s, %s)
+               on conflict (layout_id, dataset) do update set mapping = excluded.mapping, status = excluded.status,
+                 approved_by = excluded.approved_by, approved_how = excluded.approved_how, updated_at = now()""",
+            [layout_id, dataset, Jsonb(mapping), status, user_id, how],
         )
 
 
-async def record_build(pool: AsyncConnectionPool, dataset: str, error: str | None) -> None:
+async def latest_approved(pool: AsyncConnectionPool, dataset: str, columns: list[str]) -> dict[str, str | None] | None:
+    """The most recently approved mapping of this dataset that the columns can satisfy: the starting proposal for a changed layout."""
     async with pool.connection() as conn:
-        await conn.execute(
-            'update column_mapping set error = %s, built_at = case when %s::text is null then now() else built_at end where dataset = %s',
-            [error, error, dataset],
-        )
+        rows = await (
+            await conn.execute(
+                "select mapping from layout_mapping where dataset = %s and status = 'approved' order by updated_at desc", [dataset]
+            )
+        ).fetchall()
+    for (mapping,) in rows:
+        kept = {p: c if c in columns else None for p, c in mapping.items()}
+        if any(kept.values()):
+            return kept
+    return None
 
 
-def dbt_vars(dataset: str, mapping: dict[str, str | None]) -> dict[str, Any]:
-    return {f'{dataset}_columns': mapping}
+async def inputs(pool: AsyncConnectionPool, dataset: str) -> list[dict[str, Any]]:
+    """What the transforms read for a dataset: each raw table and layout with an approved mapping, the columns it reads, and the loaded
+    syncs whose rows count (a sync that failed its tests is left out, though its rows stay in raw)."""
+    async with pool.connection() as conn:
+        rows = await (
+            await conn.execute(
+                """select st.raw_table, m.layout_id, m.mapping, array_agg(s.id::text order by s.created_at)
+                   from layout_mapping m
+                   join sync s on s.layout_id = m.layout_id and s.status = 'loaded'
+                   join source_stream st on st.id = s.stream_id and st.dataset = m.dataset
+                   where m.dataset = %s and m.status = 'approved'
+                   group by st.raw_table, m.layout_id, m.mapping
+                   order by st.raw_table, m.layout_id""",
+                [dataset],
+            )
+        ).fetchall()
+    return [{'table': table, 'layout': layout, 'columns': mapping, 'syncs': syncs} for table, layout, mapping, syncs in rows]
+
+
+async def dbt_vars(pool: AsyncConnectionPool) -> dict[str, Any]:
+    return {f'{d}_inputs': await inputs(pool, d) for d in datasets()}

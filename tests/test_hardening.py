@@ -14,7 +14,7 @@ from psycopg_pool import AsyncConnectionPool
 from bi import accounts
 from bi.api import AppDeps, create_app
 from bi.app import AppContext
-from bi.uploads import Storage
+from bi.connect.files import Storage
 
 from .conftest import AMS, PoolFactory
 

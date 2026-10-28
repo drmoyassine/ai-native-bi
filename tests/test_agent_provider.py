@@ -19,7 +19,7 @@ from bi.agent.secrets import DbSecretStore
 from bi.agent.turn import TurnDeps, make_model_for, process_turn
 from bi.api import AppDeps, create_app
 from bi.app import AppContext
-from bi.uploads import Storage
+from bi.connect.files import Storage
 
 from .conftest import AMS, PoolFactory, database_url
 from .fake_openai import ServerThread

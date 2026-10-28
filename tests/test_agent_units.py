@@ -328,41 +328,64 @@ async def loaded(pool: AsyncConnectionPool) -> list[tuple[str, str, str, str, st
         )
     async with pool.connection() as conn:
         await conn.execute('create schema if not exists raw; create schema if not exists analytics')
-        await conn.execute('drop table if exists raw.enrollment; drop table if exists analytics.enrollment')
+        await conn.execute('drop table if exists raw.registrar; drop table if exists analytics.enrollment')
         await conn.execute(
-            """create table raw.enrollment (student_id text, email text, program text, advisor_note text, remark text, term_start text,
-                 _bi_file_sha256 text, _bi_file_name text, _bi_sheet text, _bi_as_of text, _bi_loaded_at timestamptz, _bi_row bigint, _dlt_id text)"""  # noqa: E501
+            """create table raw.registrar (student_id text, email text, program text, advisor_note text, remark text, term_start text,
+                 _bi_file_sha256 text, _bi_file_name text, _bi_sheet text, _bi_as_of date, _bi_loaded_at timestamptz, _bi_row bigint,
+                 _bi_sync_id text, _bi_layout text, _dlt_id text)"""
         )
         await conn.execute(
             'create table analytics.enrollment (student_id text, program text, term_start date, credits integer, as_of date)'
         )
         for i, (sid, email, program, note, remark, start) in enumerate(people):
             await conn.execute(
-                "insert into raw.enrollment values (%s, %s, %s, %s, %s, %s, 'abc123', 'jdoe-private.xlsx', null, '2026-10-20', now(), %s, 'd')",  # noqa: E501
+                """insert into raw.registrar values (%s, %s, %s, %s, %s, %s, 'abc123', 'jdoe-private.xlsx', null, '2026-10-20', now(), %s,
+                   's', 'l', 'd')""",
                 [sid, email, program, note, remark, start, i + 2],
             )
             await conn.execute(
                 'insert into analytics.enrollment values (%s, %s, %s, %s, %s)', [sid, program, start, 12 + i % 7, '2026-10-20']
             )
+        await conn.execute("delete from source where name = 'Registrar'")
+        source = await (
+            await conn.execute(
+                "insert into source (name, slug, type, state) values ('Registrar', 'registrar', 'file', 'live') returning id"
+            )
+        ).fetchone()
+        assert source is not None
+        stream = await (
+            await conn.execute(
+                """insert into source_stream (source_id, name, raw_table, dataset) values (%s, 'files', 'registrar', 'enrollment')
+                   returning id""",
+                [source[0]],
+            )
+        ).fetchone()
+        assert stream is not None
+        await conn.execute(
+            """insert into sync (source_id, stream_id, as_of, status, finished_at) values (%s, %s, '2026-10-20', 'loaded', now())""",
+            [source[0], stream[0]],
+        )
     return people
 
 
 async def test_a_profile_has_shapes_and_counts_but_no_row_and_no_identifier(
     pool: AsyncConnectionPool, loaded: list[tuple[str, ...]]
 ) -> None:
-    profile = await catalog.describe_dataset(pool, 'enrollment', threshold=5)
-    text = json.dumps(profile, default=str)
+    profile = await catalog.describe_dataset(pool, 'registrar', threshold=5)  # a source's raw table
+    typed_profile = await catalog.describe_dataset(pool, 'enrollment', threshold=5)  # the dataset built from it
+    text = json.dumps([profile, typed_profile], default=str)
     for sid, email, _program, note, remark, _ in loaded:
         assert sid not in text and email not in text and note not in text and remark not in text  # no identifier, email or free text
     assert (
         'jdoe-private' not in text and 'SECRET-PROGRAM-FOR-ONE' not in text and 'PHD1' not in text and 'MSDS' not in text
     )  # rare values: not named
+    assert profile['source'] == 'Registrar' and profile['feeds'] == 'enrollment' and typed_profile['sources'] == ['Registrar']
 
     raw = {c['name']: c for c in profile['tables']['raw']['columns']}
     assert profile['tables']['raw']['rows'] == 120 and '_dlt_id' not in raw
     assert raw['student_id']['kind'] == 'identifier' and raw['student_id']['distinct'] == 120
     assert raw['student_id']['patterns'] == [{'pattern': '999999999', 'rows': 120}]  # the shape of the ids, not an id
-    assert raw['email']['kind'] == 'identifier'
+    assert raw['email']['kind'] == 'personal' and 'values' not in raw['email']
     assert (
         raw['advisor_note']['kind'] == 'identifier' and 'values' not in raw['advisor_note']
     )  # unique on every row: treated as an identifier
@@ -373,26 +396,27 @@ async def test_a_profile_has_shapes_and_counts_but_no_row_and_no_identifier(
     assert raw['program']['kind'] == 'category'
     assert raw['program']['values'] == [{'value': 'BSME', 'rows': 48}, {'value': 'BSCE', 'rows': 40}, {'value': 'BSEE', 'rows': 26}]
     assert raw['program']['other_rows'] == 6  # MSDS 3, PHD1 2, one more: counted, never named
-    assert raw['term_start']['kind'] == 'category' and raw['term_start']['values'] == [{'value': '2026-08-24', 'rows': 120}]
+    assert raw['term_start']['kind'] == 'date' and raw['term_start']['min'] == '2026-08-24'  # dates written as text are dates
 
-    typed = {c['name']: c for c in profile['tables']['analytics']['columns']}
+    typed = {c['name']: c for c in typed_profile['tables']['analytics']['columns']}
     assert typed['term_start']['kind'] == 'date' and typed['term_start']['min'] == typed['term_start']['max'] == '2026-08-24'
     assert typed['credits']['kind'] == 'number' and (typed['credits']['min'], typed['credits']['max']) == (12.0, 18.0)
     assert 'min' not in typed['student_id']  # an identifier has no range: a minimum is a real value
 
 
 async def test_listing_datasets_and_asking_about_an_unknown_one(pool: AsyncConnectionPool, loaded: list[tuple[str, ...]]) -> None:
-    listing = await catalog.list_datasets(pool)
-    assert listing[0]['dataset'] == 'enrollment' and listing[0]['tables'] == {'raw': {'rows': 120}, 'analytics': {'rows': 120}}
-    assert listing[0]['last_load']['as_of'] == '2026-10-20' and listing[0]['last_load']['files'] == 1
+    listing = {d['dataset']: d for d in await catalog.list_datasets(pool)}
+    assert listing['enrollment']['tables'] == {'analytics': {'rows': 120}} and listing['enrollment']['sources'] == ['Registrar']
+    assert listing['registrar']['kind'] == 'source' and listing['registrar']['tables'] == {'raw': {'rows': 120}}
+    assert listing['registrar']['last_load']['as_of'] == '2026-10-20' and listing['registrar']['last_load']['syncs'] == 1
     with pytest.raises(catalog.CatalogError, match='unknown dataset'):
-        await catalog.describe_dataset(pool, 'payroll; drop table raw.enrollment', 5)
+        await catalog.describe_dataset(pool, 'payroll; drop table raw.registrar', 5)
     assert 'student_id' not in json.dumps(listing, default=str)  # a listing has no columns at all
 
 
 async def test_a_dataset_nothing_is_loaded_for_says_so(pool: AsyncConnectionPool, loaded: list[tuple[str, ...]]) -> None:
     async with pool.connection() as conn:
-        await conn.execute('drop table raw.enrollment; drop table analytics.enrollment')
+        await conn.execute('drop table raw.registrar; drop table analytics.enrollment')
     assert (await catalog.describe_dataset(pool, 'enrollment', 5))['note'] == 'nothing has been loaded for this dataset yet'
 
 

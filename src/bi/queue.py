@@ -8,22 +8,20 @@ from procrastinate.jobs import Job
 from procrastinate.retry import BaseRetryStrategy, RetryDecision
 from psycopg_pool import AsyncConnectionPool
 
-from . import mapping
 from .agent import providers as agent_providers
 from .agent import store as agent_store
 from .agent.secrets import SecretStore
 from .agent.turn import TurnDeps, process_turn
 from .callback import Ended, Supplied, Unfit, post_supply
+from .connect.files import Storage, process_sync
 from .contract import CollectRequest
 from .log import log
 from .sources import CannotAnswer, SourceRegistry
-from .uploads import Storage, process_upload, rebuild
 
 COLLECT_QUEUE = 'collect'
 COLLECT_TASK = 'collect'
 LOAD_QUEUE = 'load'
 LOAD_TASK = 'load'
-REBUILD_TASK = 'rebuild'
 AGENT_QUEUE = 'agent'
 TURN_TASK = 'agent_turn'
 REFRESH_TASK = 'refresh_models'
@@ -125,6 +123,8 @@ class LoadDeps:
     pool: AsyncConnectionPool
     storage: Storage
     database_url: str
+    suppression_threshold: int = 5
+    """Small counts hidden in the profiles a person checks before approving (DEC-017)."""
 
 
 @dataclass
@@ -142,7 +142,7 @@ def create_queue(
     agent: AgentWorkerDeps | None = None,
 ) -> procrastinate.App:
     """The job queue on the BI's database (migration 0002). The API only defers jobs (no deps); the worker also runs them: `collect`
-    (an AMS run) and `load` (an upload of the app, never retried: process_upload records why it failed)."""
+    (an AMS run) and `load` (a sync of a source, never retried: process_sync records why it failed)."""
     app = procrastinate.App(connector=procrastinate.PsycopgConnector(conninfo=conninfo))
     if agent is not None:
 
@@ -161,23 +161,11 @@ def create_queue(
         app.periodic(cron='0 */6 * * *')(app.task(name=REFRESH_TASK, queue=AGENT_QUEUE)(refresh_models))
     if load is not None:
 
-        async def load_upload(id: str) -> None:
-            outcome = await process_upload(load.pool, load.storage, load.database_url, id)
-            log('info', 'load', id=id, outcome=outcome)
+        async def load_sync(id: str) -> None:
+            outcome = await process_sync(load.pool, load.storage, load.database_url, id, load.suppression_threshold)
+            log('info', 'sync', id=id, outcome=outcome)
 
-        app.task(name=LOAD_TASK, queue=LOAD_QUEUE)(load_upload)
-
-        async def rebuild_dataset(dataset: str) -> None:
-            # Never retried: a mapping that cannot be built is recorded on it (column_mapping.error) for a person to change.
-            try:
-                built, note = await rebuild(load.pool, load.database_url, dataset)
-            except Exception as e:
-                await mapping.record_build(load.pool, dataset, str(e))
-                log('error', 'rebuild failed', dataset=dataset, error=str(e))
-                return
-            log('info', 'rebuild', dataset=dataset, models=built.models if built else None, note=note)
-
-        app.task(name=REBUILD_TASK, queue=LOAD_QUEUE)(rebuild_dataset)
+        app.task(name=LOAD_TASK, queue=LOAD_QUEUE)(load_sync)
     if deps is not None:
         strategy = retry or CollectRetry()
 
@@ -201,10 +189,6 @@ async def enqueue_collect(app: procrastinate.App, id: str) -> None:
 
 async def enqueue_load(app: procrastinate.App, id: str) -> None:
     await app.configure_task(name=LOAD_TASK, queue=LOAD_QUEUE).defer_async(id=id)
-
-
-async def enqueue_rebuild(app: procrastinate.App, dataset: str) -> None:
-    await app.configure_task(name=REBUILD_TASK, queue=LOAD_QUEUE).defer_async(dataset=dataset)
 
 
 async def enqueue_turn(app: procrastinate.App, run_id: str, conversation_id: str) -> None:
