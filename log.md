@@ -138,3 +138,12 @@ Uploads become one type of source. `docs/connect-data-spec.md` proposes sources 
 `read`, the Airbyte protocol's shape, built on dlt), discovery in layers (metadata at the source; header rows found in spreadsheets;
 profiles, sensitive columns and keys computed inside the BI; mapping by names, profiles and the agent), mappings per layout, and
 delivery in steps C1 to C5. Draft for review; decisions to be recorded once approved.
+
+## 2026-10-28 — Connect data: what dlt gives us
+
+Read the dlt documentation in full (1.31; sources, schema, naming, contracts, incremental, data quality, dataset access, dltHub, release
+notes) and revised the spec (§ 4). dlt covers connecting and structural discovery: `sql_database` with `discover_schema()` (reflection,
+no rows), `filesystem` (Drive, S3, Azure, SFTP, paths; no Excel reader, no SharePoint), Google Sheets (header must be the first row of a
+range), `rest_api` with `dlt-init-openapi`, `inbox`. Frozen schema contracts catch layout changes; unmapped personal columns can be left
+out of database reads. Header detection, profiles and sensitive-column classification stay ours. dltHub (paid) data quality and MS SQL
+change tracking are licensed for its platform only and are not used.
