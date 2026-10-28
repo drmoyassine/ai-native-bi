@@ -9,7 +9,7 @@ status: In Progress
 priority: P1
 tags:
   - agent
-last_updated: '2026-10-27'
+last_updated: '2026-10-28'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -42,9 +42,24 @@ related_decisions:
   - id: DEC-024
     name: The chat agent and the MCP server share one tool implementation
     url: /DECISIONS.md#DEC-024
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+  - id: DEC-028
+    name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+    url: /DECISIONS.md#DEC-028
+  - id: DEC-029
+    name: Mappings per layout; approved streams load under a frozen schema contract
+    url: /DECISIONS.md#DEC-029
+  - id: DEC-030
+    name: Databases load incrementally with history (scd2); files stay snapshots
+    url: /DECISIONS.md#DEC-030
+  - id: DEC-031
+    name: Raw keeps column names as written (duck_case)
+    url: /DECISIONS.md#DEC-031
 modified:
   by: agent/claude-code
-  at: '2026-10-27T06:57:20.911Z'
+  at: '2026-10-28T09:17:37.787Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -58,6 +73,18 @@ related_tasks:
   - id: TASK-015
     name: 'Agent step 2d: define a KPI'
     url: /TASKS.md#TASK-015
+  - id: TASK-023
+    name: 'Connect data C2: APIs and schedules'
+    url: /TASKS.md#TASK-023
+  - id: TASK-024
+    name: 'Connect data C3: Oracle (Banner)'
+    url: /TASKS.md#TASK-024
+  - id: TASK-025
+    name: 'Connect data C4: PostgreSQL'
+    url: /TASKS.md#TASK-025
+  - id: TASK-026
+    name: 'Connect data C5: the remaining sources'
+    url: /TASKS.md#TASK-026
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 

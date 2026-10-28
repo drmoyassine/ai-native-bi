@@ -1,6 +1,6 @@
 # Spec: Connect data — sources, discovery and mapping (ROADMAP-009, ROADMAP-003)
 
-Status: **draft for review, 2026-10-28; questions answered (§ 13); revised after a full read of the dlt docs (dlt 1.31, docs of 2026-10-27), § 4.** Replaces the Uploads page with a Connect data page, where a file upload is one type of source.
+Status: **approved 2026-10-28.** Decisions DEC-027 to DEC-031; steps C1 to C5 are TASK-022 to TASK-026. Read with dlt 1.31 and its docs of 2026-10-27 (§ 4). Replaces the Uploads page with a Connect data page, where a file upload is one type of source.
 Builds on DEC-003 (dlt for integrations), DEC-005 (raw and analytics on PostgreSQL), DEC-006 (a person approves what the agent builds),
 DEC-010 (dbt), DEC-017 (the model sees schemas, profiles and suppressed aggregates, never rows), DEC-020 (secrets) and DEC-026 (columns
 are discovered and mapped, not fixed). Agent steps 2b (TASK-013) and 2c (TASK-014) build on what this spec defines.
@@ -313,7 +313,7 @@ only the read tools).
 | **C5. The rest** | SQL Server, MySQL; folders (Drive, S3, Azure, SFTP, a path), Google Sheets, mail attachments; SharePoint/OneDrive through Microsoft Graph | A folder or mailbox of exports syncs new files |
 | **Agent** | The tools of § 10, then 2b and 2c on top | "Connect Banner" in the chat ends in a source waiting for approval |
 
-## 12. Decisions to record once approved
+## 12. Decisions (recorded as DEC-027 to DEC-031)
 
 - Connect data: sources of several types behind one connector interface (`spec`, `check`, `discover`, `read`), each a thin layer on
   a dlt source; dlt's open-source library only, not dltHub.
