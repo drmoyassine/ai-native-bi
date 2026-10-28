@@ -29,7 +29,7 @@ from .conftest import AMS, PoolFactory
 PASSWORD = 'a-long-password-0123'
 APP = {'x-bi-app': '1'}
 BASE = 'http://bi'
-TOOLS = {'list_metrics', 'query_metric', 'save_chart', 'get_chart', 'list_datasets', 'describe_dataset'}
+TOOLS = {'list_metrics', 'search_knowledge', 'query_metric', 'save_chart', 'get_chart', 'list_datasets', 'describe_dataset'}
 
 
 @pytest.fixture(scope='module')

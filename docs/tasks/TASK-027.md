@@ -3,7 +3,7 @@ title: 'Context K1: metric knowledge in Cube'
 description: >-
   Titles, descriptions, synonyms and explanations in English and Arabic in the Cube model, the institution view,
   search_knowledge, the Metrics page, a completeness check
-status: pending
+status: completed
 priority: P1
 id: TASK-027
 last_updated: '2026-10-28'
@@ -21,8 +21,8 @@ related_decisions:
       calls
     url: /DECISIONS.md#DEC-033
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T13:07:33.243Z'
+  by: process:vef-cli
+  at: '2026-10-28T13:40:04.445Z'
 ---
 # TASK-027 — Context K1: metric knowledge in Cube
 

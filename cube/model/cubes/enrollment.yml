@@ -7,6 +7,10 @@ cubes:
     meta:
       steward: registrar
       definition_version: 1
+      model: analytics.enrollment
+      ar:
+        title: التسجيل
+        description: الطلاب في كشف التسجيل لكل فصل دراسي، صف لكل طالب وفصل.
 
     dimensions:
       - name: key
@@ -18,26 +22,56 @@ cubes:
         sql: program
         type: string
         title: Program
+        description: The degree program the student is enrolled in.
+        meta:
+          ar:
+            title: البرنامج
+            description: "برنامج الدراسة"
       - name: level
         sql: level
         type: string
         title: Level
+        description: Study level, such as bachelor or master.
+        meta:
+          ar:
+            title: المستوى
+            description: "المستوى الدراسي: بكالوريوس أو ماجستير"
       - name: status
         sql: status
         type: string
         title: Enrollment status
+        description: Enrollment status in the term.
+        meta:
+          ar:
+            title: حالة التسجيل
+            description: "حالة تسجيل الطالب في الفصل"
       - name: term_code
         sql: term_code
         type: string
         title: Term code
+        description: "Term code: year plus 10 for fall, 20 for spring (202610)."
+        meta:
+          ar:
+            title: رمز الفصل
+            description: "رمز الفصل الدراسي"
       - name: term_label
         sql: term_label
         type: string
         title: Term
+        description: The term written out, such as Fall 2026.
+        meta:
+          ar:
+            title: الفصل
+            description: "اسم الفصل الدراسي"
       - name: term_start
         sql: term_start
         type: time
         title: Term start
+        description: The term's first day; a metric's period applies to it.
+        meta:
+          ar:
+            title: بداية الفصل
+            description: "تاريخ بداية الفصل الدراسي"
 
     measures:
       - name: headcount
@@ -48,8 +82,21 @@ cubes:
           Distinct students on the term's roster. A test definition (DEC-011) until the registrar, its steward, defines the KPI.
         meta:
           metric: enrollment_headcount
+          ar:
+            title: عدد الطلاب
+            description: عدد الطلاب المسجلين في كشف الفصل.
+          synonyms:
+            en: [enrollment, enrollment count, number of students, students enrolled, student count, headcount]
+            ar: [عدد المسجلين, عدد الطلبة, التسجيل, أعداد الطلاب]
+          knowledge:
+            en: Counts each student once per term, whatever the number of courses. Part-time and full-time students both count.
+            ar: يحسب كل طالب مرة واحدة في الفصل مهما كان عدد المقررات، ويشمل الطلاب بدوام كامل وجزئي.
       - name: as_of
         type: max
         sql: "CAST(TO_CHAR({CUBE}.as_of, 'YYYYMMDD') AS INTEGER)"
         title: Data as of (yyyymmdd)
         description: The latest date the data is true as of (the uploads' as-of dates); goes into every supply's asOf.
+        meta:
+          ar:
+            title: تاريخ صحة البيانات
+            description: آخر تاريخ تكون فيه البيانات صحيحة.

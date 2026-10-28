@@ -69,7 +69,7 @@ async def process_collect(deps: CollectDeps, id: str) -> str:
                 [status, error, id],
             )
 
-    source = deps.sources.find(req)
+    source = await deps.sources.find(req)
     if source is None:
         metric = req.query.metric if req.query and req.query.metric else '(none)'
         await end('no_source', f'no source answers metric "{metric}"' + (f' at endpoint "{req.endpoint}"' if req.endpoint else ''))

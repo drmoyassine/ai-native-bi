@@ -5,10 +5,11 @@ import { Chat } from './Chat';
 import { ChartPage } from './ChartPage';
 import { Connect } from './Connect';
 import { Login } from './Login';
+import { Metrics } from './Metrics';
 import { Providers } from './Providers';
 import { Tokens } from './Tokens';
 
-type Page = 'chat' | 'chart' | 'connect' | 'models' | 'tokens' | 'account';
+type Page = 'chat' | 'chart' | 'connect' | 'metrics' | 'models' | 'tokens' | 'account';
 
 export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -50,6 +51,9 @@ export function App() {
           <button className={page === 'connect' ? 'active' : ''} onClick={() => setPage('connect')}>
             Connect data
           </button>
+          <button className={page === 'metrics' ? 'active' : ''} onClick={() => setPage('metrics')}>
+            Metrics
+          </button>
           <button className={page === 'tokens' ? 'active' : ''} onClick={() => setPage('tokens')}>
             Access tokens
           </button>
@@ -72,6 +76,7 @@ export function App() {
         {page === 'chat' && <Chat />}
         {page === 'chart' && <ChartPage />}
         {page === 'connect' && <Connect user={user} />}
+        {page === 'metrics' && <Metrics />}
         {page === 'models' && user.is_admin && <Providers />}
         {page === 'tokens' && <Tokens user={user} />}
         {page === 'account' && <Account user={user} />}

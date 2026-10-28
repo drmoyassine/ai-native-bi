@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, mapping, tools
+from . import accounts, knowledge, mapping, tools
 from .accounts import User
 from .agent.routes import AgentContext, create_agent_router
 from .agent.suppress import count_measures, suppress_rows
@@ -146,6 +146,21 @@ def create_router(ctx: AppContext) -> APIRouter:
             return {'members': await client.meta()}
         except CubeError as e:
             raise HTTPException(CUBE_FAILED, str(e)) from e
+
+    @router.get('/knowledge')
+    async def knowledge_page(user: Signed, client: Annotated[CubeClient, Depends(cube)], q: str = '') -> dict[str, Any]:
+        """The Metrics page: every governed member with its words in both languages; `q` searches them (docs/context-spec.md section 4)."""
+        try:
+            members, institution = await client.meta(), await client.institution()
+        except CubeError as e:
+            raise HTTPException(CUBE_FAILED, str(e)) from e
+        if q.strip():
+            return {**knowledge.search(members, institution, q), 'instructions': institution['instructions']}
+        return {
+            'members': [knowledge.brief(m) for m in members],
+            'glossary': institution['glossary'],
+            'instructions': institution['instructions'],
+        }
 
     async def chart_rows(chart: ChartDefinition, client: CubeClient) -> list[dict[str, Any]]:
         try:

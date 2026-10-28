@@ -11,6 +11,7 @@ from typing import Any
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
+from .. import knowledge
 from ..agent import catalog
 from ..agent.suppress import count_measures, suppress_rows
 from ..charts import ChartDefinition, ChartQuery, cube_query, query_to_cube, unknown_members, unknown_query_members
@@ -52,7 +53,18 @@ async def list_metrics(ctx: ToolContext) -> dict[str, Any]:
         members = await _cube(ctx).meta()
     except CubeError as e:
         return {'error': str(e)}
-    return {'members': [{k: m[k] for k in ('name', 'title', 'kind', 'description', 'cube') if m.get(k) is not None} for m in members]}
+    return {'members': [knowledge.brief(m) for m in members]}
+
+
+async def search_knowledge(ctx: ToolContext, query: str) -> dict[str, Any]:
+    """Find governed metrics and glossary terms by the institution's own words, in English or Arabic: names, synonyms, descriptions
+    and explanations of what a metric counts. Call this when a question uses a word you do not see
+    in list_metrics, or to explain a metric."""
+    cube = _cube(ctx)
+    try:
+        return knowledge.search(await cube.meta(), await cube.institution(), query)
+    except CubeError as e:
+        return {'error': str(e)}
 
 
 async def query_metric(ctx: ToolContext, query: ChartQuery) -> dict[str, Any]:

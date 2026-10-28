@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .contract import CollectRequest, DataColumn, Filter, SupplyBody
-from .cube import CubeClient, CubeNoData
+from .cube import CubeClient, CubeError, CubeNoData
 from .sources import CannotAnswer
 
 _OPERATORS = {'eq': 'equals', 'ne': 'notEquals', 'in': 'equals', 'gt': 'gt', 'gte': 'gte', 'lt': 'lt', 'lte': 'lte'}
@@ -35,15 +35,36 @@ class Metric:
         return f'{self.cube}.{name}'
 
 
-METRICS: dict[str, Metric] = {
-    'enrollment_headcount': Metric(
-        cube='enrollment',
-        measure='headcount',
-        period='term_start',
-        dimensions=frozenset({'program', 'level', 'status', 'term_code', 'term_label'}),
-        lineage={'model': 'analytics.enrollment', 'steward': 'registrar', 'definition_version': 1},
-    ),
-}
+def metrics_from_cubes(cubes: list[dict[str, Any]]) -> dict[str, Metric]:
+    """The metrics the AMS may ask for, read from the Cube model (docs/context-spec.md section 4): a public measure that declares
+    `meta.metric` is exposed under that name. Its period is the measure's `meta.period`, or the cube's only public time dimension;
+    its dimensions are the cube's other public dimensions; its as-of measure is `meta.as_of` or a public measure named `as_of`; its
+    lineage is the cube's `meta` (model, steward, definition_version). A measure that cannot say these is not exposed."""
+    found: dict[str, Metric] = {}
+    for cube in cubes:
+        short = {m['name']: m['name'].split('.', 1)[-1] for k in ('measures', 'dimensions') for m in cube.get(k, [])}
+        times = [short[d['name']] for d in cube.get('dimensions', []) if d.get('type') == 'time']
+        others = frozenset(short[d['name']] for d in cube.get('dimensions', []) if d.get('type') != 'time')
+        measures = {short[m['name']] for m in cube.get('measures', [])}
+        cube_meta = cube.get('meta') or {}
+        for m in cube.get('measures', []):
+            meta = m.get('meta') or {}
+            name = meta.get('metric')
+            if not isinstance(name, str) or name in found:
+                continue
+            period = meta.get('period') or (times[0] if len(times) == 1 else None)
+            as_of = meta.get('as_of') or 'as_of'
+            if not isinstance(period, str) or period not in times or as_of not in measures:
+                continue
+            found[name] = Metric(
+                cube=cube['name'],
+                measure=short[m['name']],
+                period=period,
+                dimensions=others,
+                as_of=as_of,
+                lineage={k: v for k, v in cube_meta.items() if k in ('model', 'steward', 'definition_version')},
+            )
+    return found
 
 
 def _filter(metric: Metric, f: Filter) -> dict[str, Any]:
@@ -100,22 +121,31 @@ def _number(raw: Any, column: DataColumn | None) -> int | float | None:
 
 
 class CubeMetricSource:
-    """Answers the metrics of METRICS from Cube."""
+    """Answers the metrics the Cube model exposes (`meta.metric`), read from Cube when asked."""
 
     name = 'cube'
 
-    def __init__(self, cube: CubeClient, metrics: dict[str, Metric] = METRICS) -> None:
+    def __init__(self, cube: CubeClient) -> None:
         self._cube = cube
-        self._metrics = metrics
 
-    def can_answer(self, req: CollectRequest) -> bool:
-        return req.query is not None and req.query.metric in self._metrics
+    async def metrics(self) -> dict[str, Metric]:
+        return metrics_from_cubes(await self._cube.cubes())
+
+    async def can_answer(self, req: CollectRequest) -> bool:
+        if req.query is None or req.query.metric is None:
+            return False
+        try:
+            return req.query.metric in await self.metrics()
+        except CubeError:
+            return True  # Cube is down: take the request so the job retries, rather than end it as "no source"
 
     async def answer(self, req: CollectRequest) -> SupplyBody | None:
         assert req.query is not None and req.query.metric is not None
         if req.evidence.type != 'dataset':
             raise CannotAnswer('a metric answers a dataset item, not a document')
-        metric = self._metrics[req.query.metric]
+        metric = (await self.metrics()).get(req.query.metric)
+        if metric is None:
+            raise CannotAnswer(f'"{req.query.metric}" is not a metric the model exposes')
         dimensions = list(req.query.dimensions or [])
         value_key = value_column(dimensions, req.evidence.columns, req.query.metric)
         column = next((c for c in req.evidence.columns or [] if c.key == value_key), None)

@@ -71,6 +71,16 @@ outside Cube is needed to carry it.
 
 The same tools serve MCP clients, so Claude or another assistant gets the institution's meanings too.
 
+### The AMS reads the same catalogue
+
+An evidence item in the AMS names a metric (`query.metric`); the BI maps that name to a Cube member without a table of its own. A
+public measure is **exposed to the AMS** when it declares `meta.metric: <name>`. Its period is the measure's `meta.period` or the
+cube's only public time dimension; the dimensions (and filter fields) the AMS may ask for are the cube's other public dimensions; the
+as-of date comes from the measure named by `meta.as_of` (default `as_of`); the lineage is the cube's `meta` (`model`, `steward`,
+`definition_version`). A measure that cannot say these is not exposed. `src/bi/metrics.py` reads them from Cube's `/meta` when a
+request arrives, so a new KPI needs only a Cube edit, not a code change. The contract has no route yet to list the exposed metrics:
+see `docs/ams-contract-proposals.md` section 7.
+
 ### Writing and approving it
 
 - **Version 1: by pull request.** Definitions and knowledge change in `cube/model` and are reviewed like any change to a KPI; the
@@ -193,7 +203,7 @@ New tables: `verified_question` (phrasings, query, parameters, state, approvals,
 
 | Step | Scope | Done when |
 |---|---|---|
-| **K1. Metric knowledge in Cube** | Titles, descriptions, synonyms and explanations in English and Arabic on every member; the `institution` view (glossary, instructions); `list_metrics` and `search_knowledge` read them; instructions and glossary in the prompt; the read-only Metrics page; the completeness check in CI | An Arabic synonym finds the headcount metric; an instruction changes how the chat reads term codes; a metric without its words fails CI |
+| **K1. Metric knowledge in Cube** | Titles, descriptions, synonyms and explanations in English and Arabic on every member; the `institution` view (glossary, instructions); `list_metrics` and `search_knowledge` read them; instructions and glossary in the prompt; the read-only Metrics page; the completeness check in CI | An Arabic synonym finds the headcount metric; an instruction changes how the chat reads term codes; a metric without its words fails CI; a measure with `meta.metric` is answerable to the AMS with no code change |
 | **K2. Verified questions** | Saving from an answer, approving, `find_verified_question` / `run_verified_question`, the Trusted mark | A question asked in other words is answered from the verified one, marked Trusted |
 | **K3. Benchmarks** | Questions, runs, scoring from tool calls, scores on the Models page, a starter set on test data in CI | Two models compared on the same questions, with cost |
 | **K4. Drafted documentation** | "Draft descriptions" for datasets, raw tables and cubes, as suggested edits to the Cube model | A dataset's columns described in English and Arabic, approved by a steward's pull request |

@@ -39,7 +39,7 @@ def request(**over: Any) -> dict[str, Any]:
 class Headcount:
     name = 'test'
 
-    def can_answer(self, req: CollectRequest) -> bool:
+    async def can_answer(self, req: CollectRequest) -> bool:
         return req.query is not None and req.query.metric == 'enrollment_headcount'
 
     async def answer(self, req: CollectRequest) -> SupplyBody:

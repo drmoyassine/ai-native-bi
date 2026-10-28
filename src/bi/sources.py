@@ -17,7 +17,7 @@ class Source(Protocol):
 
     name: str
 
-    def can_answer(self, req: CollectRequest) -> bool: ...
+    async def can_answer(self, req: CollectRequest) -> bool: ...
 
     async def answer(self, req: CollectRequest) -> SupplyBody | None: ...
 
@@ -26,5 +26,8 @@ class SourceRegistry:
     def __init__(self, sources: Sequence[Source] = ()) -> None:
         self._sources = list(sources)
 
-    def find(self, req: CollectRequest) -> Source | None:
-        return next((s for s in self._sources if s.can_answer(req)), None)
+    async def find(self, req: CollectRequest) -> Source | None:
+        for s in self._sources:
+            if await s.can_answer(req):
+                return s
+        return None
