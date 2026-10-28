@@ -122,11 +122,19 @@ is a thin layer over the dlt source for that type.
 
 ```python
 class Connector(Protocol):
-    type: str                                                    # 'file', 'sql:postgres', 'sql:mssql', 'sql:oracle', 'gsheets', 'folder', 'rest_api', 'inbox'
-    def spec(self) -> type[BaseModel]: ...                       # the settings a person fills in; secret fields are marked as such
-    def check(self, settings, secrets) -> Check: ...             # can we connect, and only read? the reason when not
-    def discover(self, settings, secrets) -> Catalog: ...        # the streams and their columns, from metadata only
-    def read(self, settings, secrets, stream) -> DltSource: ...  # the dlt source or resource for one stream, with our hints
+    type: str  # 'file', 'sql:postgres', 'sql:mssql', 'sql:oracle', 'gsheets', 'folder', 'rest_api', 'inbox'
+
+    # the settings a person fills in; secret fields are marked as such
+    def spec(self) -> type[BaseModel]: ...
+
+    # can we connect, and only read? the reason when not
+    def check(self, settings, secrets) -> Check: ...
+
+    # the streams and their columns, from metadata only
+    def discover(self, settings, secrets) -> Catalog: ...
+
+    # the dlt source or resource for one stream, with our hints
+    def read(self, settings, secrets, stream) -> DltSource: ...
 ```
 
 | Type | `check` | `discover` | `read` |
