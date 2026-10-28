@@ -183,3 +183,11 @@ The owner accepts sending a few rows to the model during discovery, configuratio
 up to 20 random rows per table, personal and free-text columns replaced by made-up values of the same shape, identifiers re-digited;
 only an admin's setup work, only to providers an admin marks "may see sample rows" (off by default), logged and shown to the person.
 Asking, charts, MCP and the watcher keep the no-rows rule. CLAUDE.md, the agent and Connect data specs updated.
+
+## 2026-10-28 — Specs: context and trust, the setup agent
+
+`docs/context-spec.md` (stage A): a knowledge store read by every agent (instructions and glossary in the prompt, descriptions and
+synonyms in the tools, `search_knowledge`), verified questions marked Trusted, benchmarks scored from tool calls, documentation the
+agent drafts, and an ontology file replacing `SHAPES`. `docs/setup-agent-spec.md` (stage B): masked samples under DEC-032 (masking by
+profile kind, rare categories hidden, logged and shown) and mapping proposals with reasons, as one structured call in the worker.
+Drafts for review.
