@@ -21,8 +21,9 @@ transform expected, and the page showed a dbt error instead of a question a pers
    A person confirms or corrects what it found and never types a schema.
 3. **Readable by the person who knows the data.** Headers are shown as the source writes them, and the parts of a dataset have plain
    names and a one-line description. Each column comes with a short description of what it holds, never its values.
-4. **Nothing student-level leaves the BI, and the model sees no rows** (CLAUDE.md rule 5, DEC-017). Discovery produces names, types and
-   profiles. The person on the page sees the same profiles, not rows.
+4. **Nothing student-level leaves the BI** (CLAUDE.md rule 5, DEC-017). Discovery produces names, types and profiles, and the person on
+   the page sees the same profiles, not rows. During setup only, the agent may see up to 20 sample rows per table with every personal
+   column masked, through a provider an admin enabled for samples (DEC-032).
 5. **Read-only and governed.** A connection is checked to be read-only. Credentials live in the secret store. A source is not live
    until a person approves it, and a change in its layout comes back for review.
 6. **The agent uses the same objects.** "Connect Banner" in the chat creates the same source and goes through the same steps, so the

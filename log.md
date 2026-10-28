@@ -176,3 +176,10 @@ Walked through in a browser with a made-up export shaped like the real one (titl
 Hex and Monte Carlo ship as agents in 2026, where the BI stands, and a staged roadmap: context and trust (knowledge store, verified
 questions, benchmarks, documentation, ontology), agents in Connect data, the analyst agent, the watcher, reach and act. Draft for
 discussion.
+
+## 2026-10-28 — Masked samples in setup (DEC-032)
+
+The owner accepts sending a few rows to the model during discovery, configuration and drafting. DEC-032 amends DEC-017 for setup only:
+up to 20 random rows per table, personal and free-text columns replaced by made-up values of the same shape, identifiers re-digited;
+only an admin's setup work, only to providers an admin marks "may see sample rows" (off by default), logged and shown to the person.
+Asking, charts, MCP and the watcher keep the no-rows rule. CLAUDE.md, the agent and Connect data specs updated.

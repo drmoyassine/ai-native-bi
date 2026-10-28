@@ -70,7 +70,8 @@ What we have that they do not, and must keep:
 ## 4. What to build: the agentic roadmap
 
 The order follows the first pattern: context and measurement first, because every other agent depends on them. Each stage keeps the
-rules that make this BI safe: the model sees schemas, profiles and aggregates (never rows); every KPI is read through Cube; a person
+rules that make this BI safe: the model sees schemas, profiles and aggregates, and in setup only masked sample rows through providers
+an admin enabled (DEC-032); every KPI is read through Cube; a person
 approves what an agent builds; agent code runs in a sandbox.
 
 ### Stage A: Context and trust (the foundation)
@@ -89,7 +90,7 @@ approves what an agent builds; agent code runs in a sandbox.
 ### Stage B: Agents in Connect data
 
 1. **Mapping proposals**: when name rules leave a needed part unmatched or unsure, the agent proposes which column is which from the
-   headers and the profiles, with one line of reasoning per choice. The person approves, as today.
+   headers, the profiles and a masked sample of rows (DEC-032), with one line of reasoning per choice. The person approves, as today.
 2. **New datasets from new data** (step 2b): for a file or table that fits no dataset, the agent drafts the dataset: its dbt model,
    tests, a Cube view and first metrics. They run in the sandbox and are proposed for approval.
 3. **Connectors by description**: for an API, the agent drafts a `rest_api` configuration from its OpenAPI document. For a
@@ -126,7 +127,8 @@ approves what an agent builds; agent code runs in a sandbox.
 ## 5. What not to copy
 
 - Spark, a lakehouse, model training and serving, a marketplace: built for scale and breadth we do not need.
-- Sending sample rows to the model (Looker, Fabric and others can): the privacy rules forbid it, and profiles do the job.
+- Sending unmasked rows to the model, or rows outside setup: DEC-032 allows only masked samples during setup, through providers an
+  admin enabled.
 - Per-seat AI pricing and vendor lock-in: the BI stays provider-agnostic.
 
 ## 6. Recommendation
