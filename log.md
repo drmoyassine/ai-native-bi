@@ -153,3 +153,10 @@ change tracking are licensed for its platform only and are not used.
 Spec § 4: a source type dlt lacks (Excel files, SharePoint, an API without OpenAPI, a system with neither API nor database) is written
 as a dlt source, resource or transformer, never a loader beside dlt, so each gets the same loading, contracts, lineage and incremental
 state. Header detection, profiles and classification stay outside dlt, as do documents to parse and the AMS contract.
+
+## 2026-10-28 — Connect data: questions answered
+
+Spec § 13: order files, APIs, Oracle, PostgreSQL, the rest; a BI admin approves sources until there are stewards; databases load
+incrementally with dlt's `scd2` merge and a slower full read for deletes; draft data in a `draft_<source>` schema; raw switches to
+`duck_case` naming. Tried on PostgreSQL: with dlt's default `snake_case`, two Arabic headers both became `x` and one column's values
+were lost without an error (today's upload path has this flaw; C1 fixes it). dlt 1.31.0 is the latest release and already in use.

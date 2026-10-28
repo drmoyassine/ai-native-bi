@@ -1,6 +1,6 @@
 # Spec: Connect data — sources, discovery and mapping (ROADMAP-009, ROADMAP-003)
 
-Status: **draft for review, 2026-10-28; revised after a full read of the dlt docs (dlt 1.31, docs of 2026-10-27), § 4.** Replaces the Uploads page with a Connect data page, where a file upload is one type of source.
+Status: **draft for review, 2026-10-28; questions answered (§ 13); revised after a full read of the dlt docs (dlt 1.31, docs of 2026-10-27), § 4.** Replaces the Uploads page with a Connect data page, where a file upload is one type of source.
 Builds on DEC-003 (dlt for integrations), DEC-005 (raw and analytics on PostgreSQL), DEC-006 (a person approves what the agent builds),
 DEC-010 (dbt), DEC-017 (the model sees schemas, profiles and suppressed aggregates, never rows), DEC-020 (secrets) and DEC-026 (columns
 are discovered and mapped, not fixed). Agent steps 2b (TASK-013) and 2c (TASK-014) build on what this spec defines.
@@ -307,10 +307,10 @@ only the read tools).
 | Step | Scope | Done when |
 |---|---|---|
 | **C1. Sources and files** | The source, stream, layout and sync model; Connect data page; the file type through the whole flow (header detection, profiles, mappings per layout, plain part names); uploads migrated | The real xlsb loads: header found, mapping proposed with profiles, approved, analytics built |
-| **C2. A database** | One database type on `sql_database`: `check` (read-only), `discover_schema()`, choose tables and columns, sync to raw on demand | Tables of a test database appear with types and keys; chosen ones load; an unmapped personal column is not read |
-| **C3. Schedules** | Syncs on a schedule (incremental on a cursor where a table has one); frozen contracts on approved streams | A changed column pauses the stream with a review |
-| **C4. Folders, sheets and mail** | `filesystem` (Drive, S3, Azure, SFTP, a path), Google Sheets, `inbox` attachments. SharePoint/OneDrive need Microsoft Graph and come after | A folder or mailbox of exports syncs new files |
-| **C5. APIs** | `rest_api` configurations, drafted from an OpenAPI document | One endpoint syncs |
+| **C2. APIs and schedules** | `rest_api` configurations, drafted from an OpenAPI document; syncs on a schedule, incremental with state; frozen contracts on approved streams | One endpoint syncs on a schedule; a changed field pauses the stream with a review |
+| **C3. Oracle (Banner)** | `sql_database` with `oracledb`: `check` (read-only), `discover_schema()`, choose tables and columns, incremental history (§ 13, 3). Needs dlt 1.32 | Tables of a test Oracle (a container in CI) appear with types and keys; chosen ones load incrementally; an unmapped personal column is not read |
+| **C4. PostgreSQL** | The same on `psycopg` | As C3 |
+| **C5. The rest** | SQL Server, MySQL; folders (Drive, S3, Azure, SFTP, a path), Google Sheets, mail attachments; SharePoint/OneDrive through Microsoft Graph | A folder or mailbox of exports syncs new files |
 | **Agent** | The tools of § 10, then 2b and 2c on top | "Connect Banner" in the chat ends in a source waiting for approval |
 
 ## 12. Decisions to record once approved
@@ -323,15 +323,26 @@ only the read tools).
   classified by name, shape and uniqueness.
 - Mappings are kept per layout, and a layout change comes back for review (amends DEC-026).
 
-## 13. Open questions
+## 13. Questions, answered 2026-10-28
 
-1. **The first database type.** Banner runs on Oracle. A reporting copy on SQL Server or PostgreSQL may be easier to reach and safer
-   to read.
-2. **Who approves a source.** The data's steward (the registrar for enrollment), a BI admin, or both (DEC-019 says the steward for
-   integrations).
-3. **History from databases.** Append a full snapshot on every sync (simple, auditable, grows), or load incrementally on a cursor
-   column (small, needs one per table)? Files stay snapshots.
-4. **Where profiles of a draft live** before approval: a scratch schema per source, dropped if the source is abandoned?
-5. **Naming of raw columns.** Keep dlt's `snake_case` (Arabic headers become `x`, so the header as written is kept beside it), or
-   switch raw to a convention that keeps Unicode (`sql_ci_v1`, `duck_case`)? To be tested on PostgreSQL before C1.
-6. **dlt 1.32.** Oracle time-zoned timestamps load correctly only from 1.32 (we run 1.31): upgrade before the Oracle connector.
+1. **Order of source types.** Files, then APIs, Oracle, PostgreSQL and the rest (§ 11). If dlt 1.32 is not out when C3 starts,
+   PostgreSQL goes first: both use the same `sql_database` connector, so nothing is lost.
+2. **Who approves a source.** Not needed now. Until the BI has stewards (people responsible for a kind of data, DEC-019), a BI admin
+   approves. Approval is one step in the flow, so naming the steward later changes who sees the button, not the flow.
+3. **History from databases: incremental.** Each sync reads only the rows changed since the last one, using a column the table keeps
+   up to date (Banner's tables usually carry an activity date). Rows are merged with dlt's `scd2` strategy: a changed row closes the
+   old version (`_dlt_valid_to`) and opens a new one (`_dlt_valid_from`). The current state and any past date stay answerable
+   (contract `asOf`) without keeping a full copy per sync. A table with no reliable change column is read in full and merged the
+   same way. Deletes are not seen by a cursor, so a full read reconciles each table on a slower schedule (weekly, say), closing the
+   rows that disappeared. Files stay snapshots: each file is the state on its as-of date.
+4. **Draft data.** Profiles are computed on loaded data, so connecting a source loads some of it before anyone approves it. That draft
+   data goes to its own schema per source (`draft_<source>`), never to `raw`. It is dropped if the source is abandoned, and replaced
+   by the first real sync on approval. Nothing in a draft schema is read by dbt, Cube or the chat.
+5. **Column names in raw.** dlt turns each header into a database column name. With its default (`snake_case`), any non-Latin
+   character is dropped: "اسم الطالب" and "رقم الطالب" both become `x` (`sql_ci_v1` makes both `_`). Tried on PostgreSQL with dlt
+   1.31: a row with both columns loaded **one** column `x` holding the second value; the first was lost without an error. With
+   `duck_case`, both columns loaded under their Arabic names. Raw therefore uses `duck_case` (C1, which also fixes today's upload
+   path). The transforms already quote column names (`mapped` macro). The header as written is still kept in `layout` for display.
+   PostgreSQL allows 63 bytes per name, about 30 Arabic letters; dlt shortens longer names with a hash.
+6. **dlt version.** 1.31.0 is the latest release (PyPI, 2026-10-07), and the BI already runs it. The docs describe 1.32, which is
+   not released yet; Oracle's time-zoned timestamps need it (C3).
