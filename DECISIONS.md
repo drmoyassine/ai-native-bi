@@ -1308,9 +1308,10 @@ decision: >-
   names). A spreadsheet's header row is found by a heuristic over its first rows (title rows, two-row headers, empty
   columns and total rows handled) and can be changed by a person. Profiles (kind, null rate, distinct count, shapes,
   ranges, categories at or above the suppression threshold) and the classification of columns (identifier, personal,
-  category, measure) are computed in PostgreSQL on loaded data: by name, shape and uniqueness. Data loaded before
-  approval goes to draft_<source>, read by nothing but profiling, dropped if the source is abandoned. A personal column
-  no approved mapping uses is not read from a database.
+  date, number, category, text) are computed in PostgreSQL on loaded data: by name, shape and uniqueness. Data loaded
+  before approval goes to the draft schema (one table per source, named as its raw table), read by nothing but
+  profiling, replaced by the next unapproved file and dropped on approval; each sync keeps its profile. A personal
+  column no approved mapping uses is not read from a database.
 rationale: >-
   dlt does not find header rows or profile data; the libraries that guess headers are unmaintained, and full catalogs
   (OpenMetadata, DataHub) are too heavy for one institution.
@@ -1333,7 +1334,7 @@ related_roadmap_items:
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-28T09:17:14.951Z'
+  at: '2026-10-28T09:44:09.176Z'
 ---
 
 ---
@@ -1348,10 +1349,12 @@ context: >-
   in dbt.
 decision: >-
   A layout is the set of a stream's normalised columns. Mappings are kept per layout and dataset, so old and new exports
-  and a database table can feed one dataset. Matching uses names and aliases, then whether a column's profile fits the
-  part, then the agent's proposal from names and profiles. An approved stream loads with dlt's schema contract frozen
-  for columns and types: a new layout stops before anything loads and the sync is marked for review, not failed; its
-  earlier mapping is the starting proposal.
+  and a database table can feed one dataset. Matching uses names (the part's own name or label) and aliases, then
+  whether a column's profile fits the part, then the agent's proposal from names and profiles. An approved stream loads
+  only layouts with an approved mapping: a new layout stops before anything reaches raw and the sync is marked for
+  review, not failed; its earlier mapping is the starting proposal. For files the BI reads the table itself, so the
+  layout is checked before loading; for sources dlt reads (C2 onward), dlt's schema contract is frozen for columns and
+  types. The transforms read only loaded syncs, so a file that fails the tests stays in raw but does not count.
 rationale: Layout changes are expected in exports; they should ask a question, not break the analytics.
 consequences: Amends DEC-026 (one mapping per dataset). column_mapping is replaced by layout and layout_mapping.
 tags:
@@ -1375,7 +1378,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-026
 modified:
   by: agent/claude-code
-  at: '2026-10-28T09:17:15.694Z'
+  at: '2026-10-28T09:44:09.846Z'
 ---
 
 ---
@@ -1432,7 +1435,8 @@ decision: >-
 rationale: An Arabic export must not lose data; names as written are also what people recognise.
 consequences: >-
   Column names in raw are case-sensitive and may contain spaces; PostgreSQL's 63-byte limit (about 30 Arabic letters) is
-  handled by dlt's shortening. Existing raw tables are reloaded from the stored files on migration.
+  handled by dlt's shortening. Rows loaded under the old naming stay in the old raw tables, unread; their uploads become
+  syncs marked to be loaded again, which a person does from the source's page (the stored file is kept).
 tags:
   - connect-data
   - naming
@@ -1450,7 +1454,7 @@ related_roadmap_items:
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-28T09:17:17.194Z'
+  at: '2026-10-28T09:44:10.530Z'
 ---
 
 <!-- End VEF generated items. -->

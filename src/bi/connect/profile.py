@@ -176,7 +176,8 @@ def summary(profile: dict[str, Any]) -> str:
     if kind in ('category', 'boolean'):
         values = [v['value'] for v in profile.get('values', [])][:4]
         more = ', …' if distinct > len(values) else ''
-        return f'{distinct} values: {", ".join(str(v) for v in values)}{more}{tail}' if values else f'{distinct} values{tail}'
+        noun = 'value' if distinct == 1 else 'values'
+        return f'{distinct} {noun}: {", ".join(str(v) for v in values)}{more}{tail}' if values else f'{distinct} {noun}{tail}'
     if kind == 'text':
         return f'free text, {distinct} different values{tail}'
     return f'{distinct} different values{tail}'

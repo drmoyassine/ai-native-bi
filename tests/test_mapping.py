@@ -19,7 +19,7 @@ def test_columns_are_matched_by_their_own_name_first_then_by_the_names_exports_u
     guess, ok = mapping.propose('enrollment', EXPORT)
     assert not ok  # every needed part is found, but not by its own name: a person looks
     assert guess['student_id'] == 'Student Number' and guess['term_code'] == 'Semester' and guess['term_start'] == 'Start Date'
-    assert guess['program'] == 'Major' and guess['term'] is None
+    assert guess['program'] == 'Major' and guess['term'] == 'Semester Label'
     # a column named by one part is not taken by another through an alias
     assert mapping.propose('enrollment', ['Term', 'Student ID', 'Term Start'])[0]['term_code'] is None
 

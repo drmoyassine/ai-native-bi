@@ -15,8 +15,9 @@ through the contract in `docs/ams-bi-contract-v0.md` (owned by the AMS; this is 
 Phase 1 (ROADMAP-002): the pipeline runs end to end, tested on made-up files: a file is loaded into `raw`, dbt builds `analytics`,
 Cube serves `enrollment_headcount`, and the worker answers the AMS from Cube. Real data comes through the frontend later (DEC-011).
 
-The app shell (ROADMAP-009): sign in with the BI's own accounts, upload a file (loaded and analytics rebuilt by the worker, with
-the status of each upload), and chart a governed measure from Cube.
+The app shell (ROADMAP-009): sign in with the BI's own accounts, connect data (a file source today: the header found, the columns
+profiled and matched, an admin approves, analytics rebuilt; databases and APIs next, `docs/connect-data-spec.md`), and chart a
+governed measure from Cube.
 
 The agent, step 2a (ROADMAP-003, TASK-012): ask questions in a chat and get answers with governed tables and proposed charts. An
 admin adds model providers (Anthropic, OpenAI, OpenAI-compatible, OpenRouter, Ollama) on the Models page; their model lists are
@@ -46,11 +47,11 @@ Compose; the web app in React, TypeScript, Vite and ECharts. Node builds the web
 | `src/bi/queue.py`, `callback.py`, `sources.py` | The `collect` job: find a source, ask it, call the AMS back; retries |
 | `src/bi/api.py`, `main_api.py` | `GET /healthz`, `POST /ams/collect` and `POST /ams/collect/<endpoint>`; `python -m bi.main_api` |
 | `src/bi/main_worker.py` | The worker; `python -m bi.main_worker` |
-| `src/bi/ingest.py`, `main_load.py` | Loading a file (.xlsx, .xlsb, .xls, .ods, .csv) into `raw`; `python -m bi.main_load` |
+| `src/bi/connect/`, `mapping.py`, `main_load.py` | Connect data: sources, finding a sheet's table, profiles, mappings per layout, loading through dlt into `raw`; `python -m bi.main_load` |
 | `src/bi/transform/`, `dbt.py` | The dbt project: `raw` -> `staging` -> `analytics`, with its tests |
 | `cube/model/` | The governed metrics (Cube) |
 | `src/bi/metrics.py`, `cube.py` | The first source: the AMS's metric names onto Cube, and the Cube client |
-| `src/bi/app.py`, `accounts.py`, `uploads.py`, `charts.py` | The app's API (`/app/api`): sessions, uploads, governed members, chart data |
+| `src/bi/app.py`, `accounts.py`, `charts.py` | The app's API (`/app/api`): sessions, Connect data, governed members, chart data |
 | `src/bi/agent/` | The agent: providers and model lists, secret store, the turn loop (Pydantic AI), governed read tools, small-count hiding, the chat's routes |
 | `src/bi/tools/` | The governed tools, defined once: the chat agent and the MCP server both call them |
 | `src/bi/mcp/` | The MCP server at `/mcp`: the principal and token verifier, personal access tokens, rate limits, the access log |
@@ -84,9 +85,9 @@ docker compose -f compose.together.yaml up --build   # with the AMS (AMS_DIR, de
 # one by hand (it asks for the password):
 docker compose exec bi-api python -m bi.main_user you@example.edu --name "Your Name" --admin
 
-# Or load a file from the command line (the folder of exports mounted read-only), then dbt rebuilds analytics:
+# Or load a file from the command line into a file source (made if it does not exist; the folder mounted read-only):
 docker compose run --rm -v /path/to/exports:/imports:ro bi-worker \
-  python -m bi.main_load /imports/fall-2026.xlsx --dataset enrollment --as-of 2026-10-20
+  python -m bi.main_load /imports/fall-2026.xlsx --source "Registrar exports" --dataset enrollment --as-of 2026-10-20
 ```
 
 ## Check

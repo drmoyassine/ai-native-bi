@@ -40,7 +40,7 @@ SHAPES: dict[str, list[Field]] = {
         ),
         Field(
             'term', False, 'Term name', 'The term as people name it, such as Fall 2026.',
-            'text', ('termname', 'termlabel', 'termdescription', 'semestername', 'اسمالفصل'),
+            'text', ('termname', 'termlabel', 'termdescription', 'semestername', 'semesterlabel', 'semesterdescription', 'اسمالفصل'),
         ),
         Field(
             'term_start', True, 'Term start date', 'The first day of the term.',

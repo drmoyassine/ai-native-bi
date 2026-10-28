@@ -89,3 +89,38 @@ tr.gone { opacity: 0.55; }
 .made pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 label.inline { flex-direction: row; align-items: center; gap: 6px; margin-block: 12px; }
 code { font-size: 0.85em; }
+/* Connect data */
+.page-head { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { margin: 0; }
+.sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-block-start: 16px; }
+.source-card, .type { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: start; font: inherit; color: var(--fg); }
+.source-name { font-weight: 600; }
+.source-state { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.badge { font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.badge.live { color: var(--ok); border-color: var(--ok); }
+.badge.review, .badge.draft { color: #9a6700; border-color: #d4a72c; }
+.badge.personal { color: var(--error); border-color: var(--error); }
+.status.review { color: #9a6700; }
+.status.stale { color: var(--muted); }
+.types { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.type.chosen { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.type .soon { font-size: 0.8rem; }
+.add-form { display: flex; flex-direction: column; gap: 12px; max-inline-size: 560px; margin-block-start: 16px; }
+.add-form h2 { margin: 0; }
+.review { margin-block: 16px; display: flex; flex-direction: column; gap: 8px; }
+.review h2, .review h3 { margin: 8px 0 0; }
+.review h3 { font-size: 1rem; }
+.review .controls label { flex-direction: row; align-items: center; gap: 8px; }
+.review .controls input { inline-size: 5em; }
+.mapping td:first-child { inline-size: 45%; }
+tr.chosen td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.empty { text-align: center; }
+@media (prefers-color-scheme: dark) { .badge.review, .badge.draft, .status.review { color: #e3b341; border-color: #e3b341; } }
+.add-form button[type='submit'], .review button[type='submit'] { align-self: flex-start; }
+.table-wrap { overflow-x: auto; }
+@media (max-width: 720px) {
+  header { flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; }
+  header nav { order: 3; flex-basis: 100%; overflow-x: auto; }
+  .mapping td { display: block; inline-size: 100%; }
+  .mapping td:first-child { inline-size: 100%; border-bottom: none; padding-block-end: 0; }
+}
