@@ -169,3 +169,10 @@ shapes and ranges), and matches them to the dataset's parts by name, label, alia
 a BI admin approves it on the source's page and it loads into `raw.<source>`, named as written. dbt unions every approved input from
 loaded syncs, so a file that fails the tests stays in raw but does not count. Migration 0010 turns uploads into syncs to load again.
 Walked through in a browser with a made-up export shaped like the real one (title rows, other names, an email and an Arabic column).
+
+## 2026-10-28 — Agentic BI benchmark
+
+`docs/agentic-benchmark.md`: what Databricks, Microsoft Fabric and Power BI, Snowflake, Tableau Next, Looker, ThoughtSpot, Databox, dbt,
+Hex and Monte Carlo ship as agents in 2026, where the BI stands, and a staged roadmap: context and trust (knowledge store, verified
+questions, benchmarks, documentation, ontology), agents in Connect data, the analyst agent, the watcher, reach and act. Draft for
+discussion.
