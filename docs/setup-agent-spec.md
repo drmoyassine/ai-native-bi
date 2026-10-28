@@ -106,7 +106,8 @@ class SetupProposal(BaseModel):
    confidence) and the model that proposed it. The review shows the agent's choice preselected where it differs from the rules', with
    its reason and confidence; "low" choices are left for the person, not preselected.
 3. A suggested header row is shown as "The agent thinks the column names are on row 6: …", with a button to read the file again.
-4. Column notes become proposed knowledge entries (context spec § 7), approved separately.
+4. Column notes are kept on the sync and shown to the person; they feed the descriptions drafted for a dataset's Cube members when its
+   metrics are built (context spec § 7, K4).
 5. If the call fails (no setup model, budget, an error), the review shows the rules' proposal and why the agent did not help.
 
 ### Where it runs
@@ -144,7 +145,7 @@ tools, no loop. The API never calls a model (DEC-015).
 | Step | Scope | Done when |
 |---|---|---|
 | **S1. Masked samples** | The provider switch, drawing, masking by kind, `sample_log`, the notice; property tests | A sample of the made-up export reaches a fake provider with every name, email and ID replaced, repeats kept, a rare program hidden |
-| **S2. Mapping proposals** | The setup model setting, `setup_propose`, validation, the review showing choices with reasons, header suggestions, column notes as draft knowledge | On the changed export, the agent proposes the "Term" column as the term code with a reason, and the person approves |
+| **S2. Mapping proposals** | The setup model setting, `setup_propose`, validation, the review showing choices with reasons, header suggestions, column notes kept on the sync | On the changed export, the agent proposes the "Term" column as the term code with a reason, and the person approves |
 | S3 to S5 | As outlined, each with its own spec | |
 
 S2's quality is measured with the benchmark runner (context spec § 6), using a set of made-up exports with known mappings.

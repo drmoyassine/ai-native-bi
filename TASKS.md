@@ -933,11 +933,13 @@ SQL Server, MySQL; folders (Drive, S3, Azure, SFTP, a path), Google Sheets, mail
 
 ---
 
-## TASK-027 — Context K1: knowledge store
+## TASK-027 — Context K1: metric knowledge in Cube
 
 ---
-title: 'Context K1: knowledge store'
-description: Knowledge entries, the Knowledge page, instructions and glossary in the prompt, search_knowledge
+title: 'Context K1: metric knowledge in Cube'
+description: >-
+  Titles, descriptions, synonyms and explanations in English and Arabic in the Cube model, the institution view,
+  search_knowledge, the Metrics page, a completeness check
 status: pending
 priority: P1
 id: TASK-027
@@ -951,11 +953,13 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-033
-    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    name: >-
+      Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool
+      calls
     url: /DECISIONS.md#DEC-033
 modified:
   by: agent/claude-code
-  at: '2026-10-28T10:45:32.543Z'
+  at: '2026-10-28T13:07:33.243Z'
 ---
 
 docs/context-spec.md § 11, K1.
@@ -980,11 +984,13 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-033
-    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    name: >-
+      Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool
+      calls
     url: /DECISIONS.md#DEC-033
 modified:
   by: agent/claude-code
-  at: '2026-10-28T10:45:33.334Z'
+  at: '2026-10-28T13:07:32.219Z'
 ---
 
 docs/context-spec.md § 11, K2.
@@ -1009,11 +1015,13 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-033
-    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    name: >-
+      Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool
+      calls
     url: /DECISIONS.md#DEC-033
 modified:
   by: agent/claude-code
-  at: '2026-10-28T10:45:34.066Z'
+  at: '2026-10-28T13:07:32.219Z'
 ---
 
 docs/context-spec.md § 11, K3.
@@ -1038,11 +1046,13 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-033
-    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    name: >-
+      Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool
+      calls
     url: /DECISIONS.md#DEC-033
 modified:
   by: agent/claude-code
-  at: '2026-10-28T10:45:34.964Z'
+  at: '2026-10-28T13:07:32.219Z'
 ---
 
 docs/context-spec.md § 11, K4.
