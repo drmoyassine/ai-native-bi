@@ -786,4 +786,149 @@ own (never pgboss), and its analytic data in public, with no privilege on the AM
 its tables in public. To do: the migrations' search_path and schema, Procrastinate's schema, dbt's target schemas, Cube's grants,
 compose.together.yaml, and a test that the BI's role cannot read ams. Standalone deployments can keep a database of their own.
 
+---
+
+## TASK-022 — Connect data C1: sources and files
+
+---
+title: 'Connect data C1: sources and files'
+description: Sources, the Connect data page, and files through the whole flow
+status: in-progress
+priority: P1
+id: TASK-022
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:34.526Z'
+roadmap_item:
+  id: ROADMAP-009
+  name: 'The app shell: sign-in, uploads, a first chart'
+  url: /ROADMAP.md#ROADMAP-009
+related_decisions:
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:34.526Z'
+---
+
+Spec docs/connect-data-spec.md § 11. The source, stream, layout and sync model; the Connect data page; the file type through the whole flow (header detection, profiles, sensitive columns, mappings per layout with plain part names, frozen contract, draft schema); raw on duck_case; uploads migrated. Done when the real xlsb loads: header found, mapping proposed with profiles, approved, analytics built.
+
+---
+
+## TASK-023 — Connect data C2: APIs and schedules
+
+---
+title: 'Connect data C2: APIs and schedules'
+description: rest_api sources, scheduled incremental syncs
+status: pending
+priority: P1
+id: TASK-023
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:35.457Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:35.457Z'
+---
+
+rest_api configurations, drafted from an OpenAPI document; syncs on a schedule, incremental with state; frozen contracts on approved streams. Done when one endpoint syncs on a schedule and a changed field pauses the stream with a review.
+
+---
+
+## TASK-024 — Connect data C3: Oracle (Banner)
+
+---
+title: 'Connect data C3: Oracle (Banner)'
+description: Oracle source on sql_database, incremental with history
+status: pending
+priority: P1
+id: TASK-024
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:36.185Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:36.185Z'
+---
+
+sql_database with oracledb: check (read-only), discover_schema(), choose tables and columns, incremental scd2 history (DEC-030), unmapped personal columns not read. Needs dlt 1.32. Done when a test Oracle (a container in CI) loads chosen tables incrementally.
+
+---
+
+## TASK-025 — Connect data C4: PostgreSQL
+
+---
+title: 'Connect data C4: PostgreSQL'
+description: PostgreSQL source on sql_database
+status: pending
+priority: P1
+id: TASK-025
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:36.936Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:36.936Z'
+---
+
+The database connector of C3 on psycopg. Goes first if dlt 1.32 is not out when C3 starts.
+
+---
+
+## TASK-026 — Connect data C5: the remaining sources
+
+---
+title: 'Connect data C5: the remaining sources'
+description: SQL Server, MySQL, folders, Google Sheets, mail, SharePoint
+status: pending
+priority: P1
+id: TASK-026
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:37.787Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:37.787Z'
+---
+
+SQL Server, MySQL; folders (Drive, S3, Azure, SFTP, a path), Google Sheets, mail attachments; SharePoint/OneDrive through Microsoft Graph.
+
 <!-- End VEF generated items. -->

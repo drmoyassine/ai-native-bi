@@ -1233,4 +1233,224 @@ modified:
   at: '2026-10-27T15:01:11.957Z'
 ---
 
+---
+
+## DEC-027 — Connect data: every source behind one connector interface on dlt
+
+---
+title: 'Connect data: every source behind one connector interface on dlt'
+status: accepted
+context: >-
+  Uploads were the only way in, and a real export showed the page could not explain itself. The institution's data is in
+  files, APIs, Oracle (Banner), PostgreSQL and other systems (spec: docs/connect-data-spec.md).
+decision: >-
+  A Connect data page replaces Uploads. A source (a type, settings, credentials by reference, an owner, a state)
+  implements spec, check (connects; refuses a connection that can write), discover (from metadata) and read, each a thin
+  layer on a dlt source. Every source reaches raw through dlt; a type dlt lacks is written as a dlt source, resource or
+  transformer, never as a separate loader. dlt's open-source library only: dltHub components are licensed for its
+  platform and are not used. Order: files, APIs, Oracle, PostgreSQL, the rest. A BI admin approves a source until there
+  are stewards.
+rationale: >-
+  One loading path gives every source the same naming, contracts, lineage, incremental state and discovery; dlt already
+  covers databases, folders, Google Sheets, APIs and mail.
+consequences: >-
+  Excel reading with header detection, SharePoint (Microsoft Graph) and other gaps are our own dlt code. dlt is pinned
+  and upgraded on purpose; Oracle waits for dlt 1.32.
+tags:
+  - connect-data
+  - ingest
+  - dlt
+id: DEC-027
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:14.072Z'
+related_roadmap_items:
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:37.787Z'
+related_tasks:
+  - id: TASK-022
+    name: 'Connect data C1: sources and files'
+    url: /TASKS.md#TASK-022
+  - id: TASK-023
+    name: 'Connect data C2: APIs and schedules'
+    url: /TASKS.md#TASK-023
+  - id: TASK-024
+    name: 'Connect data C3: Oracle (Banner)'
+    url: /TASKS.md#TASK-024
+  - id: TASK-025
+    name: 'Connect data C4: PostgreSQL'
+    url: /TASKS.md#TASK-025
+  - id: TASK-026
+    name: 'Connect data C5: the remaining sources'
+    url: /TASKS.md#TASK-026
+---
+
+---
+
+## DEC-028 — Discovery: metadata at the source, header rows found, profiles and classification inside the BI
+
+---
+title: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+status: accepted
+context: >-
+  To map a source a person has to see what is in it, without rows leaving the BI or reaching the model (CLAUDE.md rule
+  5, DEC-017).
+decision: >-
+  Discovery reads metadata at the source (dlt's discover_schema for databases, listings for folders, sheet and range
+  names). A spreadsheet's header row is found by a heuristic over its first rows (title rows, two-row headers, empty
+  columns and total rows handled) and can be changed by a person. Profiles (kind, null rate, distinct count, shapes,
+  ranges, categories at or above the suppression threshold) and the classification of columns (identifier, personal,
+  category, measure) are computed in PostgreSQL on loaded data: by name, shape and uniqueness. Data loaded before
+  approval goes to draft_<source>, read by nothing but profiling, dropped if the source is abandoned. A personal column
+  no approved mapping uses is not read from a database.
+rationale: >-
+  dlt does not find header rows or profile data; the libraries that guess headers are unmaintained, and full catalogs
+  (OpenMetadata, DataHub) are too heavy for one institution.
+consequences: Entity recognition on sample values (Presidio) is added only if name and shape rules miss too much.
+tags:
+  - connect-data
+  - discovery
+  - privacy
+id: DEC-028
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:14.951Z'
+related_roadmap_items:
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:14.951Z'
+---
+
+---
+
+## DEC-029 — Mappings per layout; approved streams load under a frozen schema contract
+
+---
+title: Mappings per layout; approved streams load under a frozen schema contract
+status: accepted
+context: >-
+  DEC-026 kept one mapping per dataset, so files of two layouts could not feed one dataset, and a changed export failed
+  in dbt.
+decision: >-
+  A layout is the set of a stream's normalised columns. Mappings are kept per layout and dataset, so old and new exports
+  and a database table can feed one dataset. Matching uses names and aliases, then whether a column's profile fits the
+  part, then the agent's proposal from names and profiles. An approved stream loads with dlt's schema contract frozen
+  for columns and types: a new layout stops before anything loads and the sync is marked for review, not failed; its
+  earlier mapping is the starting proposal.
+rationale: Layout changes are expected in exports; they should ask a question, not break the analytics.
+consequences: Amends DEC-026 (one mapping per dataset). column_mapping is replaced by layout and layout_mapping.
+tags:
+  - connect-data
+  - mapping
+id: DEC-029
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:15.694Z'
+related_roadmap_items:
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-026
+    name: Columns are discovered from the file and matched by name; a person approves what is not exact
+    url: /DECISIONS.md#DEC-026
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:15.694Z'
+---
+
+---
+
+## DEC-030 — Databases load incrementally with history (scd2); files stay snapshots
+
+---
+title: Databases load incrementally with history (scd2); files stay snapshots
+status: accepted
+context: >-
+  Copying Banner's large tables in full on every sync is slow and grows without end; the AMS asks for figures as of a
+  date.
+decision: >-
+  Each database sync reads only rows changed since the last (a cursor on a change column, such as Banner's activity
+  date) and merges them with dlt's scd2 strategy (_dlt_valid_from, _dlt_valid_to), so the current state and any past
+  date stay answerable. A table without a reliable change column is read in full and merged the same way. A full read on
+  a slower schedule closes rows that were deleted. Files stay snapshots: each file is the state on its as-of date.
+rationale: Small, fast syncs with history kept as validity windows instead of copies.
+consequences: Each table needs a chosen cursor or a full read; deletes are seen only at the reconciliation.
+tags:
+  - connect-data
+  - databases
+  - history
+id: DEC-030
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:16.420Z'
+related_roadmap_items:
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:16.420Z'
+---
+
+---
+
+## DEC-031 — Raw keeps column names as written (duck_case)
+
+---
+title: Raw keeps column names as written (duck_case)
+status: accepted
+context: >-
+  With dlt's default snake_case, non-Latin characters are dropped. Tried on PostgreSQL with dlt 1.31: two Arabic headers
+  both became x and one column's values were lost without an error.
+decision: >-
+  Raw tables use dlt's duck_case naming convention, which keeps Unicode and case. The transforms quote column names. The
+  header as written is also kept in layout for display.
+rationale: An Arabic export must not lose data; names as written are also what people recognise.
+consequences: >-
+  Column names in raw are case-sensitive and may contain spaces; PostgreSQL's 63-byte limit (about 30 Arabic letters) is
+  handled by dlt's shortening. Existing raw tables are reloaded from the stored files on migration.
+tags:
+  - connect-data
+  - naming
+id: DEC-031
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:17.194Z'
+related_roadmap_items:
+  - id: ROADMAP-009
+    name: 'The app shell: sign-in, uploads, a first chart'
+    url: /ROADMAP.md#ROADMAP-009
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T09:17:17.194Z'
+---
+
 <!-- End VEF generated items. -->

@@ -175,7 +175,7 @@ status: In Progress
 priority: P1
 tags:
   - agent
-last_updated: '2026-10-27'
+last_updated: '2026-10-28'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -208,9 +208,24 @@ related_decisions:
   - id: DEC-024
     name: The chat agent and the MCP server share one tool implementation
     url: /DECISIONS.md#DEC-024
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+  - id: DEC-028
+    name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+    url: /DECISIONS.md#DEC-028
+  - id: DEC-029
+    name: Mappings per layout; approved streams load under a frozen schema contract
+    url: /DECISIONS.md#DEC-029
+  - id: DEC-030
+    name: Databases load incrementally with history (scd2); files stay snapshots
+    url: /DECISIONS.md#DEC-030
+  - id: DEC-031
+    name: Raw keeps column names as written (duck_case)
+    url: /DECISIONS.md#DEC-031
 modified:
   by: agent/claude-code
-  at: '2026-10-27T06:57:20.911Z'
+  at: '2026-10-28T09:17:37.787Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -224,6 +239,18 @@ related_tasks:
   - id: TASK-015
     name: 'Agent step 2d: define a KPI'
     url: /TASKS.md#TASK-015
+  - id: TASK-023
+    name: 'Connect data C2: APIs and schedules'
+    url: /TASKS.md#TASK-023
+  - id: TASK-024
+    name: 'Connect data C3: Oracle (Banner)'
+    url: /TASKS.md#TASK-024
+  - id: TASK-025
+    name: 'Connect data C4: PostgreSQL'
+    url: /TASKS.md#TASK-025
+  - id: TASK-026
+    name: 'Connect data C5: the remaining sources'
+    url: /TASKS.md#TASK-026
 ---
 
 Spec in docs/agent-spec.md and decisions DEC-015 to DEC-020: the runtime (Pydantic AI in a worker job, the model per mode a setting), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost. Delivery is in four steps.
@@ -450,7 +477,7 @@ priority: P0
 tags:
   - app
   - ui
-last_updated: '2026-10-27'
+last_updated: '2026-10-28'
 generated:
   by: agent/claude-code
   at: '2026-10-26T21:39:41.703Z'
@@ -468,6 +495,21 @@ related_decisions:
   - id: DEC-011
     name: Phase 1 on test files; real data through the frontend
     url: /DECISIONS.md#DEC-011
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+  - id: DEC-028
+    name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+    url: /DECISIONS.md#DEC-028
+  - id: DEC-029
+    name: Mappings per layout; approved streams load under a frozen schema contract
+    url: /DECISIONS.md#DEC-029
+  - id: DEC-030
+    name: Databases load incrementally with history (scd2); files stay snapshots
+    url: /DECISIONS.md#DEC-030
+  - id: DEC-031
+    name: Raw keeps column names as written (duck_case)
+    url: /DECISIONS.md#DEC-031
 related_tasks:
   - id: TASK-009
     name: Build the app shell
@@ -478,9 +520,12 @@ related_tasks:
   - id: TASK-011
     name: Manage accounts in the app
     url: /TASKS.md#TASK-011
+  - id: TASK-022
+    name: 'Connect data C1: sources and files'
+    url: /TASKS.md#TASK-022
 modified:
-  by: process:vef-cli
-  at: '2026-10-27T05:09:48.788Z'
+  by: agent/claude-code
+  at: '2026-10-28T09:17:34.526Z'
 ---
 
 The home for real data (uploads), for the agent (its chat, step 2a of ROADMAP-003, is in the app) and for charts (the builder, ROADMAP-004).

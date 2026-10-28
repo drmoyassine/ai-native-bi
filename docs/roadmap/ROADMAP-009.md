@@ -8,7 +8,7 @@ priority: P0
 tags:
   - app
   - ui
-last_updated: '2026-10-27'
+last_updated: '2026-10-28'
 generated:
   by: agent/claude-code
   at: '2026-10-26T21:39:41.703Z'
@@ -26,6 +26,21 @@ related_decisions:
   - id: DEC-011
     name: Phase 1 on test files; real data through the frontend
     url: /DECISIONS.md#DEC-011
+  - id: DEC-027
+    name: 'Connect data: every source behind one connector interface on dlt'
+    url: /DECISIONS.md#DEC-027
+  - id: DEC-028
+    name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+    url: /DECISIONS.md#DEC-028
+  - id: DEC-029
+    name: Mappings per layout; approved streams load under a frozen schema contract
+    url: /DECISIONS.md#DEC-029
+  - id: DEC-030
+    name: Databases load incrementally with history (scd2); files stay snapshots
+    url: /DECISIONS.md#DEC-030
+  - id: DEC-031
+    name: Raw keeps column names as written (duck_case)
+    url: /DECISIONS.md#DEC-031
 related_tasks:
   - id: TASK-009
     name: Build the app shell
@@ -36,9 +51,12 @@ related_tasks:
   - id: TASK-011
     name: Manage accounts in the app
     url: /TASKS.md#TASK-011
+  - id: TASK-022
+    name: 'Connect data C1: sources and files'
+    url: /TASKS.md#TASK-022
 modified:
-  by: process:vef-cli
-  at: '2026-10-27T05:09:48.788Z'
+  by: agent/claude-code
+  at: '2026-10-28T09:17:34.526Z'
 ---
 # ROADMAP-009 — The app shell: sign-in, uploads, a first chart
 

@@ -131,3 +131,32 @@ A real .xlsb export failed in dbt (`term_code` does not exist): the staging mode
 file's own columns, `bi.mapping` matches them to the parts a dataset needs (own name, then the names exports use), a person approves a match
 that is not exact (Uploads page), and dbt reads the approved mapping (DEC-026). A file whose layout cannot be read says which, instead of
 a dbt error. Discovering the dataset itself and building new ones stays with agent step 2b (TASK-013).
+
+## 2026-10-28 — Connect data: spec
+
+Uploads become one type of source. `docs/connect-data-spec.md` proposes sources with a connector interface (`spec`, `check`, `discover`,
+`read`, the Airbyte protocol's shape, built on dlt), discovery in layers (metadata at the source; header rows found in spreadsheets;
+profiles, sensitive columns and keys computed inside the BI; mapping by names, profiles and the agent), mappings per layout, and
+delivery in steps C1 to C5. Draft for review; decisions to be recorded once approved.
+
+## 2026-10-28 — Connect data: what dlt gives us
+
+Read the dlt documentation in full (1.31; sources, schema, naming, contracts, incremental, data quality, dataset access, dltHub, release
+notes) and revised the spec (§ 4). dlt covers connecting and structural discovery: `sql_database` with `discover_schema()` (reflection,
+no rows), `filesystem` (Drive, S3, Azure, SFTP, paths; no Excel reader, no SharePoint), Google Sheets (header must be the first row of a
+range), `rest_api` with `dlt-init-openapi`, `inbox`. Frozen schema contracts catch layout changes; unmapped personal columns can be left
+out of database reads. Header detection, profiles and sensitive-column classification stay ours. dltHub (paid) data quality and MS SQL
+change tracking are licensed for its platform only and are not used.
+
+## 2026-10-28 — Connect data: every source through dlt
+
+Spec § 4: a source type dlt lacks (Excel files, SharePoint, an API without OpenAPI, a system with neither API nor database) is written
+as a dlt source, resource or transformer, never a loader beside dlt, so each gets the same loading, contracts, lineage and incremental
+state. Header detection, profiles and classification stay outside dlt, as do documents to parse and the AMS contract.
+
+## 2026-10-28 — Connect data: questions answered
+
+Spec § 13: order files, APIs, Oracle, PostgreSQL, the rest; a BI admin approves sources until there are stewards; databases load
+incrementally with dlt's `scd2` merge and a slower full read for deletes; draft data in a `draft_<source>` schema; raw switches to
+`duck_case` naming. Tried on PostgreSQL: with dlt's default `snake_case`, two Arabic headers both became `x` and one column's values
+were lost without an error (today's upload path has this flaw; C1 fixes it). dlt 1.31.0 is the latest release and already in use.
