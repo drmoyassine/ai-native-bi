@@ -147,3 +147,9 @@ no rows), `filesystem` (Drive, S3, Azure, SFTP, paths; no Excel reader, no Share
 range), `rest_api` with `dlt-init-openapi`, `inbox`. Frozen schema contracts catch layout changes; unmapped personal columns can be left
 out of database reads. Header detection, profiles and sensitive-column classification stay ours. dltHub (paid) data quality and MS SQL
 change tracking are licensed for its platform only and are not used.
+
+## 2026-10-28 — Connect data: every source through dlt
+
+Spec § 4: a source type dlt lacks (Excel files, SharePoint, an API without OpenAPI, a system with neither API nor database) is written
+as a dlt source, resource or transformer, never a loader beside dlt, so each gets the same loading, contracts, lineage and incremental
+state. Header detection, profiles and classification stay outside dlt, as do documents to parse and the AMS contract.

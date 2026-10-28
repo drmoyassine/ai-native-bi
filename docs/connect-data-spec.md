@@ -81,6 +81,33 @@ to 1.31. Its destination and deployment pages do not bear on this spec.
 - **Credentials**: dlt reads secrets from its providers (TOML, environment, Google, AWS, Airflow vaults). We pass credentials from our
   own secret table straight to the source objects instead (`ConnectionStringCredentials`, a SQLAlchemy `Engine`, `GcpServiceAccountCredentials`).
 
+### Sources dlt lacks: written as dlt sources
+
+Every source reaches `raw` through dlt. A type dlt does not have becomes a dlt source, resource or transformer of our own, never a
+loader beside dlt. A dlt resource is a Python function that yields rows, which is code we would write anyway. Writing it this way
+gives every source the same things for free:
+
+- one loading path: the same naming, types, tables per stream and metadata columns in `raw`, whatever the source;
+- frozen schema contracts, so a layout change becomes a review (§ 6.6);
+- lineage: `_dlt_load_id` on every row and a list of schema changes for each run;
+- incremental loading, with its state kept in the BI's database;
+- `discover_schema()` for a source that declares its columns, so the connector interface (§ 5) is the same for every type;
+- write dispositions (append, replace, merge) and primary keys as settings.
+
+| Missing | Filled by |
+|---|---|
+| Excel files (uploads, folders, mail) | Our calamine reader with header detection (§ 6.2), as a dlt transformer after `filesystem`, `inbox` or an upload |
+| SharePoint / OneDrive | Microsoft Graph through a `rest_api` configuration (list, download), then the same reader; or an fsspec plugin for SharePoint, which `filesystem` would take directly, if a maintained one exists |
+| An API with no OpenAPI document | A `rest_api` configuration, written by a person or proposed by the agent: data to review, not code to sandbox |
+| A system with neither an API nor a database | A small `@dlt.source` in `src/bi/connectors/`, with tests on made-up data (DEC-011) |
+
+What stays outside dlt: header detection, profiles and the classification of columns. These run before or after a load and read what
+was discovered or loaded. Documents to be parsed (PDF, Word) stay outside too; once parsed into a table they can go through dlt. So does
+the AMS contract, which is a request and a supply, not ingestion.
+
+The cost is dlt's own upgrades: releases 1.25 to 1.31 each changed some default behaviour. dlt is pinned and upgraded on purpose, with
+every connector's tests run first.
+
 ### What we do not take
 
 - **dltHub** (the paid product): data quality metrics and checks, transformations, the AI harness, MS SQL change tracking and the
@@ -290,6 +317,7 @@ only the read tools).
 
 - Connect data: sources of several types behind one connector interface (`spec`, `check`, `discover`, `read`), each a thin layer on
   a dlt source; dlt's open-source library only, not dltHub.
+- Every source reaches raw through dlt; a type dlt lacks is written as a dlt source, resource or transformer, never as a separate loader.
 - Approved streams load under a frozen schema contract; a layout change comes back for review.
 - Discovery reads metadata at the source and profiles inside the BI; header rows are found by a heuristic; sensitive columns are
   classified by name, shape and uniqueness.
