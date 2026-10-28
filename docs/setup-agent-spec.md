@@ -1,6 +1,6 @@
 # Spec: The setup agent — masked samples and AI proposals in Connect data (stage B)
 
-Status: **draft for review, 2026-10-28.** Stage B of `docs/agentic-benchmark.md`, on top of Connect data (`docs/connect-data-spec.md`,
+Status: **approved 2026-10-28.** Decision DEC-035; S1 and S2 are TASK-032 and TASK-033. Stage B of `docs/agentic-benchmark.md`, on top of Connect data (`docs/connect-data-spec.md`,
 C1 built). Implements DEC-032 (masked sample rows in setup, through providers an admin enables). Builds on DEC-015 (the agent runs in
 the worker), DEC-016 (providers configured in the app), DEC-020 (budgets), DEC-028 and DEC-029 (discovery and mappings per layout).
 
@@ -149,15 +149,14 @@ tools, no loop. The API never calls a model (DEC-015).
 
 S2's quality is measured with the benchmark runner (context spec § 6), using a set of made-up exports with known mappings.
 
-## 9. Decisions to record once approved
+## 9. Decisions (recorded as DEC-035)
 
 - Masking is by profile kind, in code, before anything leaves the BI; unclassified columns are masked as free text; rare categories
   are hidden.
 - The setup agent runs where the rules fall short or a person asks, as one structured call in the worker; its proposal is validated and
   shown with reasons, never applied without review.
 
-## 10. Open questions
+## 10. Questions, answered 2026-10-28
 
-1. **Automatic or on request**: run the agent automatically whenever the rules fall short (costs tokens on every unusual file), or only
-   when a person clicks "Ask the agent"? The recommendation is automatic, with the institution budget as the limit.
-2. **Sample size**: 20 rows (DEC-032's limit), or fewer by default (say 10)?
+1. **Automatic or on request**: automatic when the rules fall short, and on request; the institution's budget is the limit.
+2. **Sample size**: 20 rows (DEC-032's limit), a setting that can only be lowered.

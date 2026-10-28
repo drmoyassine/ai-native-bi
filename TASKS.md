@@ -931,4 +931,207 @@ modified:
 
 SQL Server, MySQL; folders (Drive, S3, Azure, SFTP, a path), Google Sheets, mail attachments; SharePoint/OneDrive through Microsoft Graph.
 
+---
+
+## TASK-027 — Context K1: knowledge store
+
+---
+title: 'Context K1: knowledge store'
+description: Knowledge entries, the Knowledge page, instructions and glossary in the prompt, search_knowledge
+status: pending
+priority: P1
+id: TASK-027
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:32.543Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-033
+    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    url: /DECISIONS.md#DEC-033
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:32.543Z'
+---
+
+docs/context-spec.md § 11, K1.
+
+---
+
+## TASK-028 — Context K2: verified questions
+
+---
+title: 'Context K2: verified questions'
+description: Save from an answer, approve, find and run, the Trusted mark
+status: pending
+priority: P1
+id: TASK-028
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:33.334Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-033
+    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    url: /DECISIONS.md#DEC-033
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:33.334Z'
+---
+
+docs/context-spec.md § 11, K2.
+
+---
+
+## TASK-029 — Context K3: benchmarks
+
+---
+title: 'Context K3: benchmarks'
+description: Questions, runs scored from tool calls, scores on the Models page, a starter set in CI
+status: pending
+priority: P1
+id: TASK-029
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:34.066Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-033
+    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    url: /DECISIONS.md#DEC-033
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:34.066Z'
+---
+
+docs/context-spec.md § 11, K3.
+
+---
+
+## TASK-030 — Context K4: drafted documentation
+
+---
+title: 'Context K4: drafted documentation'
+description: Draft descriptions for datasets, raw tables and cubes, approved by a person
+status: pending
+priority: P1
+id: TASK-030
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:34.964Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-033
+    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    url: /DECISIONS.md#DEC-033
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:34.964Z'
+---
+
+docs/context-spec.md § 11, K4.
+
+---
+
+## TASK-031 — Context K5: the ontology
+
+---
+title: 'Context K5: the ontology'
+description: src/bi/ontology.yml replaces SHAPES; mapping and agents read it
+status: pending
+priority: P1
+id: TASK-031
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:35.952Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-034
+    name: The ontology is a reviewed file that replaces SHAPES
+    url: /DECISIONS.md#DEC-034
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:35.952Z'
+---
+
+docs/context-spec.md § 11, K5.
+
+---
+
+## TASK-032 — Setup agent S1: masked samples
+
+---
+title: 'Setup agent S1: masked samples'
+description: Provider switch, drawing, masking by kind, sample_log, the notice, property tests
+status: in-progress
+priority: P1
+id: TASK-032
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:36.799Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-035
+    name: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
+    url: /DECISIONS.md#DEC-035
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:36.799Z'
+---
+
+docs/setup-agent-spec.md § 3 and § 8, S1 (DEC-032).
+
+---
+
+## TASK-033 — Setup agent S2: mapping proposals
+
+---
+title: 'Setup agent S2: mapping proposals'
+description: The setup model, setup_propose, validation, the review with reasons, header suggestions, column notes
+status: in-progress
+priority: P1
+id: TASK-033
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:37.606Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-035
+    name: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
+    url: /DECISIONS.md#DEC-035
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:37.606Z'
+---
+
+docs/setup-agent-spec.md § 4 and § 8, S2.
+
 <!-- End VEF generated items. -->

@@ -1,6 +1,6 @@
 # Spec: Context and trust — knowledge, verified questions, benchmarks, documentation, ontology (stage A)
 
-Status: **draft for review, 2026-10-28.** Stage A of `docs/agentic-benchmark.md`. Builds on DEC-004 (Cube is the only read path),
+Status: **approved 2026-10-28.** Decisions DEC-033 and DEC-034; steps K1 to K5 are TASK-027 to TASK-031. Stage A of `docs/agentic-benchmark.md`. Builds on DEC-004 (Cube is the only read path),
 DEC-012 (chart definitions), DEC-017 and DEC-032 (what the model may see), DEC-019 (approval outside the chat), DEC-024 (one tool
 implementation for the chat and MCP) and DEC-027 (a BI admin approves until there are stewards).
 
@@ -187,7 +187,7 @@ New tables: `knowledge_entry`, `verified_question` (phrasings, query, parameters
 
 K1 and K2 are the most visible; K3 tells us whether they help. K5 can go alongside the setup agent (S2 of the setup agent spec).
 
-## 12. Decisions to record once approved
+## 12. Decisions (recorded as DEC-033 and DEC-034)
 
 - One knowledge store, approved by a person, read by every agent through the shared tools; instructions and glossary frozen into the
   prompt within a budget, the rest found by a tool.
@@ -195,8 +195,8 @@ K1 and K2 are the most visible; K3 tells us whether they help. K5 can go alongsi
 - Benchmarks score models from their tool calls, not from a judging model; scores shown where models are allowed.
 - The ontology is a reviewed file in the repository, replacing `SHAPES`, until it is stable enough to edit in the app.
 
-## 13. Open questions
+## 13. Questions, answered 2026-10-28
 
-1. **Who approves knowledge**: a BI admin for now (DEC-027); stewards per subject later?
-2. **Prompt budget**: 2,000 tokens for instructions and glossary, or larger for models with big caches?
-3. **Benchmark data**: run on live governed data (what people see) or on a frozen copy (comparable over time)? Both, chosen per run?
+1. **Who approves knowledge**: a BI admin for now (DEC-027); stewards per subject later.
+2. **Prompt budget**: 2,000 tokens for instructions and glossary; raised later for models with big caches.
+3. **Benchmark data**: live governed data by default; a frozen copy for comparisons over time when needed.
