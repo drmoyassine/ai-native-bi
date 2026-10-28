@@ -169,3 +169,25 @@ shapes and ranges), and matches them to the dataset's parts by name, label, alia
 a BI admin approves it on the source's page and it loads into `raw.<source>`, named as written. dbt unions every approved input from
 loaded syncs, so a file that fails the tests stays in raw but does not count. Migration 0010 turns uploads into syncs to load again.
 Walked through in a browser with a made-up export shaped like the real one (title rows, other names, an email and an Arabic column).
+
+## 2026-10-28 — Agentic BI benchmark
+
+`docs/agentic-benchmark.md`: what Databricks, Microsoft Fabric and Power BI, Snowflake, Tableau Next, Looker, ThoughtSpot, Databox, dbt,
+Hex and Monte Carlo ship as agents in 2026, where the BI stands, and a staged roadmap: context and trust (knowledge store, verified
+questions, benchmarks, documentation, ontology), agents in Connect data, the analyst agent, the watcher, reach and act. Draft for
+discussion.
+
+## 2026-10-28 — Masked samples in setup (DEC-032)
+
+The owner accepts sending a few rows to the model during discovery, configuration and drafting. DEC-032 amends DEC-017 for setup only:
+up to 20 random rows per table, personal and free-text columns replaced by made-up values of the same shape, identifiers re-digited;
+only an admin's setup work, only to providers an admin marks "may see sample rows" (off by default), logged and shown to the person.
+Asking, charts, MCP and the watcher keep the no-rows rule. CLAUDE.md, the agent and Connect data specs updated.
+
+## 2026-10-28 — Specs: context and trust, the setup agent
+
+`docs/context-spec.md` (stage A): a knowledge store read by every agent (instructions and glossary in the prompt, descriptions and
+synonyms in the tools, `search_knowledge`), verified questions marked Trusted, benchmarks scored from tool calls, documentation the
+agent drafts, and an ontology file replacing `SHAPES`. `docs/setup-agent-spec.md` (stage B): masked samples under DEC-032 (masking by
+profile kind, rare categories hidden, logged and shown) and mapping proposals with reasons, as one structured call in the worker.
+Drafts for review.

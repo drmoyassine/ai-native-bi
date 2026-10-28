@@ -223,9 +223,18 @@ related_decisions:
   - id: DEC-031
     name: Raw keeps column names as written (duck_case)
     url: /DECISIONS.md#DEC-031
+  - id: DEC-033
+    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    url: /DECISIONS.md#DEC-033
+  - id: DEC-034
+    name: The ontology is a reviewed file that replaces SHAPES
+    url: /DECISIONS.md#DEC-034
+  - id: DEC-035
+    name: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
+    url: /DECISIONS.md#DEC-035
 modified:
   by: agent/claude-code
-  at: '2026-10-28T09:17:37.787Z'
+  at: '2026-10-28T10:45:37.606Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -251,6 +260,27 @@ related_tasks:
   - id: TASK-026
     name: 'Connect data C5: the remaining sources'
     url: /TASKS.md#TASK-026
+  - id: TASK-027
+    name: 'Context K1: knowledge store'
+    url: /TASKS.md#TASK-027
+  - id: TASK-028
+    name: 'Context K2: verified questions'
+    url: /TASKS.md#TASK-028
+  - id: TASK-029
+    name: 'Context K3: benchmarks'
+    url: /TASKS.md#TASK-029
+  - id: TASK-030
+    name: 'Context K4: drafted documentation'
+    url: /TASKS.md#TASK-030
+  - id: TASK-031
+    name: 'Context K5: the ontology'
+    url: /TASKS.md#TASK-031
+  - id: TASK-032
+    name: 'Setup agent S1: masked samples'
+    url: /TASKS.md#TASK-032
+  - id: TASK-033
+    name: 'Setup agent S2: mapping proposals'
+    url: /TASKS.md#TASK-033
 ---
 
 Spec in docs/agent-spec.md and decisions DEC-015 to DEC-020: the runtime (Pydantic AI in a worker job, the model per mode a setting), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost. Delivery is in four steps.

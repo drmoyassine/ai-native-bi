@@ -28,10 +28,12 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
 ## The agent (ROADMAP-003)
 
 `src/bi/agent/` is the agent (spec: `docs/agent-spec.md`, decisions DEC-015 to DEC-020). The loop runs in the worker (`agent_turn` job),
-never in the API; the model sees no rows (tools return schemas, profiles and aggregates with small counts hidden, `suppress.py`); a
+never in the API; the model sees no rows (tools return schemas, profiles and aggregates with small counts hidden, `suppress.py`), except
+masked samples during a source's setup, to providers an admin enabled for them (DEC-032); a
 chart it proposes is read through `/app/api/drafts/<id>/data`, which hides them too. Providers, keys and models are configured in the
 app; keys live in the `secret` table, encrypted with `BI_SECRETS_KEY`. Tests need no model: they use scripted models and
-`tests/fake_openai.py` (an OpenAI-protocol server over real HTTP). Do not add a tool that returns rows about people.
+`tests/fake_openai.py` (an OpenAI-protocol server over real HTTP). Do not add a tool that returns rows about people, outside DEC-032's
+masked setup samples.
 
 ## The MCP server (ROADMAP-004)
 

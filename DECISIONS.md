@@ -1457,4 +1457,187 @@ modified:
   at: '2026-10-28T09:44:10.530Z'
 ---
 
+---
+
+## DEC-032 — Masked sample rows reach the model during setup only, through providers an admin enables
+
+---
+title: Masked sample rows reach the model during setup only, through providers an admin enables
+status: accepted
+context: >-
+  Discovering a source from profiles alone leaves the agent guessing (a column of term codes named "Term" was proposed
+  as the term name). A few rows make setup far more accurate. The owner accepts sending a few rows to the model during
+  discovery, configuration and drafting, with personal data masked and only to providers an admin allows.
+decision: >-
+  Amends DEC-017 for setup only. While a source is discovered or configured, or a dataset or metric is drafted from it,
+  an agent tool may send a sample of up to 20 rows per table, drawn at random, to the model. Before they leave the BI,
+  every column classified as personal (names, emails, phones, addresses, birth dates, national IDs) gets made-up values
+  of the same shape, and identifier columns keep their shape with other digits; codes, dates, categories and numbers are
+  sent as they are. Only a BI admin's setup work sends samples, only to a provider an admin has marked "may see sample
+  rows" on the Models page (off by default), and each sample is logged (who, source, rows, provider). The person sees
+  that the agent saw masked samples. Asking, charts, MCP and the watcher keep DEC-017: no rows.
+rationale: >-
+  Setup is where rows help most and where an admin is present; masking keeps what the agent needs (formats, codes,
+  categories) and removes what identifies a person.
+consequences: >-
+  Masking runs in the tool, not the prompt, and is tested like suppression. Free-text columns are masked too, since they
+  may name people. TASK-002 (privacy rules) should confirm this with the institution's data-protection owner before real
+  data is used with a sampling provider.
+tags:
+  - privacy
+  - agent
+  - connect-data
+id: DEC-032
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:35:05.069Z'
+related_decisions:
+  - id: DEC-017
+    name: The model sees schemas, profiles and suppressed aggregates, never rows
+    url: /DECISIONS.md#DEC-017
+  - id: DEC-028
+    name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+    url: /DECISIONS.md#DEC-028
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:35:05.069Z'
+---
+
+---
+
+## DEC-033 — One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+
+---
+title: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+status: accepted
+context: >-
+  The leading platforms found that agents answer well from curated context and that accuracy has to be measured
+  (docs/agentic-benchmark.md, docs/context-spec.md).
+decision: >-
+  Knowledge entries (descriptions, synonyms, glossary, instructions; English and Arabic) are written by people, approved
+  by a BI admin and never edited in place. Every agent reads them through the shared tools: approved instructions and
+  the glossary are frozen into the prompt within a budget (2,000 tokens), descriptions and synonyms come with
+  list_metrics and describe_dataset, and search_knowledge finds the rest. A verified question is a governed query (a
+  chart definition's) with parameters, approved by a person; an answer built from one is marked Trusted. Benchmarks are
+  the institution's questions with expected outcomes, scored from the tool calls (numbers, refusals, privacy probes),
+  not by a judging model; scores show on the Models page. Benchmarks run on live governed data by default.
+rationale: One store serves the chat and MCP alike; checking tool calls makes scores repeatable and cheap.
+consequences: >-
+  A Knowledge page, new tables, a runner job. Knowledge text goes to the model, so it is checked for personal data
+  before saving.
+tags:
+  - agent
+  - knowledge
+  - benchmarks
+id: DEC-033
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:21.402Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:34.964Z'
+related_tasks:
+  - id: TASK-027
+    name: 'Context K1: knowledge store'
+    url: /TASKS.md#TASK-027
+  - id: TASK-028
+    name: 'Context K2: verified questions'
+    url: /TASKS.md#TASK-028
+  - id: TASK-029
+    name: 'Context K3: benchmarks'
+    url: /TASKS.md#TASK-029
+  - id: TASK-030
+    name: 'Context K4: drafted documentation'
+    url: /TASKS.md#TASK-030
+---
+
+---
+
+## DEC-034 — The ontology is a reviewed file that replaces SHAPES
+
+---
+title: The ontology is a reviewed file that replaces SHAPES
+status: accepted
+context: bi.mapping.SHAPES hard-codes one dataset's parts; agents and the mapping need the institution's entities and keys.
+decision: >-
+  src/bi/ontology.yml declares entities, keys, attributes, relationships and which dataset parts and Cube members
+  correspond to. It grows from SHAPES and replaces it, changes by pull request, and is read by the mapping, the setup
+  agent, the chat and the Knowledge page. Editing it in the app waits until it is stable.
+rationale: The transforms depend on it, so it changes like the Cube model, reviewed.
+consequences: Connect data's parts and labels come from the ontology (K5).
+tags:
+  - ontology
+  - connect-data
+id: DEC-034
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:22.295Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:35.952Z'
+related_tasks:
+  - id: TASK-031
+    name: 'Context K5: the ontology'
+    url: /TASKS.md#TASK-031
+---
+
+---
+
+## DEC-035 — The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
+
+---
+title: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
+status: accepted
+context: >-
+  Name rules mis-proposed a column of term codes named "Term" as the term name (docs/setup-agent-spec.md). DEC-032
+  allows masked samples in setup.
+decision: >-
+  Masked samples (at most 20 random rows per table) are made by a pure function of the profile and the rows: personal
+  columns get made-up values of the same shape and script, identifiers keep their shape with other digits (repeats
+  kept), free text becomes a length note, a category value rarer than the suppression threshold in the table becomes
+  "[rare value]", and a column the rules could not classify is masked as free text. The provider switch
+  (may_see_samples) is off by default; every sample is logged and shown on the review. The setup agent runs
+  automatically when the rules leave a needed part unmatched or doubtful, and on request, as one structured call in the
+  worker with a validated result; its choices are checked like a person's, shown with reasons and confidence, never
+  applied without review, and "low" ones are not preselected.
+rationale: The rules are free and predictable; the agent adds a proposal only where they fall short, and a person approves.
+consequences: >-
+  A setup model is chosen on the Models page (an allowed build model). Without samples the agent works from headers and
+  profiles. S3 to S5 (checks, new datasets, connector settings) get their own specs.
+tags:
+  - agent
+  - connect-data
+  - privacy
+id: DEC-035
+last_updated: '2026-10-28'
+generated:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:23.028Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: agent/claude-code
+  at: '2026-10-28T10:45:37.606Z'
+related_tasks:
+  - id: TASK-032
+    name: 'Setup agent S1: masked samples'
+    url: /TASKS.md#TASK-032
+  - id: TASK-033
+    name: 'Setup agent S2: mapping proposals'
+    url: /TASKS.md#TASK-033
+---
+
 <!-- End VEF generated items. -->

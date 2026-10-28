@@ -271,7 +271,8 @@ multi-turn conversation with tools and checks the replayed history is accepted (
 1. Runtime A: Pydantic AI in a worker job, provider-neutral; the API never calls a model (§ 3).
 2. Five providers (Anthropic, OpenAI, OpenAI-compatible, OpenRouter, Ollama), configured in the app; their model lists fetched
    automatically into a selector; tool-capable models only; an admin allows models per mode; a conversation pinned to one model (§ 3).
-3. The model sees schemas, profiles and suppressed aggregates only, whatever the provider (§ 7).
+3. The model sees schemas, profiles and suppressed aggregates only, whatever the provider (§ 7); in a source's setup, also masked
+   sample rows, through providers an admin enabled for them (DEC-032).
 4. Our own sandbox and our own file and command tools for code the agent writes; deny-by-default network; credentials by handle (§ 6).
 5. Conversations append-only, events through PostgreSQL and SSE (§ 8, § 9).
 6. Approvals outside the chat (§ 9).
