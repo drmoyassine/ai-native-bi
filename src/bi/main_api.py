@@ -19,7 +19,7 @@ from .db import ensure_database, ensure_reader_role, grant_analytics, migrate
 from .log import log
 from .mcp.oidc import OidcIssuer
 from .mcp.server import McpContext
-from .queue import create_queue, enqueue_collect, enqueue_load, enqueue_turn
+from .queue import create_queue, enqueue_collect, enqueue_load, enqueue_setup, enqueue_turn
 
 
 def oidc_issuers(env: Env, http: httpx.AsyncClient) -> list[OidcIssuer]:
@@ -59,6 +59,7 @@ async def main() -> None:
                 pool=pool,
                 storage=storage(env),
                 enqueue_load=lambda id: enqueue_load(queue, id),
+                enqueue_setup=lambda id: enqueue_setup(queue, id),
                 cube=cube,
                 cookie_secure=env.APP_COOKIE_SECURE,
                 public_url=env.PUBLIC_URL,

@@ -32,7 +32,12 @@ async def main() -> None:
         turn = TurnDeps(
             pool=pool, cube=cube_client, suppression_threshold=env.SUPPRESSION_THRESHOLD, model_for=make_model_for(pool, secrets)
         )
-        queue = create_queue(env.DATABASE_URL, deps, load=load, agent=AgentWorkerDeps(turn=turn, secrets=secrets, http=client))
+        queue = create_queue(
+            env.DATABASE_URL,
+            deps,
+            load=load,
+            agent=AgentWorkerDeps(turn=turn, secrets=secrets, http=client, institution_monthly_tokens=env.AGENT_INSTITUTION_MONTHLY_TOKENS),
+        )
         queues = [COLLECT_QUEUE, LOAD_QUEUE, AGENT_QUEUE]
         async with queue.open_async():
             log('info', 'bi worker started', queues=queues, agent=secrets is not None)

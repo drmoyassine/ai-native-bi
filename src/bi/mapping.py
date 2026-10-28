@@ -142,10 +142,14 @@ async def stored(pool: AsyncConnectionPool, layout_id: str, dataset: str) -> dic
     async with pool.connection() as conn:
         row = await (
             await conn.execute(
-                'select mapping, status, approved_how from layout_mapping where layout_id = %s and dataset = %s', [layout_id, dataset]
+                """select mapping, status, approved_how, proposed_by, reasons, model from layout_mapping
+                   where layout_id = %s and dataset = %s""",
+                [layout_id, dataset],
             )
         ).fetchone()
-    return None if row is None else {'mapping': row[0], 'status': row[1], 'approved_how': row[2]}
+    if row is None:
+        return None
+    return {'mapping': row[0], 'status': row[1], 'approved_how': row[2], 'proposed_by': row[3], 'reasons': row[4], 'model': row[5]}
 
 
 async def save(
@@ -156,14 +160,18 @@ async def save(
     status: str,
     how: str | None,
     user_id: str | None = None,
+    proposed_by: str = 'rules',
+    reasons: dict[str, Any] | None = None,
+    model: str | None = None,
 ) -> None:
     async with pool.connection() as conn:
         await conn.execute(
-            """insert into layout_mapping (layout_id, dataset, mapping, status, approved_by, approved_how)
-               values (%s, %s, %s, %s, %s, %s)
+            """insert into layout_mapping (layout_id, dataset, mapping, status, approved_by, approved_how, proposed_by, reasons, model)
+               values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                on conflict (layout_id, dataset) do update set mapping = excluded.mapping, status = excluded.status,
-                 approved_by = excluded.approved_by, approved_how = excluded.approved_how, updated_at = now()""",
-            [layout_id, dataset, Jsonb(mapping), status, user_id, how],
+                 approved_by = excluded.approved_by, approved_how = excluded.approved_how, proposed_by = excluded.proposed_by,
+                 reasons = excluded.reasons, model = excluded.model, updated_at = now()""",
+            [layout_id, dataset, Jsonb(mapping), status, user_id, how, proposed_by, Jsonb(reasons) if reasons is not None else None, model],
         )
 
 

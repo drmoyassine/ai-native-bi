@@ -101,6 +101,26 @@ export interface Part {
   required: boolean;
 }
 
+export interface AgentState {
+  state: 'queued' | 'running' | 'proposed' | 'failed' | 'none';
+  reason?: string;
+  error?: string;
+  model?: string;
+  provider?: string;
+  earlier?: boolean;
+  header?: { row: number; reason: string | null } | null;
+  dropped?: string[];
+  column_notes?: Record<string, string>;
+  sample?: { rows: number; masked: Record<string, string[]> } | null;
+}
+
+export interface Reason {
+  column: string | null;
+  confidence: 'high' | 'medium' | 'low';
+  reason: string;
+  by: string;
+}
+
 export interface Review {
   sync: { id: string; status: SyncStatus; file_name: string; rows: number | null; note: string | null; error: string | null };
   source: { id: string; name: string; state: string };
@@ -110,6 +130,10 @@ export interface Review {
   parts: Part[];
   mapping: Record<string, string | null> | null;
   mapping_status: 'proposed' | 'approved' | null;
+  proposed_by: 'rules' | 'agent' | 'person' | null;
+  reasons: Record<string, Reason> | null;
+  model?: string | null;
+  agent: AgentState | null;
 }
 
 export interface ModelChoice {

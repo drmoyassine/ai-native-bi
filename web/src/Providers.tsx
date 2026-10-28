@@ -13,7 +13,11 @@ interface Provider {
   models: number;
   allowed: number;
   data_path: string;
+  may_see_samples: boolean;
 }
+
+const SAMPLES_WARNING =
+  'Masked sample rows (at most 20 per table, personal columns replaced with made-up values) will be sent to this provider when an admin sets up a source. Use this only with a provider the institution has an agreement with, or a local one. Allow it?';
 
 interface ProviderModel {
   model_id: string;
@@ -86,6 +90,20 @@ export function Providers() {
             </button>
           </div>
           <p className="note">{p.data_path}</p>
+          <label className="inline samples">
+            <input
+              type="checkbox"
+              checked={p.may_see_samples}
+              onChange={(e) => {
+                if (e.target.checked && !window.confirm(SAMPLES_WARNING)) return;
+                void api.put(`/admin/providers/${p.id}`, { may_see_samples: e.target.checked }).then(refresh);
+              }}
+            />
+            <span>
+              May see sample rows during setup
+              <span className="hint"> (up to 20 rows per table, names, emails and IDs replaced; off by default)</span>
+            </span>
+          </label>
           {p.fetch_error && <p className="error">Could not list models: {p.fetch_error}</p>}
           {open === p.id && <ModelList provider={p} onChange={refresh} onNotice={setNotice} />}
         </div>

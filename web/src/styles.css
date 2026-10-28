@@ -124,3 +124,10 @@ tr.chosen td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
   .mapping td { display: block; inline-size: 100%; }
   .mapping td:first-child { inline-size: 100%; border-bottom: none; padding-block-end: 0; }
 }
+label.samples { align-items: flex-start; margin-block: 8px 0; }
+.agent-note { margin: 4px 0; padding: 8px 12px; border-inline-start: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; }
+.agent-note p { margin: 4px 0; }
+.reason.low { color: #9a6700; }
+.agent-note { margin: 4px 0; padding: 8px 12px; border-inline-start: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; }
+.agent-note p { margin: 4px 0; }
+.reason.low { color: #9a6700; }
