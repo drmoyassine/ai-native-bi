@@ -61,6 +61,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+      # Its first start on a server can be slow: failed checks only count after this grace period.
+      start_period: 120s
     depends_on:
       bi-api: { condition: service_healthy }
 
