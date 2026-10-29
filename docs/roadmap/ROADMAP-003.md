@@ -81,7 +81,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-038
 modified:
   by: process:vef-cli
-  at: '2026-10-29T07:55:51.059Z'
+  at: '2026-10-29T09:23:52.213Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -155,6 +155,9 @@ related_tasks:
   - id: TASK-042
     name: 'Connect data C2b: API configurations drafted, incremental reads, frozen contracts'
     url: /TASKS.md#TASK-042
+  - id: TASK-043
+    name: The organization calendar
+    url: /TASKS.md#TASK-043
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 

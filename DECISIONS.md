@@ -1698,7 +1698,7 @@ related_roadmap_items:
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: process:vef-cli
-  at: '2026-10-29T07:21:13.230Z'
+  at: '2026-10-29T09:23:52.213Z'
 related_tasks:
   - id: TASK-034
     name: 'Data model M2: generated warehouse'
@@ -1724,6 +1724,9 @@ related_tasks:
   - id: TASK-041
     name: 'Data model M0b: template models installed by generation'
     url: /TASKS.md#TASK-041
+  - id: TASK-043
+    name: The organization calendar
+    url: /TASKS.md#TASK-043
 ---
 
 ---
@@ -1767,7 +1770,7 @@ related_roadmap_items:
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: process:vef-cli
-  at: '2026-10-29T07:21:13.230Z'
+  at: '2026-10-29T09:23:52.213Z'
 related_tasks:
   - id: TASK-040
     name: 'Data model M0a: out with the built-in domain (code)'
@@ -1775,6 +1778,9 @@ related_tasks:
   - id: TASK-041
     name: 'Data model M0b: template models installed by generation'
     url: /TASKS.md#TASK-041
+  - id: TASK-043
+    name: The organization calendar
+    url: /TASKS.md#TASK-043
 ---
 
 ---
