@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, definitions, knowledge, mapping, organization, tools
+from . import accounts, calendars, definitions, knowledge, mapping, organization, tools
 from .accounts import User
 from .agent.routes import AgentContext, create_agent_router
 from .agent.secrets import SecretStore
@@ -220,6 +220,33 @@ def create_router(ctx: AppContext) -> APIRouter:
             raise HTTPException(409, str(e)) from e
         log('info', 'definition approved', kind=kind, name=name, version=version, user=user.id)
         return {'version': version, 'status': 'approved'}
+
+    @router.get('/calendars')
+    async def calendar_list(user: Signed) -> dict[str, Any]:
+        """The organization's calendars (docs/data-model-spec.md section 4), with the events that read each."""
+        return {'calendars': await calendars.listing(ctx.pool)}
+
+    @router.put('/calendars/{name}')
+    async def save_calendar(name: str, body: dict[str, Any], user: Signed) -> dict[str, Any]:
+        if not user.is_admin:
+            raise HTTPException(403, "only an admin changes the organization's calendars")
+        try:
+            await calendars.save(ctx.pool, name, body, user.id)
+        except calendars.CalendarError as e:
+            raise HTTPException(422, str(e)) from e
+        log('info', 'calendar saved', name=name, user=user.id)
+        return {'calendars': await calendars.listing(ctx.pool)}
+
+    @router.delete('/calendars/{name}')
+    async def remove_calendar(name: str, user: Signed) -> dict[str, Any]:
+        if not user.is_admin:
+            raise HTTPException(403, "only an admin changes the organization's calendars")
+        try:
+            await calendars.remove(ctx.pool, name)
+        except calendars.CalendarError as e:
+            raise HTTPException(409, str(e)) from e
+        log('info', 'calendar removed', name=name, user=user.id)
+        return {'calendars': await calendars.listing(ctx.pool)}
 
     @router.put('/me/language', status_code=204)
     async def my_language(body: LanguageChoice, user: Signed) -> None:

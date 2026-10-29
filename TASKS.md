@@ -1433,7 +1433,7 @@ description: >-
   The organization's periods (any kind: months, quarters, terms, seasons, fiscal years) with their dates, set in
   Settings; metrics are cut by them and cohorts say a year later or within N periods with them (docs/data-model-spec.md
   section 4)
-status: pending
+status: completed
 priority: P1
 id: TASK-043
 last_updated: '2026-10-29'
@@ -1455,7 +1455,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-037
 modified:
   by: process:vef-cli
-  at: '2026-10-29T09:23:52.213Z'
+  at: '2026-10-29T10:36:50.196Z'
 ---
 
 ---

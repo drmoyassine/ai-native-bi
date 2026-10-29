@@ -245,3 +245,25 @@ export interface ColumnMapping {
   status: 'proposed' | 'approved' | null;
   error: string | null;
 }
+
+/** One of the organization's calendars (docs/data-model-spec.md § 4): periods listed with their dates, or repeating every year. */
+export interface CalendarPeriod {
+  code: string;
+  label?: Record<string, string>;
+  starts: string;
+  ends: string;
+}
+
+export interface CalendarBody {
+  label: Record<string, string>;
+  description?: Record<string, string>;
+  repeat?: { every: 'year' | 'quarter'; starts: string; named_by?: 'start' | 'end' } | null;
+  periods?: CalendarPeriod[];
+}
+
+export interface CalendarSummary {
+  name: string;
+  body: CalendarBody;
+  updated_at: string;
+  used_by: string[];
+}

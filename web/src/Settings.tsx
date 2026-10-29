@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Account } from './Account';
+import { Calendars } from './Calendars';
 import { api, type Me, type Organization, type Template } from './api';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
@@ -175,7 +176,7 @@ export function OrganizationSettings({ me, languages, onSaved }: { me: Me; langu
   );
 }
 
-export type SettingsTab = 'organization' | 'account' | 'tokens' | 'models';
+export type SettingsTab = 'organization' | 'calendars' | 'account' | 'tokens' | 'models';
 
 const tabClass = [
   'shrink-0 whitespace-nowrap border-0 border-b-2 border-transparent bg-transparent px-3 py-2 text-start text-sm',
@@ -199,6 +200,7 @@ export function Settings({
   const { t } = useTranslation();
   const items: { key: SettingsTab; label: string; hint: string }[] = [
     { key: 'organization', label: t('settings.organization'), hint: t('settings.organizationHint') },
+    { key: 'calendars', label: t('settings.calendars'), hint: t('settings.calendarsHint') },
     { key: 'account', label: t('settings.account'), hint: t('settings.accountHint') },
     { key: 'tokens', label: t('settings.tokens'), hint: t('settings.tokensHint') },
     ...(me.user.is_admin ? [{ key: 'models' as const, label: t('settings.models'), hint: t('settings.modelsHint') }] : []),
@@ -227,6 +229,7 @@ export function Settings({
         </nav>
         <div className="min-w-0 flex-1">
           {current === 'organization' && <OrganizationSettings me={me} languages={languages} onSaved={onSaved} />}
+          {current === 'calendars' && <Calendars me={me} />}
           {current === 'account' && <Account user={me.user} />}
           {current === 'tokens' && <Tokens user={me.user} />}
           {current === 'models' && me.user.is_admin && <Providers />}

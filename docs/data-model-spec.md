@@ -88,6 +88,11 @@ Consumers         charts and dashboards, the chat, MCP, connected systems (the A
   them, the only thing readable without signing in.
 - **Calendar**: the organisation's periods (month, quarter, term, season, fiscal year, shift), each with its dates, used to cut every
   metric over time and to say "a year later" in a cohort. Calendar years and months exist by default; any other period is defined.
+  Built (TASK-043, `bi.calendars`, Settings, Calendars): a calendar either **lists** its periods (a code, a label per language, first and
+  last day; two may not overlap; a date in none has no period) or **repeats** every year from a start day (MM-DD, the day at most 28),
+  as years or their quarters, named by the year they start or end in. An admin changes them; a calendar an event reads cannot be
+  removed. The derived part **period** (§ 6) says which period a date falls in; the calendar's periods are written into the generated
+  staging model, so a change applies at the next build.
 - **Privacy**: the suppression threshold (as today) and the patterns that mark a column personal, from the language packs and the
   organisation's own.
 
@@ -224,7 +229,7 @@ and frozen contracts are C2b.
 ### Order from here (2026-10-29)
 
 1. ~~M3, the Model page, with derived parts~~ and ~~C1b, column decisions at review~~: built 2026-10-29.
-2. **The organization's calendar** (§ 4): its periods, which cohorts and metrics are cut by.
+2. ~~**The organization's calendar** (§ 4)~~: built 2026-10-29.
 3. **M5. The metric builder**, then **M6. The cohort builder** (cohort rates are metrics).
 4. **M2's rest** (core and cohorts schemas, shared dimensions, the official-load setting) and **M4** (targets proposed after the first
    read, the form's dataset choice removed).

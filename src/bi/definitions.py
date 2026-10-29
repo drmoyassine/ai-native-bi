@@ -11,7 +11,7 @@ from typing import Annotated, Any, Literal
 
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
-from pydantic import BaseModel, Field, StringConstraints, model_validator
+from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
 
 from . import packs
 
@@ -86,6 +86,14 @@ class DatePartRule(_Body):
     unit: Literal['year', 'quarter', 'month', 'week', 'day_of_week']
 
 
+class PeriodRule(_Body):
+    """Which period of one of the organization's calendars (bi.calendars) a date falls in; a date in none has no value."""
+
+    type: Literal['period']
+    part: Name
+    calendar: Name
+
+
 class ArithmeticRule(_Body):
     type: Literal['arithmetic']
     left: Name | float
@@ -117,7 +125,7 @@ class FirstOfRule(_Body):
     parts: Annotated[list[Name], Field(min_length=2, max_length=10)]
 
 
-Rule = Annotated[GroupRule | JoinRule | DatePartRule | ArithmeticRule | BucketRule | FirstOfRule, Field(discriminator='type')]
+Rule = Annotated[GroupRule | JoinRule | DatePartRule | PeriodRule | ArithmeticRule | BucketRule | FirstOfRule, Field(discriminator='type')]
 
 
 class Derived(_Body):
@@ -181,7 +189,7 @@ class EventBody(_Body):
             if unknown:
                 raise ValueError(f'"{d.name}" uses {", ".join(unknown)}, which is not a part of the event')
             rule = d.rule
-            if isinstance(rule, DatePartRule) and kinds[rule.part] != 'date':
+            if isinstance(rule, DatePartRule | PeriodRule) and kinds[rule.part] != 'date':
                 raise ValueError(f'"{d.name}" takes a part of a date, but "{rule.part}" is not a date')
             if isinstance(rule, ArithmeticRule | BucketRule) and any(kinds[u] != 'number' for u in d.uses()):
                 raise ValueError(f'"{d.name}" does arithmetic, but not every part it uses is a number')
@@ -191,11 +199,23 @@ class EventBody(_Body):
 BODIES: dict[str, type[_Body]] = {'subject': SubjectBody, 'entity': EntityBody, 'event': EventBody}
 
 
+def reasons(error: ValueError) -> str:
+    """What is wrong, for a person: each problem with where it is (`periods.1.ends: ...`), not the validator's dump."""
+    if not isinstance(error, ValidationError):
+        return str(error)
+    out = []
+    for e in error.errors():
+        where = '.'.join(str(p) for p in e['loc'])
+        message = str(e['msg']).removeprefix('Value error, ')
+        out.append(f'{where}: {message}' if where else message)
+    return '; '.join(out)
+
+
 def parse(kind: str, body: dict[str, Any]) -> Any:
     try:
         return BODIES[kind].model_validate(body)
     except ValueError as e:
-        raise DefinitionError(f'the {kind} is not valid: {e}') from e
+        raise DefinitionError(f'the {kind} is not valid: {reasons(e)}') from e
 
 
 async def current(pool: AsyncConnectionPool, kind: Kind) -> dict[str, Any]:
@@ -239,6 +259,12 @@ async def save_draft(pool: AsyncConnectionPool, kind: Kind, name: str, body: dic
     subject = getattr(parsed, 'subject', None)
     if subject is not None and subject not in await current(pool, 'subject'):
         raise DefinitionError(f'no approved subject named "{subject}"')
+    wanted = {d.rule.calendar for d in getattr(parsed, 'derived', []) if isinstance(d.rule, PeriodRule)}
+    if wanted:
+        async with pool.connection() as conn:
+            known = {r[0] for r in await (await conn.execute('select name from calendar')).fetchall()}
+        if wanted - known:
+            raise DefinitionError(f'no calendar named {", ".join(sorted(wanted - known))} (Settings, Calendars)')
     async with pool.connection() as conn, conn.transaction():
         await conn.execute("delete from definition where kind = %s and name = %s and status = 'draft'", [kind, name])
         row = await (
