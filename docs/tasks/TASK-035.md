@@ -1,6 +1,8 @@
 ---
 title: 'Data model M3: the Model page'
-description: Subjects, entities and events edited in the app, approved by the steward, with a what-changes preview
+description: >-
+  Subjects, entities and events edited in the app (parts, grain, snapshot, derived parts: group values, join, date
+  period, arithmetic, buckets, first non-empty), approved by the steward, with a what-changes preview
 status: pending
 priority: P1
 id: TASK-035
@@ -20,6 +22,6 @@ related_decisions:
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:23:28.261Z'
+  at: '2026-10-29T09:56:57.544Z'
 ---
 # TASK-035 — Data model M3: the Model page

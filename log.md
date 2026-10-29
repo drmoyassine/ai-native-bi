@@ -282,3 +282,23 @@ PR #26 (Settings, M1, M0b, C2a) merged and deployed. The first deploy failed: Cu
 (#27). The AMS's contract sync of 2026-10-27 (6.2 person identity, 6.3 co-deployment) had never been merged; `contract.py` already
 matched it, so it merges as is (#28). Order from here (data model spec § 13): the Model page (M3), the organization calendar
 (TASK-043), the metric builder (M5), the cohort builder (M6), then the rest of M2, M4, M7, C2b and database sources.
+
+## 2026-10-29 — Column decisions at review (C1b) and derived parts (M3)
+
+A real export on staging showed "Civil ID" classed as a plain identifier: the English pack had no word for it. The packs now also know
+civil, citizen, identity, NIN, visa, residency, licence, IBAN, nationality's short "NAT.", religion, ethnicity, health and others (and
+Arabic مدني). The owner asked what a person should decide before approving a stream. Specified (connect data spec § 6.7, TASK-044, P0):
+personal (identifying, describing or not, with a reason), keep or leave out, kind with validation, labels and descriptions, row key with
+checks, the as-of column; cadence on the source. Derived columns belong to definitions (derived parts of an event: group values, join,
+a date's period, arithmetic, buckets, first non-empty; data model spec § 6) or to metrics, not to a source; they are part of M3.
+
+## 2026-10-29 — C1b built: column decisions at review
+
+Before approving a stream, an admin decides each column (migration 0016, `stream_column`; `PUT /app/api/syncs/{id}/columns`):
+personal (identifies, describes, not personal; moving away from "identifies" needs a reason, kept with the name), keep or leave out
+(a left-out column never reaches raw; identifying columns nothing uses are proposed for leaving out), the kind (checked against the
+values: how many do not fit, by shape), a label, and the row key (checked for empty parts and repeats). The profile applies the
+decisions, so masking and mapping follow them, and every later sync of the stream keeps them. Language packs now tell describing
+words (gender, nationality, religion, age) from identifying ones, so Gender and NAT. are kept and counted instead of proposed for
+leaving out. Checked in a browser on an export shaped like the real Banner file. Still to do: the as-of column and the expected cadence of
+file sources.

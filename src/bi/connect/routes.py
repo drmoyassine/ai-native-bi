@@ -44,6 +44,13 @@ class NewSource(BaseModel):
     """An API source's endpoints and the dataset each feeds (none: kept as raw data)."""
 
 
+class Decisions(BaseModel):
+    """A person's column decisions (connect data spec § 6.7), by column name, and the stream's row key."""
+
+    columns: dict[str, dict[str, Any]] = {}
+    row_key: list[str] | None = None
+
+
 class Credential(BaseModel):
     credential: str
 
@@ -63,6 +70,7 @@ def create_connect_router(
     enqueue_setup: Callable[[str], Awaitable[None]] | None,
     current_user: Callable[..., Awaitable[User]],
     secrets: SecretStore | None = None,
+    threshold: int = 5,
 ) -> APIRouter:
     router = APIRouter()
     Signed = Annotated[User, Depends(current_user)]
@@ -193,6 +201,18 @@ def create_connect_router(
         await enqueue_load(sync_id)
         log('info', 'sync approved', sync=sync_id, user=user.id)
         return {'status': 'queued'}
+
+    @router.put('/syncs/{sync_id}/columns')
+    async def columns(sync_id: str, body: Decisions, user: Signed) -> dict[str, Any]:
+        admin(user)
+        try:
+            await files.decide(pool, sync_id, body.columns, body.row_key, user.id, threshold)
+        except files.DecisionError as e:
+            raise HTTPException(422, str(e)) from e
+        log('info', 'column decisions', sync=sync_id, columns=sorted(body.columns), user=user.id)
+        found = await files.review(pool, sync_id)
+        assert found is not None
+        return found
 
     @router.post('/syncs/{sync_id}/header')
     async def header(sync_id: str, body: HeaderRow, user: Signed) -> dict[str, str]:

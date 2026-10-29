@@ -269,5 +269,8 @@ def create_router(ctx: AppContext) -> APIRouter:
     if ctx.agent is not None:
         router.include_router(create_agent_router(ctx.agent, current_user))
     router.include_router(create_tokens_router(ctx.pool, current_user, ctx.public_url))
-    router.include_router(create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, ctx.enqueue_setup, current_user, ctx.secrets))
+    profile_threshold = ctx.agent.suppression_threshold if ctx.agent is not None else 5
+    router.include_router(
+        create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, ctx.enqueue_setup, current_user, ctx.secrets, profile_threshold)
+    )
     return router

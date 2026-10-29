@@ -11,7 +11,7 @@ import hashlib
 import os
 import re
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -183,6 +183,15 @@ def _read(storage: Storage, row: dict[str, Any]) -> tuple[Table, str, str]:
     return table, sha256, stored_at
 
 
+def without_left_out(table: Table, decisions: dict[str, dict[str, Any]]) -> Table:
+    """The table without the columns a person left out (connect data spec § 6.7): they never reach raw."""
+    out = {c for c, d in decisions.items() if d.get('keep') is False}
+    if not out:
+        return table
+    columns = [c for c in table.columns if c not in out]
+    return replace(table, columns=columns, rows=[{c: r.get(c) for c in columns} for r in table.rows])
+
+
 async def rebuild(pool: AsyncConnectionPool, database_url: str) -> dbt.Built:
     """Rebuilds staging and analytics from every approved input (dbt build, with its tests)."""
     generated = generate.dbt_files(await definitions.events(pool))
@@ -253,7 +262,9 @@ async def _process(
     approved = await _approved(pool, row, layout_id)
     if not approved:
         await asyncio.to_thread(load_rows, database_url, DRAFT, table_name, table, meta, True)
-        profile = await profile_table(pool, DRAFT, table_name, threshold, sql.SQL('_bi_sync_id = {}').format(sql.Literal(sync_id)))
+        decisions = await store.column_decisions(pool, row['stream_id'])
+        rows_of = sql.SQL('_bi_sync_id = {}').format(sql.Literal(sync_id))
+        profile = await profile_table(pool, DRAFT, table_name, threshold, rows_of, decisions)
         await store.update_sync(pool, sync_id, profile=profile)
         approved = await _propose(pool, row, layout_id, columns, profile)
         if not approved:
@@ -261,7 +272,8 @@ async def _process(
             return 'review'
     repeat = await asyncio.to_thread(_already_loaded, database_url, table_name, sha256, layout_id)
     if not repeat:
-        await asyncio.to_thread(load_rows, database_url, RAW, table_name, table, meta)
+        kept = without_left_out(table, await store.column_decisions(pool, row['stream_id']))
+        await asyncio.to_thread(load_rows, database_url, RAW, table_name, kept, meta)
     await asyncio.to_thread(drop_draft, database_url, table_name)
     await store.update_sync(pool, sync_id, status='loaded', repeat=repeat, note=None, finished_at=dt.datetime.now(dt.UTC))
     if dataset:
@@ -339,11 +351,22 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
     async with pool.connection() as conn:
         found = await (await conn.execute('select columns from layout where id = %s', [row['layout_id']])).fetchone()
     profiles = {p['name']: p for p in (row['profile'] or {}).get('columns', [])}
+    decisions = await store.column_decisions(pool, row['stream_id'])
     out['columns'] = [
         {'name': c['name'], 'header': c['header'], 'kind': profiles.get(c['name'], {}).get('kind'),
-         'summary': summary(profiles[c['name']]) if c['name'] in profiles else None}
+         'summary': summary(profiles[c['name']]) if c['name'] in profiles else None,
+         'detected_personal': profiles.get(c['name'], {}).get('detected_personal', False),
+         'detected_describing': profiles.get(c['name'], {}).get('detected_describing', False),
+         'invalid': profiles.get(c['name'], {}).get('invalid'),
+         'decision': _jsonable(decisions.get(c['name']))}
         for c in (found[0] if found else [])
     ]  # fmt: skip
+    out['row_key'] = {'columns': row['row_key'] or [], 'check': None}
+    if row['row_key'] and row['status'] == 'review':
+        try:
+            out['row_key']['check'] = await store.row_key_check(pool, DRAFT, row['raw_table'], row['id'], row['row_key'])
+        except psycopg.Error:
+            out['row_key']['check'] = None  # the draft is gone or lacks a column: nothing to check
     if row['dataset']:
         out['parts'] = [
             {'name': f.name, 'label': f.label, 'description': f.description, 'required': f.required, 'expects': f.expects}
@@ -354,7 +377,80 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
             out['mapping'], out['mapping_status'] = kept['mapping'], kept['status']
             out['proposed_by'], out['reasons'] = kept['proposed_by'], kept['reasons']
             out['model'] = kept['model']
+    used = {c for c in (out['mapping'] or {}).values() if c}
+    for c in out['columns']:  # identifying data nothing uses: proposed to be left out (data minimisation)
+        undecided = c['decision'] is None
+        c['suggest_leave_out'] = undecided and c['kind'] == 'personal' and c['name'] not in used
     return out
+
+
+def _jsonable(d: dict[str, Any] | None) -> dict[str, Any] | None:
+    if d is None:
+        return None
+    return {k: (v.isoformat() if hasattr(v, 'isoformat') else v) for k, v in d.items()}
+
+
+class DecisionError(ValueError):
+    """Column decisions that cannot be saved, with the reason."""
+
+
+KINDS = {'text', 'number', 'date', 'category', 'identifier', 'boolean'}
+
+
+async def decide(
+    pool: AsyncConnectionPool,
+    sync_id: str,
+    columns: dict[str, dict[str, Any]],
+    row_key: list[str] | None,
+    user_id: str | None,
+    threshold: int,
+) -> None:
+    """Saves a person's column decisions for the sync's stream and profiles the waiting data again with them."""
+    row = await store.get_sync(pool, sync_id)
+    if row is None or row['layout_id'] is None:
+        raise DecisionError('this sync has no columns yet')
+    async with pool.connection() as conn:
+        found = await (await conn.execute('select columns from layout where id = %s', [row['layout_id']])).fetchone()
+    names = {c['name'] for c in (found[0] if found else [])}
+    profiles = {p['name']: p for p in (row['profile'] or {}).get('columns', [])}
+    clean: dict[str, dict[str, Any]] = {}
+    for name, d in columns.items():
+        if name not in names:
+            raise DecisionError(f'the data has no column "{name}"')
+        personal, kind = d.get('personal'), d.get('kind')
+        if personal not in (None, 'identifying', 'describing', 'none'):
+            raise DecisionError(f'"{personal}" is not a personal-data choice')
+        if kind is not None and kind not in KINDS:
+            raise DecisionError(f'"{kind}" is not a kind')
+        reason = (d.get('reason') or '').strip() or None
+        if personal in ('none', 'describing') and profiles.get(name, {}).get('detected_personal') and not reason:
+            raise DecisionError(f'say why "{name}" does not identify a person: it looked like identifying data')
+        clean[name] = {
+            'personal': personal, 'reason': reason, 'keep': d.get('keep', True) is not False, 'kind': kind,
+            'label': {k: str(v)[:200] for k, v in (d.get('label') or {}).items() if v},
+            'description': {k: str(v)[:2000] for k, v in (d.get('description') or {}).items() if v},
+        }  # fmt: skip
+    left_out = {n for n, d in clean.items() if not d['keep']}
+    key = [c for c in (row_key or []) if c]
+    if set(key) - names:
+        raise DecisionError(f'the row key names a column the data does not have: {", ".join(sorted(set(key) - names))}')
+    if set(key) & left_out:
+        raise DecisionError('a column of the row key cannot be left out')
+    if row['dataset']:
+        kept_mapping = await mapping.stored(pool, row['layout_id'], row['dataset'])
+        used = {c for c in ((kept_mapping or {}).get('mapping') or {}).values() if c}
+        if used & left_out:
+            raise DecisionError(f'{", ".join(sorted(used & left_out))} supplies a part of the dataset: choose another column first')
+    await store.save_column_decisions(pool, row['stream_id'], clean, user_id)
+    await store.set_row_key(pool, row['stream_id'], key or None)
+    if row['status'] == 'review':  # the data waits in the draft: profile it again with the decisions
+        decisions = await store.column_decisions(pool, row['stream_id'])
+        rows_of = sql.SQL('_bi_sync_id = {}').format(sql.Literal(sync_id))
+        try:
+            profile = await profile_table(pool, DRAFT, row['raw_table'], threshold, rows_of, decisions)
+        except psycopg.Error:
+            return
+        await store.update_sync(pool, sync_id, profile=profile)
 
 
 async def approve(pool: AsyncConnectionPool, sync_id: str, chosen: dict[str, str | None] | None, user_id: str, email: str) -> None:
@@ -365,7 +461,8 @@ async def approve(pool: AsyncConnectionPool, sync_id: str, chosen: dict[str, str
     if row['dataset']:
         async with pool.connection() as conn:
             found = await (await conn.execute('select columns from layout where id = %s', [row['layout_id']])).fetchone()
-        names = [c['name'] for c in (found[0] if found else [])]
+        left_out = {c for c, d in (await store.column_decisions(pool, row['stream_id'])).items() if d.get('keep') is False}
+        names = [c['name'] for c in (found[0] if found else []) if c['name'] not in left_out]  # a left-out column supplies nothing
         mapping.check(row['dataset'], await mapping.fields(pool, row['dataset']), chosen or {}, names)
         kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
         changed = kept is None or {p: c for p, c in (chosen or {}).items() if c} != {p: c for p, c in kept['mapping'].items() if c}

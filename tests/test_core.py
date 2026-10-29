@@ -81,6 +81,7 @@ async def test_migrates_once_and_creates_the_database_once(pool: AsyncConnection
         '0013_templates.sql',
         '0014_definitions.sql',
         '0015_api_source.sql',
+        '0016_column_decisions.sql',
     ]
     assert await migrate(pool) == []
 

@@ -129,11 +129,29 @@ export interface ApiSettings {
   schedule: 'manual' | 'hourly' | 'daily';
 }
 
+export type PersonalRole = 'identifying' | 'describing' | 'none';
+
+/** A person's decision about a column (docs/connect-data-spec.md § 6.7). */
+export interface ColumnDecision {
+  personal: PersonalRole | null;
+  reason?: string | null;
+  keep: boolean;
+  kind: string | null;
+  label: Record<string, string>;
+  description?: Record<string, string>;
+  decided_by?: string | null;
+}
+
 export interface ReviewColumn {
   name: string;
   header: string;
   kind: string | null;
   summary: string | null;
+  detected_personal?: boolean;
+  detected_describing?: boolean;
+  invalid?: number | null;
+  decision?: ColumnDecision | null;
+  suggest_leave_out?: boolean;
 }
 
 export interface Part {
@@ -184,6 +202,7 @@ export interface Review {
   reasons: Record<string, Reason> | null;
   model?: string | null;
   agent: AgentState | null;
+  row_key?: { columns: string[]; check: { empty: number; repeated: number } | null };
 }
 
 export interface ModelChoice {
