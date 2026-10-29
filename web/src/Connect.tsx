@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   api,
+  type ApiSettings,
   type Reason,
   type Review,
   type Source,
@@ -94,6 +95,8 @@ export function Connect({ user }: { user: User }) {
 function AddSource({ listing, onCancel, onMade }: { listing: Listing; onCancel: () => void; onMade: (id: string) => void }) {
   const [type, setType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [endpoints, setEndpoints] = useState<Endpoint[]>([{ name: '', path: '', data_selector: '', feeds: '' }]);
+  const [auth, setAuth] = useState<ApiSettings['auth']['type']>('bearer');
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -101,11 +104,30 @@ function AddSource({ listing, onCancel, onMade }: { listing: Listing; onCancel: 
     setError(null);
     try {
       const dataset = String(form.get('dataset') ?? '');
-      const made = await api.post<{ id: string }>('/sources', {
-        name: form.get('name'),
-        type,
-        dataset: dataset || null,
-      });
+      const body =
+        type === 'api'
+          ? {
+              name: form.get('name'),
+              type,
+              settings: {
+                base_url: String(form.get('base_url') ?? ''),
+                schedule: String(form.get('schedule') ?? 'manual'),
+                auth: {
+                  type: auth,
+                  ...(auth === 'api_key' ? { header: String(form.get('header') || 'X-API-Key') } : {}),
+                  ...(auth === 'basic' ? { username: String(form.get('username') ?? '') } : {}),
+                },
+                endpoints: endpoints.map((p) => ({
+                  name: p.name,
+                  path: p.path,
+                  ...(p.data_selector ? { data_selector: p.data_selector } : {}),
+                })),
+              },
+              feeds: Object.fromEntries(endpoints.map((p) => [p.name, p.feeds || null])),
+              credential: auth === 'none' ? null : String(form.get('credential') ?? '') || null,
+            }
+          : { name: form.get('name'), type, dataset: dataset || null };
+      const made = await api.post<{ id: string }>('/sources', body);
       onMade(made.id);
     } catch (err) {
       setError((err as Error).message);
@@ -133,7 +155,124 @@ function AddSource({ listing, onCancel, onMade }: { listing: Listing; onCancel: 
           </button>
         ))}
       </div>
-      {type && (
+      {type === 'api' && (
+        <form onSubmit={submit} className="card add-form">
+          <h2>2. Connect the API</h2>
+          <label>
+            Name
+            <input name="name" required maxLength={80} placeholder="Ticketing system" />
+          </label>
+          <label>
+            Base URL
+            <input name="base_url" type="url" required placeholder="https://api.example.org/v1/" />
+          </label>
+          <label>
+            How it signs in
+            <select value={auth} onChange={(e) => setAuth(e.target.value as ApiSettings['auth']['type'])}>
+              <option value="bearer">A bearer token</option>
+              <option value="api_key">An API key in a header</option>
+              <option value="basic">A username and password</option>
+              <option value="none">No sign-in (a public API)</option>
+            </select>
+          </label>
+          {auth === 'api_key' && (
+            <label>
+              Header name
+              <input name="header" defaultValue="X-API-Key" pattern="[A-Za-z0-9-]{1,64}" />
+            </label>
+          )}
+          {auth === 'basic' && (
+            <label>
+              Username
+              <input name="username" required autoComplete="off" />
+            </label>
+          )}
+          {auth !== 'none' && (
+            <label>
+              {auth === 'basic' ? 'Password' : auth === 'api_key' ? 'API key' : 'Token'}{' '}
+              <span className="hint">(kept in the secret store, never shown again)</span>
+              <input name="credential" type="password" required autoComplete="new-password" />
+            </label>
+          )}
+          <label>
+            Read it
+            <select name="schedule" defaultValue="daily">
+              <option value="manual">Only when someone says so</option>
+              <option value="hourly">Every hour</option>
+              <option value="daily">Every day</option>
+            </select>
+          </label>
+          <h3>Endpoints</h3>
+          <p className="hint">
+            Each endpoint is read with GET, page by page, and becomes a stream. Say where the items are in the response if they are not the
+            whole of it (for example <code>data</code>).
+          </p>
+          {endpoints.map((p, i) => (
+            <div key={i} className="controls">
+              <label>
+                Name
+                <input
+                  required
+                  pattern="[a-z][a-z0-9_]{0,40}"
+                  title="lower-case letters, digits and _"
+                  value={p.name}
+                  onChange={(e) => setEndpoints(endpoints.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                />
+              </label>
+              <label>
+                Path
+                <input
+                  required
+                  placeholder="items"
+                  value={p.path}
+                  onChange={(e) => setEndpoints(endpoints.map((x, j) => (j === i ? { ...x, path: e.target.value } : x)))}
+                />
+              </label>
+              <label>
+                Items at
+                <input
+                  placeholder="data"
+                  value={p.data_selector}
+                  onChange={(e) => setEndpoints(endpoints.map((x, j) => (j === i ? { ...x, data_selector: e.target.value } : x)))}
+                />
+              </label>
+              <label>
+                Feeds
+                <select
+                  value={p.feeds}
+                  onChange={(e) => setEndpoints(endpoints.map((x, j) => (j === i ? { ...x, feeds: e.target.value } : x)))}
+                >
+                  <option value="">Raw data only</option>
+                  {listing.datasets.map((d) => (
+                    <option key={d.name} value={d.name}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {endpoints.length > 1 && (
+                <button type="button" className="link" onClick={() => setEndpoints(endpoints.filter((_, j) => j !== i))}>
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="link"
+            onClick={() => setEndpoints([...endpoints, { name: '', path: '', data_selector: '', feeds: '' }])}
+          >
+            + Another endpoint
+          </button>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button type="submit">Connect the API</button>
+        </form>
+      )}
+      {type && type !== 'api' && (
         <form onSubmit={submit} className="card add-form">
           <h2>2. Name it, and say what it feeds</h2>
           <label>
@@ -161,6 +300,13 @@ function AddSource({ listing, onCancel, onMade }: { listing: Listing; onCancel: 
       )}
     </section>
   );
+}
+
+interface Endpoint {
+  name: string;
+  path: string;
+  data_selector: string;
+  feeds: string;
 }
 
 function SourcePage(props: {
@@ -202,6 +348,31 @@ function SourcePage(props: {
       setError((err as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function syncNow() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post(`/sources/${id}/sync`);
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function replaceCredential(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    setError(null);
+    try {
+      await api.put(`/sources/${id}/credential`, { credential: String(new FormData(form).get('credential') ?? '') });
+      form.reset();
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
@@ -254,6 +425,53 @@ function SourcePage(props: {
         </form>
       )}
 
+      {source.type === 'api' && source.settings && (
+        <div className="card upload">
+          <div>
+            <p className="m-0">
+              <code>{source.settings.base_url}</code> · read{' '}
+              {source.settings.schedule === 'manual'
+                ? 'when someone says so'
+                : source.settings.schedule === 'hourly'
+                  ? 'every hour'
+                  : 'every day'}
+              {source.state !== 'live' && source.settings.schedule !== 'manual' ? ', once approved' : ''}
+            </p>
+            <ul>
+              {(source.streams ?? []).map((st) => (
+                <li key={st.id}>
+                  <strong>{st.name}</strong> <span className="hint">· {datasetLabel(st.dataset)}</span>
+                  {st.last_status && <span className={`status ${st.last_status}`}> · {STATUS[st.last_status]}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {user.is_admin && (
+            <>
+              <button type="button" onClick={() => void syncNow()} disabled={busy}>
+                {busy ? 'Queuing…' : 'Read it now'}
+              </button>
+              {source.settings.auth?.type !== 'none' && (
+                <form onSubmit={replaceCredential} className="controls">
+                  <label>
+                    Replace the credential
+                    <input name="credential" type="password" required autoComplete="new-password" />
+                  </label>
+                  <button type="submit" className="link">
+                    Replace
+                  </button>
+                </form>
+              )}
+            </>
+          )}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+
       {open && (
         <ReviewPanel
           key={open}
@@ -266,12 +484,12 @@ function SourcePage(props: {
         />
       )}
 
-      <h2>Files received</h2>
+      <h2>{source.type === 'api' ? 'Reads' : 'Files received'}</h2>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>File</th>
+              <th>{source.type === 'api' ? 'Endpoint' : 'File'}</th>
               <th>As of</th>
               <th>Status</th>
               <th className="num">Rows</th>
@@ -283,7 +501,7 @@ function SourcePage(props: {
           <tbody>
             {source.syncs.map((s: Sync) => (
               <tr key={s.id} className={s.id === open ? 'chosen' : ''}>
-                <td>{s.file_name}</td>
+                <td>{s.file_name ?? s.endpoint}</td>
                 <td>{s.as_of}</td>
                 <td>
                   <span className={`status ${s.status}`}>{STATUS[s.status]}</span>
@@ -433,26 +651,35 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
 
   return (
     <div className="card review">
-      <h2>Check what was found in {review.sync.file_name}</h2>
+      <h2>Check what was found in {review.sync.file_name ?? review.sync.endpoint}</h2>
       <p className="note">{review.sync.note}</p>
 
       <h3>The table</h3>
-      <p>
-        The column names are on <strong>row {review.header.row}</strong>
-        {review.header.guessed === false ? ' (as you chose)' : ''}; {review.sync.rows} rows of data below them.
-        {(review.header.above_header?.length ?? 0) > 0 && (
-          <span className="hint"> Above them, left out: “{review.header.above_header?.join(' · ')}”.</span>
-        )}
-      </p>
-      <div className="controls">
-        <label>
-          Not right? The column names are on row
-          <input type="number" min={1} value={headerRow} onChange={(e) => setHeaderRow(e.target.value)} />
-        </label>
-        <button onClick={() => void act(`/syncs/${syncId}/header`, { row: Number(headerRow) })} disabled={!headerRow}>
-          Read it again
-        </button>
-      </div>
+      {review.source.type === 'api' ? (
+        <p>
+          {review.sync.rows} items read from <code>{review.sync.endpoint}</code>, one row each; nested fields become columns named{' '}
+          <code>parent__child</code>.
+        </p>
+      ) : (
+        <>
+          <p>
+            The column names are on <strong>row {review.header.row}</strong>
+            {review.header.guessed === false ? ' (as you chose)' : ''}; {review.sync.rows} rows of data below them.
+            {(review.header.above_header?.length ?? 0) > 0 && (
+              <span className="hint"> Above them, left out: “{review.header.above_header?.join(' · ')}”.</span>
+            )}
+          </p>
+          <div className="controls">
+            <label>
+              Not right? The column names are on row
+              <input type="number" min={1} value={headerRow} onChange={(e) => setHeaderRow(e.target.value)} />
+            </label>
+            <button onClick={() => void act(`/syncs/${syncId}/header`, { row: Number(headerRow) })} disabled={!headerRow}>
+              Read it again
+            </button>
+          </div>
+        </>
+      )}
 
       <AgentNote
         review={review}

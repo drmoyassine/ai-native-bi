@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from . import accounts, definitions, knowledge, mapping, organization, tools
 from .accounts import User
 from .agent.routes import AgentContext, create_agent_router
+from .agent.secrets import SecretStore
 from .agent.suppress import count_measures, suppress_rows
 from .charts import ChartDefinition
 from .connect.files import Storage
@@ -46,6 +47,8 @@ class AppContext:
     """How many failed sign-ins refuse the next (TASK-010)."""
     enqueue_setup: Callable[[str], Awaitable[None]] | None = None
     """Asks the setup agent about a sync waiting for review (docs/setup-agent-spec.md)."""
+    secrets: SecretStore | None = None
+    """The secret store (DEC-020): where an API source's credential is kept."""
     proxy_hops: int = 0
     """Proxies in front of the app that append the client's address to X-Forwarded-For (0: the connection's own address is the client)."""
 
@@ -266,5 +269,5 @@ def create_router(ctx: AppContext) -> APIRouter:
     if ctx.agent is not None:
         router.include_router(create_agent_router(ctx.agent, current_user))
     router.include_router(create_tokens_router(ctx.pool, current_user, ctx.public_url))
-    router.include_router(create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, ctx.enqueue_setup, current_user))
+    router.include_router(create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, ctx.enqueue_setup, current_user, ctx.secrets))
     return router

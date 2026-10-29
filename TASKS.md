@@ -817,15 +817,18 @@ Spec docs/connect-data-spec.md § 11. The source, stream, layout and sync model;
 
 ---
 
-## TASK-023 — Connect data C2: APIs and schedules
+## TASK-023 — Connect data C2a: REST API sources
 
 ---
-title: 'Connect data C2: APIs and schedules'
-description: rest_api sources, scheduled incremental syncs
-status: pending
+title: 'Connect data C2a: REST API sources'
+description: >-
+  One source per API, one stream per endpoint, read with GET through dlt rest_api (pagination found by dlt), bearer, API
+  key or basic credentials in the secret store, the same draft, profile, mapping and review path as files, Read it now
+  and an hourly or daily schedule
+status: completed
 priority: P1
 id: TASK-023
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T09:17:35.457Z'
@@ -838,8 +841,8 @@ related_decisions:
     name: 'Connect data: every source behind one connector interface on dlt'
     url: /DECISIONS.md#DEC-027
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T09:17:35.457Z'
+  by: process:vef-cli
+  at: '2026-10-29T07:55:50.255Z'
 ---
 
 rest_api configurations, drafted from an OpenAPI document; syncs on a schedule, incremental with state; frozen contracts on approved streams. Done when one endpoint syncs on a schedule and a changed field pauses the stream with a review.
@@ -1389,6 +1392,31 @@ related_decisions:
 modified:
   by: process:vef-cli
   at: '2026-10-29T07:47:19.913Z'
+---
+
+---
+
+## TASK-042 — Connect data C2b: API configurations drafted, incremental reads, frozen contracts
+
+---
+title: 'Connect data C2b: API configurations drafted, incremental reads, frozen contracts'
+description: >-
+  rest_api configurations drafted from an OpenAPI document (with setup agent S5), incremental reads with state, frozen
+  schema contracts on approved streams so a changed field pauses the stream with a review
+status: pending
+priority: P2
+id: TASK-042
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T07:55:51.059Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T07:55:51.059Z'
 ---
 
 <!-- End VEF generated items. -->

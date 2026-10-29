@@ -73,6 +73,7 @@ async def main() -> None:
                     per_ip=env.SIGN_IN_MAX_FAILURES_PER_IP,
                 ),
                 proxy_hops=env.TRUSTED_PROXY_HOPS,
+                secrets=secrets,
                 agent=AgentContext(
                     pool=pool,
                     database_url=env.DATABASE_URL,

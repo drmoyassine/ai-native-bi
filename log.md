@@ -264,3 +264,13 @@ staging, analytics and tests for every approved event into a copy of the dbt pro
 the template, and Cube reads them from `cube_model.file` through `cube/cube.js` (reloading when they change). The waiting list of
 `tests/test_agnostic.py` is gone. Tests run a second, unrelated domain (a service desk's tickets) through definitions, loading,
 generation and dbt. TASK-031 and TASK-041 completed.
+
+## 2026-10-29 — C2a: REST API sources
+
+An admin connects an API on Connect data: base URL, how it signs in (bearer token, API key in a header, username and password; the
+credential goes to the secret store and is never shown again), the endpoints (each a stream, read with GET page by page through dlt's
+`rest_api`; where the items are when they are not the whole response) and what each feeds, and a schedule (hourly, daily or on
+request). A read flattens nested fields to `parent__child` and goes through the same draft, profile, mapping and review path as a file
+(migration 0015: `api` sources, `sync.endpoint`). A periodic job queues due reads of live sources. Found by the test: re-queueing after
+approval only accepted syncs with a stored file. Checked in a browser against a local paged API: connected, read, reviewed, approved,
+built; a second read loaded on its own. Drafting configurations from OpenAPI, incremental reads and frozen contracts are C2b (TASK-042).

@@ -12,13 +12,14 @@ from pydantic import BaseModel
 
 from .. import mapping
 from ..accounts import User
+from ..agent.secrets import SecretStore
 from ..log import log
-from . import files, store
+from . import api, files, store
 
 # Every type the spec plans, in the order they are built (§ 11); only the available ones can be made.
 TYPES: list[dict[str, Any]] = [
     {'type': 'file', 'label': 'File', 'hint': 'An export you upload: xlsx, xlsb, xls, ods or csv.', 'available': True},
-    {'type': 'api', 'label': 'API', 'hint': 'A system with a web API, such as an LMS.', 'available': False, 'step': 'C2'},
+    {'type': 'api', 'label': 'API', 'hint': 'A system with a web API: its endpoints are read on a schedule, read-only.', 'available': True},
     {'type': 'oracle', 'label': 'Oracle', 'hint': 'A database such as Banner, read-only.', 'available': False, 'step': 'C3'},
     {'type': 'postgres', 'label': 'PostgreSQL', 'hint': 'A PostgreSQL database, read-only.', 'available': False, 'step': 'C4'},
     {'type': 'mssql', 'label': 'SQL Server', 'hint': 'A SQL Server database, read-only.', 'available': False, 'step': 'C5'},
@@ -35,6 +36,16 @@ class NewSource(BaseModel):
     name: str
     type: str
     dataset: str | None = None
+    settings: dict[str, Any] | None = None
+    """An API source's settings (bi.connect.api.ApiSettings)."""
+    credential: str | None = None
+    """An API source's token, key or password: kept in the secret store, never returned."""
+    feeds: dict[str, str | None] | None = None
+    """An API source's endpoints and the dataset each feeds (none: kept as raw data)."""
+
+
+class Credential(BaseModel):
+    credential: str
 
 
 class Approval(BaseModel):
@@ -51,6 +62,7 @@ def create_connect_router(
     enqueue_load: Callable[[str], Awaitable[None]],
     enqueue_setup: Callable[[str], Awaitable[None]] | None,
     current_user: Callable[..., Awaitable[User]],
+    secrets: SecretStore | None = None,
 ) -> APIRouter:
     router = APIRouter()
     Signed = Annotated[User, Depends(current_user)]
@@ -69,7 +81,10 @@ def create_connect_router(
 
     @router.post('/sources', status_code=201)
     async def create(body: NewSource, user: Signed) -> dict[str, str]:
-        if body.dataset is not None and body.dataset not in await mapping.installed_datasets(pool):
+        datasets = await mapping.installed_datasets(pool)
+        if body.type == 'api':
+            return await create_api(body, user, datasets)
+        if body.dataset is not None and body.dataset not in datasets:
             raise HTTPException(422, f'unknown dataset "{body.dataset}"')
         try:
             id = await store.create_source(pool, name=body.name, type=body.type, dataset=body.dataset, owner=user.id)
@@ -77,6 +92,56 @@ def create_connect_router(
             raise HTTPException(422, str(e)) from e
         log('info', 'source made', id=id, type=body.type, user=user.id)
         return {'id': id}
+
+    async def create_api(body: NewSource, user: User, datasets: list[str]) -> dict[str, str]:
+        if not user.is_admin:
+            raise HTTPException(403, 'only a BI admin connects an API (its credential and what it reads)')
+        try:
+            settings = api.ApiSettings.model_validate(body.settings or {})
+        except ValueError as e:
+            raise HTTPException(422, f'the API settings are not valid: {e}') from e
+        feeds = {e.name: (body.feeds or {}).get(e.name) for e in settings.endpoints}
+        unknown = sorted({d for d in feeds.values() if d is not None and d not in datasets})
+        if unknown:
+            raise HTTPException(422, f'unknown dataset {", ".join(unknown)}')
+        if settings.auth.type != 'none' and not body.credential:
+            raise HTTPException(422, 'this authentication needs its credential')
+        if body.credential and secrets is None:
+            raise HTTPException(503, 'the secret store is not configured (BI_SECRETS_KEY), so a credential cannot be kept')
+        try:
+            id = await store.create_source(
+                pool, name=body.name, type='api', dataset=None, owner=user.id, settings=settings.model_dump(), streams=feeds
+            )
+        except store.SourceError as e:
+            raise HTTPException(422, str(e)) from e
+        if body.credential and secrets is not None:
+            await secrets.put(api.secret_handle(id), body.credential, user.id)
+        log('info', 'source made', id=id, type='api', endpoints=len(feeds), user=user.id)  # never the credential
+        return {'id': id}
+
+    @router.put('/sources/{source_id}/credential', status_code=204)
+    async def set_credential(source_id: str, body: Credential, user: Signed) -> None:
+        admin(user)
+        found = await store.get_source(pool, source_id)
+        if found is None or found['type'] != 'api':
+            raise HTTPException(404, 'no such API source')
+        if secrets is None:
+            raise HTTPException(503, 'the secret store is not configured (BI_SECRETS_KEY)')
+        await secrets.put(api.secret_handle(source_id), body.credential, user.id)
+        log('info', 'source credential replaced', id=source_id, user=user.id)
+
+    @router.post('/sources/{source_id}/sync', status_code=202)
+    async def sync_now(source_id: str, user: Signed) -> dict[str, Any]:
+        """Reads every endpoint of an API source now (each a sync of its stream)."""
+        admin(user)
+        found = await store.get_source(pool, source_id)
+        if found is None or found['type'] != 'api':
+            raise HTTPException(404, 'no such API source')
+        ids = await store.queue_endpoint_syncs(pool, source_id, user.id, dt.date.today())
+        for id in ids:
+            await enqueue_load(id)
+        log('info', 'source sync queued', id=source_id, syncs=len(ids), user=user.id)
+        return {'syncs': ids}
 
     @router.get('/sources/{source_id}')
     async def source(source_id: str, user: Signed) -> dict[str, Any]:

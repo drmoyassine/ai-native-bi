@@ -200,7 +200,7 @@ async def process_setup(
 
     chosen = await setup_model(pool)
     if chosen is None:
-        return await finish('none', reason='No model is chosen for building: an admin picks one on the Models page.')
+        return await finish('none', reason='No model is chosen for building: an admin picks one in Settings, Models.')
     if organization_cap is not None and await tokens_this_month(pool) + used_elsewhere >= organization_cap:
         return await finish('none', reason="The organization's monthly token budget is used up.")
     await store.update_sync(pool, sync_id, agent={**request, 'state': 'running'})

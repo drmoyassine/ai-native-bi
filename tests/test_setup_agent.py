@@ -238,7 +238,7 @@ async def test_a_missing_model_a_spent_budget_a_failing_model_and_an_approved_la
     none = await waiting_sync(pool, tmp_path, 'No model', by_admin=True)
     assert await process_setup(pool, Recorder(GOOD).model_for, none) == 'none'
     ended = await store.get_sync(pool, none)
-    assert ended is not None and 'Models page' in ended['agent']['reason']
+    assert ended is not None and 'Settings, Models' in ended['agent']['reason']
 
     await set_provider(pool, samples=False)
     spent = await waiting_sync(pool, tmp_path, 'Spent', by_admin=True)

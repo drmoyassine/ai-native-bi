@@ -78,7 +78,7 @@ async def app(pool: AsyncConnectionPool, tmp_path: Path) -> AsyncIterator[tuple[
 
 @asynccontextmanager
 async def app_for(
-    pool: AsyncConnectionPool, tmp_path: Path, enqueue: Any = None, cube: FakeCube | None = None
+    pool: AsyncConnectionPool, tmp_path: Path, enqueue: Any = None, cube: FakeCube | None = None, secrets: Any = None
 ) -> AsyncIterator[httpx.AsyncClient]:
     """The app over a pool, as a client (other modules' tests use it too)."""
 
@@ -91,6 +91,7 @@ async def app_for(
         enqueue_load=enqueue or nothing,
         cube=cube or FakeCube(),  # type: ignore[arg-type]
         cookie_secure=False,
+        secrets=secrets,
     )
     web = tmp_path / 'web'
     web.mkdir(exist_ok=True)
@@ -140,7 +141,7 @@ async def test_connect_data_makes_a_file_source_takes_files_and_refuses_what_it_
     client, queued, _ = app
     await signed_in(client)
     listed = (await client.get('/app/api/sources')).json()
-    assert {t['type'] for t in listed['types'] if t['available']} == {'file'}  # the rest come in C2 to C5
+    assert {t['type'] for t in listed['types'] if t['available']} == {'file', 'api'}  # the rest come in C3 to C5
     assert {'oracle', 'postgres', 'api'} <= {t['type'] for t in listed['types']} and listed['datasets'][0]['name'] == 'enrollment'
 
     async def make(body: dict[str, Any]) -> httpx.Response:
