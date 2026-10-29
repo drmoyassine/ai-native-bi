@@ -21,6 +21,7 @@ class LanguagePack:
     code: str
     letters: re.Pattern[str]
     personal: re.Pattern[str] | None
+    describing: re.Pattern[str] | None
     identifier: re.Pattern[str] | None
     total: re.Pattern[str] | None
     fake_names: tuple[str, ...]
@@ -53,6 +54,7 @@ def _language(data: dict[str, Any]) -> LanguagePack:
         code=data['code'],
         letters=re.compile(data['letters']),
         personal=_words(data.get('personal_words', []), match),
+        describing=_words(data.get('describing_words', []), match),
         identifier=_words(data.get('identifier_words', []), match),
         total=_starts(data.get('total_words', []), match),
         fake_names=tuple(data.get('fake_names', [])),
@@ -81,6 +83,11 @@ def pack_for(text: str) -> LanguagePack:
 
 def looks_personal(column: str) -> bool:
     return any(p.personal is not None and p.personal.search(column) for p in languages())
+
+
+def looks_describing(column: str) -> bool:
+    """A column that describes a person without identifying them (gender, nationality): counted, never shown alone."""
+    return any(p.describing is not None and p.describing.search(column) for p in languages())
 
 
 def looks_identifying(column: str) -> bool:

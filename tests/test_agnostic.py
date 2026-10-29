@@ -87,7 +87,9 @@ def test_language_packs_bring_the_words_code_used_to_hold() -> None:
 def test_national_ids_and_other_personal_columns_are_recognised() -> None:
     from bi import packs
 
-    for column in ('Civil ID', 'National ID', 'NAT.', 'Passport No', 'Mobile', 'Guardian Phone'):
+    for column in ('Civil ID', 'National ID', 'Passport No', 'Mobile', 'Guardian Phone'):
         assert packs.looks_personal(column), column
+    for column in ('NAT.', 'Gender', 'Nationality'):
+        assert packs.looks_describing(column) and not packs.looks_personal(column), column
     for column in ('Program', 'Major', 'Funding type', 'Term'):
         assert not packs.looks_personal(column), column

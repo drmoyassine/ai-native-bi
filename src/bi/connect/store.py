@@ -153,7 +153,8 @@ async def get_source(pool: AsyncConnectionPool, source_id: str) -> dict[str, Any
 async def get_sync(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | None:
     async with pool.connection() as conn:
         cur = await conn.execute(
-            sql.SQL("""select {}, st.dataset, st.raw_table, st.name as stream_name, s.name as source_name, s.state as source_state,
+            sql.SQL("""select {}, st.dataset, st.raw_table, st.name as stream_name, st.row_key, s.name as source_name,
+                s.state as source_state,
                 s.slug, s.type as source_type, s.settings as source_settings
                 from sync y join source_stream st on st.id = y.stream_id join source s on s.id = y.source_id
                 left join app_user a on a.id = y.user_id
@@ -221,3 +222,64 @@ async def due_api_sources(pool: AsyncConnectionPool) -> list[str]:
             )
         ).fetchall()
     return [str(r[0]) for r in rows]
+
+
+# Column decisions at review (C1b, docs/connect-data-spec.md § 6.7).
+
+DECISION_FIELDS = ('personal', 'reason', 'keep', 'kind', 'label', 'description')
+
+
+async def column_decisions(pool: AsyncConnectionPool, stream_id: str) -> dict[str, dict[str, Any]]:
+    """What a person decided about each column of a stream, by column name."""
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            """select c.name, c.personal, c.reason, c.keep, c.kind, c.label, c.description, a.name as decided_by, c.decided_at
+               from stream_column c left join app_user a on a.id = c.decided_by where c.stream_id::text = %s""",
+            [stream_id],
+        )
+        names = [d.name for d in cur.description or []]
+        rows = [dict(zip(names, r, strict=True)) for r in await cur.fetchall()]
+    return {r.pop('name'): r for r in rows}
+
+
+async def save_column_decisions(
+    pool: AsyncConnectionPool, stream_id: str, decisions: dict[str, dict[str, Any]], user_id: str | None
+) -> None:
+    """Saves the decisions given (a column's decision replaces its earlier one as a whole)."""
+    async with pool.connection() as conn, conn.transaction():
+        for name, d in decisions.items():
+            await conn.execute(
+                """insert into stream_column (stream_id, name, personal, reason, keep, kind, label, description, decided_by)
+                   values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   on conflict (stream_id, name) do update set personal = excluded.personal, reason = excluded.reason,
+                     keep = excluded.keep, kind = excluded.kind, label = excluded.label, description = excluded.description,
+                     decided_by = excluded.decided_by, decided_at = now()""",
+                [stream_id, name, d.get('personal'), d.get('reason'), d.get('keep', True), d.get('kind'),
+                 Jsonb(d.get('label') or {}), Jsonb(d.get('description') or {}), user_id],
+            )  # fmt: skip
+
+
+async def set_row_key(pool: AsyncConnectionPool, stream_id: str, columns: list[str] | None) -> None:
+    async with pool.connection() as conn:
+        await conn.execute('update source_stream set row_key = %s where id::text = %s', [columns or None, stream_id])
+
+
+async def row_key_check(pool: AsyncConnectionPool, schema: str, table: str, sync_id: str, columns: list[str]) -> dict[str, int]:
+    """For the rows a sync loaded: how many have an empty key part, and how many keys are repeated (a key is a row key only when both
+    are 0)."""
+    key = sql.SQL(', ').join(sql.Identifier(c) for c in columns)
+    empty = sql.SQL(' or ').join(sql.SQL('nullif(trim({}::text), {}) is null').format(sql.Identifier(c), sql.Literal('')) for c in columns)
+    tbl = sql.Identifier(schema, table)
+    async with pool.connection() as conn:
+        e = await (
+            await conn.execute(sql.SQL('select count(*) from {} where _bi_sync_id = %s and ({})').format(tbl, empty), [sync_id])
+        ).fetchone()
+        d = await (
+            await conn.execute(
+                sql.SQL(
+                    'select coalesce(sum(n - 1), 0) from (select count(*) as n from {} where _bi_sync_id = %s group by {}) g where n > 1'
+                ).format(tbl, key),
+                [sync_id],
+            )
+        ).fetchone()
+    return {'empty': int(e[0]) if e else 0, 'repeated': int(d[0]) if d else 0}

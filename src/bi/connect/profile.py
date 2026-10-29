@@ -23,6 +23,7 @@ PATTERN_SQL = "regexp_replace(regexp_replace(regexp_replace({col}, '[0-9]', '9',
 _DATE_RE = r'^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?)?$'
 _NUMBER_RE = r'^[-+]?\d+(\.\d+)?$'
 _EMAIL_RE = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
+_BOOLEAN_RE = r'^(true|false|yes|no|y|n|1|0|t|f)$'
 
 
 def _short(pattern: str) -> str:
@@ -47,9 +48,15 @@ async def _columns(pool: AsyncConnectionPool, schema: str, table: str) -> list[t
 
 
 async def profile_table(
-    pool: AsyncConnectionPool, schema: str, table: str, threshold: int, where: sql.Composable | None = None
+    pool: AsyncConnectionPool,
+    schema: str,
+    table: str,
+    threshold: int,
+    where: sql.Composable | None = None,
+    decisions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """The profile of every column of a table (or of the rows `where` selects): {'rows': n, 'columns': [...]}."""
+    """The profile of every column of a table (or of the rows `where` selects): {'rows': n, 'columns': [...]}. A person's `decisions`
+    on a column (connect data spec § 6.7: personal role, kind) win over what is detected."""
     cols = await _columns(pool, schema, table)
     if not cols:
         return {'rows': 0, 'columns': []}
@@ -63,7 +70,8 @@ async def profile_table(
     out = []
     for i, (column, dtype) in enumerate(cols):
         non_null, distinct = counts[1 + 2 * i], counts[2 + 2 * i]
-        out.append(await _profile_column(pool, tbl, where, column, dtype, n_rows, non_null, distinct, threshold))
+        decided = (decisions or {}).get(column, {})
+        out.append(await _profile_column(pool, tbl, where, column, dtype, n_rows, non_null, distinct, threshold, decided))
     return {'rows': n_rows, 'columns': out}
 
 
@@ -77,7 +85,9 @@ async def _profile_column(
     non_null: int,
     distinct: int,
     threshold: int,
+    decided: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    decided = decided or {}
     out: dict[str, Any] = {
         'name': column,
         'type': dtype,
@@ -118,11 +128,61 @@ async def _profile_column(
         if lo and lo[0][0] is not None:
             out['min'], out['max'] = (v.isoformat() if hasattr(v, 'isoformat') else float(v) for v in lo[0])
 
-    personal = packs.looks_personal(column) or (dtype in TEXT_TYPES and await share(_EMAIL_RE) >= 0.5)
+    async def categories() -> None:
+        found = await rows(
+            sql.SQL('select {c}, count(*) from {t}{w} group by {c} order by count(*) desc limit 200').format(
+                c=col, t=tbl, w=_where(rows_of, sql.SQL('{} is not null').format(col))
+            )
+        )
+        shown = [(v, n) for v, n in found if n >= threshold and len(str(v)) <= 60]
+        out['values'] = [{'value': v, 'rows': n} for v, n in shown]
+        hidden = sum(n for _, n in found) - sum(n for _, n in shown)
+        if hidden:
+            out['other_rows'] = hidden  # rows whose value is rare (or long) and so not named
+
+    async def invalid(regex: str) -> None:
+        """How many values do not fit the kind a person chose (shapes only, never values)."""
+        if dtype not in TEXT_TYPES or not non_null:
+            return
+        bad = sql.SQL('{} !~* {}').format(text, sql.Literal(regex))
+        found = await rows(sql.SQL('select count(*) from {t}{w}').format(t=tbl, w=_where(rows_of, bad)))
+        out['invalid'] = int(found[0][0])
+        if out['invalid']:
+            pat = sql.SQL(PATTERN_SQL).format(col=text)
+            shapes = await rows(
+                sql.SQL('select {p} as p, count(*) from {t}{w} group by p order by count(*) desc limit 3').format(
+                    p=pat, t=tbl, w=_where(rows_of, bad)
+                )
+            )
+            out['invalid_patterns'] = [{'pattern': _short(p), 'rows': n} for p, n in shapes]
+
+    detected = packs.looks_personal(column) or (dtype in TEXT_TYPES and await share(_EMAIL_RE) >= 0.5)
+    out['detected_personal'] = bool(detected)
+    if not detected and packs.looks_describing(column):
+        out['detected_describing'] = True  # counted with small numbers hidden, like a category; never identifying
+    role = decided.get('personal')  # 'identifying', 'describing', 'none', or not decided
+    if role or out.get('detected_describing'):
+        out['personal_role'] = role or 'describing'
+    forced = decided.get('kind')
     unique = non_null >= 20 and distinct >= 0.9 * non_null
-    if personal:
+    if role == 'identifying' or (role is None and detected):
         out['kind'] = 'personal'  # a count and a shape; never values, never mapped unless a person chooses it
         out['patterns'] = await patterns()
+    elif forced:
+        out['kind'] = forced
+        if forced == 'date':
+            await invalid(_DATE_RE)
+            await span('date')
+        elif forced == 'number':
+            await invalid(_NUMBER_RE)
+            await span('numeric')
+        elif forced == 'boolean':
+            await invalid(_BOOLEAN_RE)
+            await categories()
+        elif forced == 'category':
+            await categories()
+        else:  # identifier, text: shapes only
+            out['patterns'] = await patterns()
     elif dtype in DATE_TYPES or (dtype in TEXT_TYPES and non_null and await share(_DATE_RE) >= 0.9):
         out['kind'] = 'date'
         await span('date')
@@ -135,16 +195,7 @@ async def _profile_column(
     elif dtype in TEXT_TYPES or dtype == 'boolean':
         if distinct <= MAX_CATEGORIES:
             out['kind'] = 'category' if dtype != 'boolean' else 'boolean'
-            found = await rows(
-                sql.SQL('select {c}, count(*) from {t}{w} group by {c} order by count(*) desc').format(
-                    c=col, t=tbl, w=_where(rows_of, sql.SQL('{} is not null').format(col))
-                )
-            )
-            shown = [(v, n) for v, n in found if n >= threshold and len(str(v)) <= 60]
-            out['values'] = [{'value': v, 'rows': n} for v, n in shown]
-            hidden = sum(n for _, n in found) - sum(n for _, n in shown)
-            if hidden:
-                out['other_rows'] = hidden  # rows whose value is rare (or long) and so not named
+            await categories()
         else:
             out['kind'] = 'text'
             out['patterns'] = await patterns()
@@ -164,6 +215,8 @@ def summary(profile: dict[str, Any]) -> str:
         shape_text = f' like {shape[0]["pattern"]}' if shape else ''
         what = 'personal data' if kind == 'personal' else 'an identifier'
         return f'{what}{shape_text}, {distinct} different values{tail}'
+    if profile.get('invalid'):
+        tail += f', {profile["invalid"]} values do not fit'
     if kind in ('date', 'number') and 'min' in profile:
         return f'{"dates" if kind == "date" else "numbers"} from {profile["min"]} to {profile["max"]}{tail}'
     if kind in ('category', 'boolean'):

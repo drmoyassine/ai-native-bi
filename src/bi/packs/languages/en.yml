@@ -5,8 +5,9 @@ letters: '[A-Za-z]'
 match: word # a word of the column name, not any part of it
 personal_words: [name, names, first, last, surname, family, email, e-mail, mail, phone, mobile, tel, whatsapp, contact, address,
   street, postcode, zip, dob, birth, birthdate, national, civil, citizen, citizenship, identity, cpr, ssn, nin, passport, iqama, visa,
-  residency, license, licence, iban, gender, sex, nationality, nat, religion, ethnicity, race, disability, medical, health, guardian,
-  parent]
+  residency, license, licence, iban, medical, health, guardian, parent]
+# Words that suggest a column describes a person without identifying them: counted, never shown alone (small numbers hidden).
+describing_words: [gender, sex, nationality, nat, religion, ethnicity, race, disability, age]
 total_words: [grand total, total] # a row starting with one of these is a total, not data
 identifier_words: [id, ids, identifier, key, number, 'no', code]
 fake_names: [Mariam, Yousif, Layla, Omar, Noor, Karim, Salma, Faisal, Dana, Tariq, Hessa, Rami, Aya, Zaid]

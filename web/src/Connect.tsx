@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   api,
   type ApiSettings,
+  type ColumnDecision,
+  type PersonalRole,
+  type ReviewColumn,
   type Reason,
   type Review,
   type Source,
@@ -613,10 +616,18 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
   const [choice, setChoice] = useState<Record<string, string | null>>({});
   const [headerRow, setHeaderRow] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [columns, setColumns] = useState<Record<string, ColumnDecision>>({});
+  const [rowKey, setRowKey] = useState<string[]>([]);
+
+  function start(r: Review) {
+    setReview(r);
+    setColumns(Object.fromEntries(r.columns.map((c) => [c.name, initialDecision(c)])));
+    setRowKey(r.row_key?.columns ?? []);
+  }
 
   useEffect(() => {
     void api.get<Review>(`/syncs/${syncId}/review`).then((r) => {
-      setReview(r);
+      start(r);
       setChoice(r.mapping ?? {});
       setHeaderRow(String(r.header.row ?? ''));
     });
@@ -646,6 +657,17 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
       onDone();
     } catch (err) {
       setError((err as Error).message);
+    }
+  }
+
+  async function saveColumns(): Promise<boolean> {
+    setError(null);
+    try {
+      start(await api.put<Review>(`/syncs/${syncId}/columns`, { columns: changedDecisions(review!, columns), row_key: rowKey }));
+      return true;
+    } catch (err) {
+      setError((err as Error).message);
+      return false;
     }
   }
 
@@ -688,28 +710,15 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
         onHeader={(row) => void act(`/syncs/${syncId}/header`, { row })}
       />
 
-      <h3>The columns</h3>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Column</th>
-              <th>What it holds</th>
-            </tr>
-          </thead>
-          <tbody>
-            {review.columns.map((c) => (
-              <tr key={c.name}>
-                <td>
-                  {c.header} {c.kind === 'personal' && <span className="badge personal">Personal data</span>}
-                </td>
-                <td className="hint">{c.summary}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="hint">Personal data is never shown as values; it is used only if you choose it below.</p>
+      <ColumnsEditor
+        review={review}
+        user={user}
+        draft={columns}
+        onDraft={setColumns}
+        rowKey={rowKey}
+        onRowKey={setRowKey}
+        onSave={() => void saveColumns()}
+      />
 
       {review.dataset && (
         <>
@@ -762,9 +771,10 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
           type="submit"
           disabled={missing.length > 0}
           onClick={() =>
-            void act(`/syncs/${syncId}/approve`, {
-              mapping: review.dataset ? choice : null,
-            })
+            void (async () => {
+              if (user.is_admin && !(await saveColumns())) return;
+              await act(`/syncs/${syncId}/approve`, { mapping: review.dataset ? choice : null });
+            })()
           }
         >
           {review.dataset ? 'Approve and build the analytics' : 'Approve the source'}
@@ -774,5 +784,184 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
       )}
       {missing.length > 0 && <span className="hint"> Still needed: {missing.map((p) => p.label).join(', ')}</span>}
     </div>
+  );
+}
+
+const KIND_LABELS: Record<string, string> = {
+  text: 'Text',
+  number: 'Number',
+  date: 'Date',
+  category: 'Category',
+  identifier: 'Identifier',
+  boolean: 'Yes / no',
+};
+
+function initialDecision(c: ReviewColumn): ColumnDecision {
+  const d = c.decision;
+  return {
+    personal: d?.personal ?? null,
+    reason: d?.reason ?? '',
+    keep: d ? d.keep : !c.suggest_leave_out,
+    kind: d?.kind ?? null,
+    label: d?.label ?? {},
+  };
+}
+
+/** The decisions that differ from what was detected, or were made before: what is sent to be saved. */
+function changedDecisions(review: Review, draft: Record<string, ColumnDecision>): Record<string, ColumnDecision> {
+  return Object.fromEntries(
+    review.columns
+      .filter((c) => {
+        const d = draft[c.name];
+        return d && (c.decision || d.personal || !d.keep || d.kind || d.label.en);
+      })
+      .map((c) => [c.name, draft[c.name]!]),
+  );
+}
+
+/** Column decisions at review (docs/connect-data-spec.md § 6.7): personal, keep, kind, a label, the row key. */
+function ColumnsEditor({
+  review,
+  user,
+  draft,
+  onDraft,
+  rowKey,
+  onRowKey,
+  onSave,
+}: {
+  review: Review;
+  user: User;
+  draft: Record<string, ColumnDecision>;
+  onDraft: (d: Record<string, ColumnDecision>) => void;
+  rowKey: string[];
+  onRowKey: (k: string[]) => void;
+  onSave: () => void;
+}) {
+  const edit = user.is_admin;
+  const set = (name: string, change: Partial<ColumnDecision>) => onDraft({ ...draft, [name]: { ...draft[name]!, ...change } });
+  const check = review.row_key?.check;
+  return (
+    <>
+      <h3>The columns</h3>
+      <p className="hint">
+        Decide what each column is before approving. A column left out never reaches the BI. Identifying data is never shown and never
+        becomes a breakdown; data that describes a person (such as gender) is only counted, with small numbers hidden.
+      </p>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>What it holds</th>
+              <th>Personal</th>
+              <th>Keep</th>
+              <th>Kind</th>
+              <th>Label</th>
+              <th title="The columns that identify a row">Key</th>
+            </tr>
+          </thead>
+          <tbody>
+            {review.columns.map((c) => {
+              const d = draft[c.name] ?? initialDecision(c);
+              const needsReason = c.detected_personal && (d.personal === 'none' || d.personal === 'describing');
+              return (
+                <tr key={c.name} className={d.keep ? '' : 'gone'}>
+                  <td>
+                    {c.header} {c.kind === 'personal' && <span className="badge personal">Personal data</span>}
+                    {c.suggest_leave_out && !d.keep && <div className="hint">Proposed: leave out (nothing needs it)</div>}
+                  </td>
+                  <td className="hint">{c.summary}</td>
+                  <td>
+                    <select
+                      disabled={!edit}
+                      aria-label={`Personal: ${c.header}`}
+                      value={d.personal ?? ''}
+                      onChange={(e) => set(c.name, { personal: (e.target.value || null) as PersonalRole | null })}
+                    >
+                      <option value="">
+                        {c.detected_personal
+                          ? 'As found: identifies a person'
+                          : c.detected_describing
+                            ? 'As found: describes a person'
+                            : 'As found: not personal'}
+                      </option>
+                      <option value="identifying">Identifies a person</option>
+                      <option value="describing">Describes a person</option>
+                      <option value="none">Not personal</option>
+                    </select>
+                    {needsReason && (
+                      <input
+                        disabled={!edit}
+                        aria-label={`Why: ${c.header}`}
+                        placeholder="Why? (kept with your name)"
+                        value={d.reason ?? ''}
+                        onChange={(e) => set(c.name, { reason: e.target.value })}
+                      />
+                    )}
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      disabled={!edit}
+                      aria-label={`Keep ${c.header}`}
+                      checked={d.keep}
+                      onChange={(e) => set(c.name, { keep: e.target.checked })}
+                    />
+                  </td>
+                  <td>
+                    <select
+                      disabled={!edit}
+                      aria-label={`Kind: ${c.header}`}
+                      value={d.kind ?? ''}
+                      onChange={(e) => set(c.name, { kind: e.target.value || null })}
+                    >
+                      <option value="">As found{c.kind && KIND_LABELS[c.kind] ? `: ${KIND_LABELS[c.kind]}` : ''}</option>
+                      {Object.entries(KIND_LABELS).map(([k, label]) => (
+                        <option key={k} value={k}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {c.invalid ? <div className="error">{c.invalid} values do not fit</div> : null}
+                  </td>
+                  <td>
+                    <input
+                      disabled={!edit}
+                      aria-label={`Label: ${c.header}`}
+                      placeholder={c.header}
+                      value={d.label.en ?? ''}
+                      onChange={(e) => set(c.name, { label: { ...d.label, en: e.target.value } })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      disabled={!edit || !d.keep}
+                      aria-label={`Row key: ${c.header}`}
+                      checked={rowKey.includes(c.name)}
+                      onChange={(e) => onRowKey(e.target.checked ? [...rowKey, c.name] : rowKey.filter((k) => k !== c.name))}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {check && (
+        <p className={check.empty || check.repeated ? 'error' : 'hint'}>
+          Row key ({rowKey.join(', ')}): {check.empty} rows with an empty part, {check.repeated} repeated rows
+          {check.empty || check.repeated ? ': it does not identify a row.' : ': every row is identified once.'}
+        </p>
+      )}
+      {edit && (
+        <p className="hint">
+          <button type="button" onClick={onSave}>
+            Save and check
+          </button>{' '}
+          Checks each chosen kind against the values and the row key against the rows. Approving saves them too.
+        </p>
+      )}
+    </>
   );
 }
