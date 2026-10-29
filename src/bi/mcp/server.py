@@ -114,6 +114,10 @@ def build_server(ctx: McpContext) -> tuple[MCPServer, Starlette]:
     async def list_metrics() -> dict[str, Any]:
         return await call('list_metrics', {}, tools.list_metrics)
 
+    @server.tool(name='search_knowledge', description=tools.search_knowledge.__doc__, annotations=READ_ONLY)
+    async def search_knowledge(query: str) -> dict[str, Any]:
+        return await call('search_knowledge', {'query': query}, lambda tc: tools.search_knowledge(tc, query))
+
     @server.tool(name='query_metric', description=tools.query_metric.__doc__, annotations=READ_ONLY)
     async def query_metric(query: ChartQuery) -> dict[str, Any]:
         return await call('query_metric', {'query': query.model_dump(mode='json', by_alias=True, exclude_defaults=True)},

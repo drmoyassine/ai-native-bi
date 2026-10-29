@@ -58,7 +58,9 @@ related_decisions:
     name: Raw keeps column names as written (duck_case)
     url: /DECISIONS.md#DEC-031
   - id: DEC-033
-    name: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+    name: >-
+      Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool
+      calls
     url: /DECISIONS.md#DEC-033
   - id: DEC-034
     name: The ontology is a reviewed file that replaces SHAPES
@@ -68,7 +70,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-035
 modified:
   by: agent/claude-code
-  at: '2026-10-28T10:45:37.606Z'
+  at: '2026-10-28T13:07:33.243Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -95,7 +97,7 @@ related_tasks:
     name: 'Connect data C5: the remaining sources'
     url: /TASKS.md#TASK-026
   - id: TASK-027
-    name: 'Context K1: knowledge store'
+    name: 'Context K1: metric knowledge in Cube'
     url: /TASKS.md#TASK-027
   - id: TASK-028
     name: 'Context K2: verified questions'

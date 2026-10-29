@@ -191,3 +191,21 @@ synonyms in the tools, `search_knowledge`), verified questions marked Trusted, b
 agent drafts, and an ontology file replacing `SHAPES`. `docs/setup-agent-spec.md` (stage B): masked samples under DEC-032 (masking by
 profile kind, rare categories hidden, logged and shown) and mapping proposals with reasons, as one structured call in the worker.
 Drafts for review.
+
+## 2026-10-28 — K1 revised: knowledge is part of the metric definition, in Cube
+
+The owner asked that K1 and metric definitions be the same thing, in Cube. Checked on a throwaway Cube 1.8: `/meta` returns nested `meta`
+(lists, Arabic text) for measures, dimensions and views. So titles, descriptions, explanations and synonyms (English and Arabic) live on
+each member, and the glossary and instructions in an `institution` view; no knowledge table or Knowledge page. The steward approves by
+approving the pull request; CI checks completeness and personal-data-looking text; a read-only Metrics page shows definition and meaning
+together. DEC-033, TASK-027 and `docs/context-spec.md` § 4 updated.
+
+## 2026-10-29 — K1 built: metric knowledge in Cube, and the AMS reads the same catalogue
+
+The Cube model now carries Arabic titles and descriptions on every member, and synonyms and an explanation on headcount. The
+`institution` view holds the glossary and instructions (a view must be public to appear in `/meta`; the BI filters it from the metric
+list). `list_metrics` returns the words, `search_knowledge` finds a metric or glossary term in either language (Arabic spelling variants
+and typos forgiven), the chat prompt carries the instructions and glossary, and a read-only Metrics page shows them. The hard-coded
+`METRICS` table is gone: a measure is answerable to the AMS when it declares `meta.metric`, with period, dimensions, as-of and lineage
+read from Cube. CI checks completeness and personal-data-looking text. `docs/ams-contract-proposals.md` § 7 drafts a request for a
+metrics catalogue route. TASK-027 completed; next in stage A: K2 verified questions (TASK-028).

@@ -60,28 +60,47 @@ class CubeClient:
             data: list[dict[str, Any]] = body.get('data', [])
             return data
 
-    async def meta(self) -> list[dict[str, Any]]:
-        """The governed members (public measures and dimensions of every cube): name, title, type, kind and description."""
+    async def cubes(self) -> list[dict[str, Any]]:
+        """Cube's `/meta` as it answers, with the members that are not public left out."""
         try:
             res = await self._client.get(f'{self._url}/meta', headers={'authorization': self._token()}, timeout=self._timeout_s)
         except httpx.HTTPError as e:
             raise CubeError(f'Cube could not be reached: {e}') from e
         if res.status_code != 200:
             raise CubeError(f'Cube answered {res.status_code}: {res.text[:200]}')
+        cubes: list[dict[str, Any]] = res.json().get('cubes', [])
+        return [
+            {**cube, **{k: [m for m in cube.get(k, []) if m.get('public', m.get('isVisible', True))] for k in ('measures', 'dimensions')}}
+            for cube in cubes
+        ]
+
+    async def meta(self) -> list[dict[str, Any]]:
+        """The governed members (public measures and dimensions of every cube): name, title, type, kind, description and the model's `meta`
+        (Arabic words, synonyms, explanation: docs/context-spec.md section 4)."""
         members: list[dict[str, Any]] = []
-        for cube in res.json().get('cubes', []):
+        for cube in await self.cubes():
+            if cube.get('type') == 'view':
+                continue  # views carry words for agents (institution), not metrics
             for kind in ('measures', 'dimensions'):
                 for m in cube.get(kind, []):
-                    if m.get('public', m.get('isVisible', True)):
-                        members.append(
-                            {
-                                'name': m['name'],
-                                'title': m.get('shortTitle') or m.get('title') or m['name'],  # 'Headcount', not 'Enrollment Headcount'
-                                'type': m.get('type'),
-                                'agg_type': m.get('aggType'),
-                                'kind': kind[:-1],
-                                'description': m.get('description'),
-                                'cube': cube.get('title') or cube['name'],
-                            }
-                        )
+                    members.append(
+                        {
+                            'name': m['name'],
+                            'title': m.get('shortTitle') or m.get('title') or m['name'],  # 'Headcount', not 'Enrollment Headcount'
+                            'type': m.get('type'),
+                            'agg_type': m.get('aggType'),
+                            'kind': kind[:-1],
+                            'description': m.get('description'),
+                            'cube': cube.get('title') or cube['name'],
+                            'meta': m.get('meta') or {},
+                        }
+                    )
         return members
+
+    async def institution(self) -> dict[str, Any]:
+        """The `institution` view's glossary and instructions (docs/context-spec.md section 4); empty when the model has none."""
+        for cube in await self.cubes():
+            if cube.get('name') == 'institution' and cube.get('type') == 'view':
+                meta = cube.get('meta') or {}
+                return {'glossary': list(meta.get('glossary') or []), 'instructions': list(meta.get('instructions') or [])}
+        return {'glossary': [], 'instructions': []}

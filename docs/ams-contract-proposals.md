@@ -59,3 +59,14 @@ yet); the institution's SSO is federated through the AMS. Built on the BI side a
 Not a request: the AMS revised the rule. When both run together they share **one PostgreSQL database**: the AMS in `ams` (and
 `pgboss`), the BI in schemas of its own (its tables in `bi`, its job queue in its own schema) and `public` for its analytic data.
 The BI today uses its own database with its tables in `public`; moving to this layout is TASK-021.
+
+## 7. A catalogue of the metrics the BI exposes (new request)
+
+**Need.** An AMS evidence item names a metric (`query.metric`) the BI must know. Today a person types the name from outside; nothing tells
+the AMS which metrics exist, what each is called, or which dimensions and filters it accepts. The BI now reads this from its Cube model
+(`meta.metric`; `docs/context-spec.md` section 4), so it can publish the list.
+
+Proposal: a read route, `GET {BI_BASE_URL}/ams/metrics` (same bearer key as `/ams/collect`), answering
+`{ metrics: [{ name, title, titleAr?, description, dimensions: string[], period: 'term' | ..., asOf?: string }] }`. The AMS offers the list
+when an administrator sets up a governed-metric evidence item and validates `query.metric` and `dimensions` against it. The BI sends no
+data from the route, only definitions.

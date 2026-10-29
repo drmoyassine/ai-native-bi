@@ -76,9 +76,9 @@ approves what an agent builds; agent code runs in a sandbox.
 
 ### Stage A: Context and trust (the foundation)
 
-1. **Knowledge store**, edited on a "Knowledge" page and read by every agent and by MCP: dataset and column descriptions, synonyms in
-   English and Arabic ("headcount", "عدد الطلاب"), the institution's glossary (terms, programs, colleges), and instructions ("a term
-   code's first four digits are the academic year").
+1. **Metric knowledge, in the Cube model** (the same record as the definition), read by every agent and by MCP: titles, descriptions
+   and explanations, synonyms in English and Arabic ("headcount", "عدد الطلاب"), and, in an institution view, the glossary and
+   instructions ("a term code's first four digits are the academic year"). A read-only Metrics page shows definition and meaning together.
 2. **Verified questions**: a question with its governed query, approved by a steward. An answer that uses one is marked *Trusted*,
    as Genie and Power BI do.
 3. **Benchmarks**: a set of questions with expected answers, run against the chat agent on every change and every model switch; a
@@ -135,7 +135,7 @@ approves what an agent builds; agent code runs in a sandbox.
 
 Start with **Stage A (1 to 3) together with B1**. These are small, visible and the base for everything else:
 
-- the knowledge store and verified questions make the chat's answers more correct and mark trusted ones;
+- metric knowledge in Cube and verified questions make the chat's answers more correct and mark trusted ones;
 - benchmarks tell us whether each change (and each model) helps;
 - mapping proposals fix the weakness you just saw in Connect data.
 

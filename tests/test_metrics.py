@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from bi.contract import CollectRequest
-from bi.metrics import METRICS, CubeMetricSource, cube_query
+from bi.metrics import CubeMetricSource, cube_query, metrics_from_cubes
 from bi.sources import CannotAnswer
 
 COLUMNS: list[dict[str, Any]] = [
@@ -28,10 +28,30 @@ def request(query: dict[str, Any] | None = None, columns: list[dict[str, Any]] |
     )
 
 
+def member(name: str, **extra: Any) -> dict[str, Any]:
+    return {'name': f'enrollment.{name}', 'public': True, **extra}
+
+
+CUBES: list[dict[str, Any]] = [
+    {
+        'name': 'enrollment',
+        'type': 'cube',
+        'meta': {'steward': 'registrar', 'definition_version': 1, 'model': 'analytics.enrollment', 'ar': {'title': 'x'}},
+        'measures': [member('headcount', meta={'metric': 'enrollment_headcount'}), member('as_of')],
+        'dimensions': [member(d, type='string') for d in ('program', 'level', 'status', 'term_code', 'term_label')]
+        + [member('term_start', type='time')],
+    }
+]
+METRICS = metrics_from_cubes(CUBES)
+
+
 class FakeCube:
     def __init__(self, data: list[dict[str, Any]]) -> None:
         self.data = data
         self.queries: list[dict[str, Any]] = []
+
+    async def cubes(self) -> list[dict[str, Any]]:
+        return CUBES
 
     async def load(self, query: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         self.queries.append(query | {'fresh': fresh})
@@ -109,7 +129,26 @@ async def test_says_why_it_cannot_answer_a_shape_it_does_not_have(
     assert cube.queries == []
 
 
-def test_answers_only_the_metrics_it_knows() -> None:
+async def test_answers_only_the_metrics_it_knows() -> None:
     src, _ = source([])
-    assert src.can_answer(request())
-    assert not src.can_answer(request({'metric': 'graduation_rate'}))
+    assert await src.can_answer(request())
+    assert not await src.can_answer(request({'metric': 'graduation_rate'}))
+
+
+def test_the_model_decides_which_measures_the_ams_may_ask_for() -> None:
+    assert set(METRICS) == {'enrollment_headcount'}
+    m = METRICS['enrollment_headcount']
+    assert (m.cube, m.measure, m.period, m.as_of) == ('enrollment', 'headcount', 'term_start', 'as_of')
+    assert m.dimensions == {'program', 'level', 'status', 'term_code', 'term_label'}
+    assert m.lineage == {'model': 'analytics.enrollment', 'steward': 'registrar', 'definition_version': 1}
+
+
+def test_a_measure_without_a_declared_name_period_or_as_of_is_not_exposed() -> None:
+    plain = [{**CUBES[0], 'measures': [member('headcount'), member('as_of')]}]
+    assert metrics_from_cubes(plain) == {}
+    two_times = [{**CUBES[0], 'dimensions': CUBES[0]['dimensions'] + [member('census', type='time')]}]
+    assert metrics_from_cubes(two_times) == {}  # which time dimension the period applies to is not said
+    chosen = [{**two_times[0], 'measures': [member('headcount', meta={'metric': 'h', 'period': 'census'}), member('as_of')]}]
+    assert metrics_from_cubes(chosen)['h'].period == 'census'
+    no_as_of = [{**CUBES[0], 'measures': [member('headcount', meta={'metric': 'h'})]}]
+    assert metrics_from_cubes(no_as_of) == {}

@@ -38,6 +38,9 @@ class FakeCube:
     async def meta(self) -> list[dict[str, Any]]:
         return MEMBERS
 
+    async def institution(self) -> dict[str, Any]:
+        return {'glossary': [], 'instructions': ['Term codes are year plus 10 for fall.']}
+
     async def load(self, query: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         self.queries.append(query)
         if self.fail:
@@ -307,3 +310,12 @@ async def test_accounts_refuse_weak_passwords_duplicates_and_disabled_users(pool
         await conn.execute('update app_user set disabled_at = now() where id = %s', [user.id])
     assert await accounts.session_user(pool, signed[1]) is None
     assert await accounts.sign_in(pool, 'gone@example.edu', PASSWORD) is None
+
+
+async def test_the_metrics_page_reads_the_models_words(app: tuple[httpx.AsyncClient, list[str], FakeCube]) -> None:
+    client, _, _ = app
+    await signed_in(client)
+    page = (await client.get('/app/api/knowledge')).json()
+    assert [m['name'] for m in page['members']] == [m['name'] for m in MEMBERS]
+    assert page['instructions'] == ['Term codes are year plus 10 for fall.']
+    assert (await client.get('/app/api/knowledge', params={'q': 'zzzz'})).json()['members'] == []

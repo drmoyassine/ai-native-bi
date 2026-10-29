@@ -50,6 +50,10 @@ async def list_metrics(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
     return await tools.list_metrics(context(ctx.deps))
 
 
+async def search_knowledge(ctx: RunContext[AgentDeps], query: str) -> dict[str, Any]:
+    return await tools.search_knowledge(context(ctx.deps), query)
+
+
 async def query_metric(ctx: RunContext[AgentDeps], query: ChartQuery) -> dict[str, Any]:
     return await tools.query_metric(context(ctx.deps), query)
 
@@ -70,6 +74,7 @@ async def describe_dataset(ctx: RunContext[AgentDeps], dataset: str) -> dict[str
 # The model reads the shared docstrings; set them before registering, which is when Pydantic AI reads them.
 for wrapper, shared in (
     (list_metrics, tools.list_metrics),
+    (search_knowledge, tools.search_knowledge),
     (query_metric, tools.query_metric),
     (propose_chart, tools.save_chart),
     (list_datasets, tools.list_datasets),

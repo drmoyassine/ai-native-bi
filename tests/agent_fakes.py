@@ -84,6 +84,9 @@ class FakeCube:
         self.queries: list[dict[str, Any]] = []
         self.fail: Exception | None = None
 
+    async def institution(self) -> dict[str, Any]:
+        return {'glossary': [], 'instructions': ['Term codes are year plus 10 for fall.']}
+
     async def meta(self) -> list[dict[str, Any]]:
         return MEMBERS
 

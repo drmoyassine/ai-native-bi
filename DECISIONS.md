@@ -1506,26 +1506,33 @@ modified:
 
 ---
 
-## DEC-033 — One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+## DEC-033 — Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool calls
 
 ---
-title: One knowledge store, verified questions marked Trusted, benchmarks scored from tool calls
+title: >-
+  Knowledge is part of the metric definition in Cube; verified questions marked Trusted; benchmarks scored from tool
+  calls
 status: accepted
 context: >-
   The leading platforms found that agents answer well from curated context and that accuracy has to be measured
   (docs/agentic-benchmark.md, docs/context-spec.md).
 decision: >-
-  Knowledge entries (descriptions, synonyms, glossary, instructions; English and Arabic) are written by people, approved
-  by a BI admin and never edited in place. Every agent reads them through the shared tools: approved instructions and
-  the glossary are frozen into the prompt within a budget (2,000 tokens), descriptions and synonyms come with
-  list_metrics and describe_dataset, and search_knowledge finds the rest. A verified question is a governed query (a
-  chart definition's) with parameters, approved by a person; an answer built from one is marked Trusted. Benchmarks are
-  the institution's questions with expected outcomes, scored from the tool calls (numbers, refusals, privacy probes),
-  not by a judging model; scores show on the Models page. Benchmarks run on live governed data by default.
-rationale: One store serves the chat and MCP alike; checking tool calls makes scores repeatable and cheap.
+  Knowledge and metric definitions are the same record in the Cube model: a member's title, description and explanation
+  in English and Arabic, its synonyms (members' meta), and, in an institution view, the glossary and instructions. There
+  is no second store. The steward's approval of the pull request that changes the model is the approval. Agents read it
+  through the shared tools (list_metrics, search_knowledge over Cube's /meta; instructions and glossary frozen into the
+  prompt within a budget of 2,000 tokens), and a read-only Metrics page shows definition and meaning together. CI checks
+  that every public member has its words and that no text looks like personal data. A verified question is a governed
+  query (a chart definition's) with parameters, approved by a person; an answer built from one is marked Trusted.
+  Benchmarks are the institution's questions with expected outcomes, scored from the tool calls (numbers, refusals,
+  privacy probes), not by a judging model; scores show on the Models page. Benchmarks run on live governed data by
+  default.
+rationale: >-
+  One record to review and one place to read (DEC-004); Cube's /meta already carries nested meta, Arabic included
+  (checked on Cube 1.8). Checking tool calls makes benchmark scores repeatable and cheap.
 consequences: >-
-  A Knowledge page, new tables, a runner job. Knowledge text goes to the model, so it is checked for personal data
-  before saving.
+  No Knowledge page or table; a Metrics page and a completeness test instead. Editing in the app (a pull request opened
+  for the steward) comes later.
 tags:
   - agent
   - knowledge
@@ -1541,10 +1548,10 @@ related_roadmap_items:
     url: /ROADMAP.md#ROADMAP-003
 modified:
   by: agent/claude-code
-  at: '2026-10-28T10:45:34.964Z'
+  at: '2026-10-28T13:07:33.243Z'
 related_tasks:
   - id: TASK-027
-    name: 'Context K1: knowledge store'
+    name: 'Context K1: metric knowledge in Cube'
     url: /TASKS.md#TASK-027
   - id: TASK-028
     name: 'Context K2: verified questions'
