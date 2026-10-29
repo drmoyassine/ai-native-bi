@@ -37,7 +37,7 @@ class AgentContext:
     http: httpx.AsyncClient
     enqueue_turn: Callable[[str, str], Awaitable[None]]
     """(run_id, conversation_id): queues the turn; one at a time per conversation."""
-    institution_monthly_tokens: int = 100_000_000
+    organization_monthly_tokens: int = 100_000_000
     person_monthly_tokens: int = 10_000_000
     suppression_threshold: int = 5
     build_model: Callable[[str, str, str | None, str | None], Model] = field(default=providers.build_model)
@@ -97,7 +97,7 @@ async def tokens_used(pool: AsyncConnectionPool, owner_id: str | None = None) ->
             )
         ).fetchone()
         setup = 0
-        if owner_id is None:  # the setup agent's calls (Connect data) belong to the institution, not to a person
+        if owner_id is None:  # the setup agent's calls (Connect data) belong to the organization, not to a person
             found = await (
                 await conn.execute(
                     'select coalesce(sum(input_tokens + output_tokens), 0) from setup_run where created_at >= %s', [month_start()]
@@ -231,7 +231,7 @@ def create_agent_router(ctx: AgentContext, current_user: Callable[..., Awaitable
             raise HTTPException(409, 'the assistant is still answering: wait for it, or stop it')
         for who, used, cap in (
             ('you', await tokens_used(ctx.pool, user.id), ctx.person_monthly_tokens),
-            ('the institution', await tokens_used(ctx.pool), ctx.institution_monthly_tokens),
+            ('the organization', await tokens_used(ctx.pool), ctx.organization_monthly_tokens),
         ):
             if used >= cap:
                 raise HTTPException(429, f'the monthly token budget of {who} is used up ({used:,} of {cap:,}); an admin can raise it')
@@ -300,7 +300,7 @@ def create_agent_router(ctx: AgentContext, current_user: Callable[..., Awaitable
     async def usage(user: Signed) -> dict[str, Any]:
         return {
             'person': {'used': await tokens_used(ctx.pool, user.id), 'cap': ctx.person_monthly_tokens},
-            'institution': {'used': await tokens_used(ctx.pool), 'cap': ctx.institution_monthly_tokens},
+            'organization': {'used': await tokens_used(ctx.pool), 'cap': ctx.organization_monthly_tokens},
             'month_start': month_start().date().isoformat(),
         }
 

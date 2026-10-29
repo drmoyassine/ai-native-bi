@@ -64,12 +64,12 @@ def create_connect_router(
         return {
             'sources': await store.list_sources(pool),
             'types': TYPES,
-            'datasets': [{'name': d, 'label': d.replace('_', ' ').capitalize()} for d in mapping.datasets()],
+            'datasets': [{'name': d, 'label': mapping.dataset_label(d)} for d in await mapping.installed_datasets(pool)],
         }
 
     @router.post('/sources', status_code=201)
     async def create(body: NewSource, user: Signed) -> dict[str, str]:
-        if body.dataset is not None and body.dataset not in mapping.datasets():
+        if body.dataset is not None and body.dataset not in await mapping.installed_datasets(pool):
             raise HTTPException(422, f'unknown dataset "{body.dataset}"')
         try:
             id = await store.create_source(pool, name=body.name, type=body.type, dataset=body.dataset, owner=user.id)

@@ -170,15 +170,15 @@ async def test_before_anything_is_loaded_the_real_cube_means_no_data_not_failure
             await conn.execute('alter table analytics.enrollment_hidden rename to enrollment')
 
 
-async def test_the_model_carries_the_institutions_words(cube_env: tuple[str, str]) -> None:
-    """The Arabic words, synonyms and the institution view come through Cube's /meta; search finds the metric by an Arabic synonym."""
+async def test_the_model_carries_the_organizations_words(cube_env: tuple[str, str]) -> None:
+    """Words in other languages, synonyms and the glossary view come through Cube's /meta; search finds the metric by an Arabic synonym."""
     from bi import knowledge
 
     async with httpx.AsyncClient() as http:
         cube = CubeClient(http, *cube_env)
         members = await cube.meta()
-        institution = await cube.institution()
-    assert all(m['cube'] != 'Institution' for m in members)  # the view carries words, not metrics
-    assert institution['instructions'] and any(g['term'] == 'Census date' for g in institution['glossary'])
-    found = knowledge.search(members, institution, 'عدد المسجلين')
+        words = await cube.words()
+    assert all(m['cube'] != 'Organization' for m in members)  # the view carries words, not metrics
+    assert words['instructions'] and any(g['term']['en'] == 'Census date' for g in words['glossary'])
+    found = knowledge.search(members, words, 'عدد المسجلين')
     assert found['members'][0]['name'] == 'enrollment.headcount'

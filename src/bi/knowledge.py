@@ -1,4 +1,4 @@
-"""Finding a metric by the institution's own words: titles, descriptions, synonyms and explanations in English and Arabic, and the
+"""Finding a metric by the organization's own words: titles, descriptions, synonyms and explanations in each of its languages, and the
 glossary (docs/context-spec.md section 4). It reads what Cube's `/meta` returns, so it never disagrees with the model."""
 
 from __future__ import annotations
@@ -8,15 +8,15 @@ import re
 import unicodedata
 from typing import Any
 
-_ARABIC_MARKS = re.compile('[\u0610-\u061a\u064b-\u065f\u0670\u0640]')  # diacritics and tatweel
-_ALEF = str.maketrans({'\u0623': '\u0627', '\u0625': '\u0627', '\u0622': '\u0627', '\u0649': '\u064a', '\u0629': '\u0647'})
+from . import packs
+
 _WORD = re.compile(r'\w+')
 MAX_RESULTS = 8
 
 
 def normalise(text: str) -> str:
-    """Lower case, no Arabic marks, one spelling of alef, yeh and teh marbuta."""
-    return _ARABIC_MARKS.sub('', unicodedata.normalize('NFKC', text).casefold()).translate(_ALEF)
+    """Lower case, by Unicode's rules for any script, then folded by the language packs (marks, letter variants)."""
+    return packs.fold(unicodedata.normalize('NFKC', text).casefold())
 
 
 def words(text: str) -> list[str]:
@@ -36,12 +36,13 @@ def _texts(value: Any) -> list[str]:
 def entry_texts(member: dict[str, Any]) -> list[tuple[str, float]]:
     """The words of a member with how much each counts: a title or synonym is worth more than an explanation."""
     meta = member.get('meta') or {}
-    ar = meta.get('ar') or {}
+    translations = (meta.get('translations') or {}).values()  # {language code: {title, description}}
     out: list[tuple[str, float]] = []
-    for text in (member.get('title'), ar.get('title')):
+    for text in [member.get('title'), *(t.get('title') for t in translations)]:
         out += [(t, 3.0) for t in _texts(text)]
     out += [(t, 3.0) for t in _texts(meta.get('synonyms'))]
-    out += [(t, 1.0) for t in _texts(member.get('description')) + _texts(ar.get('description')) + _texts(meta.get('knowledge'))]
+    descriptions = [member.get('description'), *(t.get('description') for t in translations), meta.get('knowledge')]
+    out += [(t, 1.0) for d in descriptions for t in _texts(d)]
     return out
 
 
@@ -69,19 +70,17 @@ def score(query: str, texts: list[tuple[str, float]]) -> float:
     return best
 
 
-def search(members: list[dict[str, Any]], institution: dict[str, Any], query: str) -> dict[str, Any]:
-    """Members and glossary terms matching the query, best first, in either language."""
+def search(members: list[dict[str, Any]], words_of: dict[str, Any], query: str) -> dict[str, Any]:
+    """Members and glossary terms matching the query, best first, in any of the organization's languages. A glossary entry is
+    {term: {language code: text}, meaning: {language code: text}}."""
     found: list[tuple[float, dict[str, Any]]] = []
     for m in members:
         s = score(query, entry_texts(m))
         if s > 0:
             found.append((s, brief(m)))
     terms: list[tuple[float, dict[str, Any]]] = []
-    for g in institution.get('glossary', []):
-        s = score(
-            query,
-            [(str(g.get('term', '')), 3.0), (str(g.get('ar', '')), 3.0), (str(g.get('en', '')), 1.0), (str(g.get('ar_meaning', '')), 1.0)],
-        )
+    for g in words_of.get('glossary', []):
+        s = score(query, [(t, 3.0) for t in _texts(g.get('term'))] + [(t, 1.0) for t in _texts(g.get('meaning'))])
         if s > 0:
             terms.append((s, g))
     found.sort(key=lambda x: -x[0])
@@ -90,12 +89,11 @@ def search(members: list[dict[str, Any]], institution: dict[str, Any], query: st
 
 
 def brief(member: dict[str, Any]) -> dict[str, Any]:
-    """What an agent or a person reads about one member: its words in both languages."""
+    """What an agent or a person reads about one member: its words in each language."""
     meta = member.get('meta') or {}
-    ar = meta.get('ar') or {}
     out: dict[str, Any] = {k: member[k] for k in ('name', 'title', 'kind', 'description', 'cube') if member.get(k) is not None}
-    if ar:
-        out['ar'] = ar
+    if meta.get('translations'):
+        out['translations'] = meta['translations']
     if meta.get('synonyms'):
         out['synonyms'] = meta['synonyms']
     if meta.get('knowledge'):
@@ -105,13 +103,17 @@ def brief(member: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def prompt_text(institution: dict[str, Any], budget_chars: int = 8000) -> str:
+def _glossary_line(entry: dict[str, Any]) -> str:
+    term, meaning = entry.get('term'), entry.get('meaning')
+    terms = ' / '.join(_texts(term))
+    return f'- {terms}: {" / ".join(_texts(meaning))}'
+
+
+def prompt_text(words_of: dict[str, Any], budget_chars: int = 8000) -> str:
     """The glossary and instructions as a block for the agent's instructions, within a budget (about 2,000 tokens)."""
     lines: list[str] = []
-    if institution.get('instructions'):
-        lines += ["The institution's instructions:"] + [f'- {i}' for i in institution['instructions']]
-    if institution.get('glossary'):
-        lines += ["The institution's glossary:"] + [
-            f'- {g.get("term")} ({g.get("ar", "")}): {g.get("en", "")}' for g in institution['glossary']
-        ]
+    if words_of.get('instructions'):
+        lines += ["The organization's instructions:"] + [f'- {i}' for i in words_of['instructions']]
+    if words_of.get('glossary'):
+        lines += ["The organization's glossary:"] + [_glossary_line(g) for g in words_of['glossary']]
     return '\n'.join(lines)[:budget_chars]

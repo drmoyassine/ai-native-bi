@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { api, type Me, type Organization } from './api';
+import { useEffect, useState, type FormEvent } from 'react';
+import { api, type Me, type Organization, type Template } from './api';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -16,6 +16,13 @@ export function Settings({ me, languages, onSaved }: { me: Me; languages: Langua
   const [draft, setDraft] = useState<Organization>(org);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  useEffect(() => {
+    api
+      .get<{ templates: Template[] }>('/templates')
+      .then((r) => setTemplates(r.templates))
+      .catch(() => undefined);
+  }, []);
   const secondary = languages.find((l) => l.code === draft.secondary_language);
   const accentProblem = draft.accent_color && !isReadableAccent(draft.accent_color);
 
@@ -34,6 +41,7 @@ export function Settings({ me, languages, onSaved }: { me: Me; languages: Langua
         secondary_language: draft.secondary_language,
         default_locale: draft.secondary_language ? draft.default_locale : PRIMARY_LANGUAGE,
         accent_color: draft.accent_color,
+        installed_templates: draft.installed_templates,
       });
       setSaved(true);
       onSaved();
@@ -123,6 +131,34 @@ export function Settings({ me, languages, onSaved }: { me: Me; languages: Langua
               <span className="mt-1 block text-muted-foreground">{t('settings.accentHint')}</span>
               {accentProblem && <span className="mt-1 block text-[var(--error)]">{t('settings.accentUnreadable')}</span>}
             </div>
+            <fieldset className="border-0 p-0 text-sm">
+              <legend className="mb-1">{t('settings.templates')}</legend>
+              <span className="mb-2 block text-muted-foreground">{t('settings.templatesHint')}</span>
+              {templates.length === 0 && <span className="block text-muted-foreground">{t('settings.templatesNone')}</span>}
+              {templates.map((tpl) => (
+                <label key={tpl.name} className="flex items-start gap-2 py-1">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={draft.installed_templates.includes(tpl.name)}
+                    onChange={(e) =>
+                      set(
+                        'installed_templates',
+                        e.target.checked
+                          ? [...draft.installed_templates, tpl.name]
+                          : draft.installed_templates.filter((n) => n !== tpl.name),
+                      )
+                    }
+                  />
+                  <span>
+                    <span className="font-medium">{tpl.label[me.locale] ?? tpl.label.en ?? tpl.name}</span>
+                    <span className="block text-muted-foreground">
+                      {tpl.datasets.map((d) => d.label[me.locale] ?? d.label.en ?? d.name).join(', ')}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
           </fieldset>
           {error && <p className="text-sm text-[var(--error)]">{error}</p>}
           {saved && <p className="text-sm text-[var(--ok)]">{t('settings.saved')}</p>}

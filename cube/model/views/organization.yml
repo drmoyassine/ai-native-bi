@@ -1,0 +1,24 @@
+# The organization's own words for agents (docs/context-spec.md section 4): the glossary and the instructions every agent reads.
+# Part of the higher-education template's content (DEC-037); moves into it with data model M0b.
+views:
+  - name: organization
+    title: Organization
+    description: How this organization speaks about its data. Holds the glossary and the instructions agents follow; exposes no metric of its own.
+    cubes:
+      - join_path: enrollment
+        includes:
+          - term_code
+    meta:
+      glossary:
+        - term: {en: Census date, ar: تاريخ الإحصاء}
+          meaning:
+            en: The day a term's roster is frozen for reporting; students who withdraw before it are not counted.
+            ar: اليوم الذي يُجمَّد فيه كشف الفصل للتقارير؛ لا يُحتسب الطلاب المنسحبون قبله.
+        - term: {en: Term code, ar: رمز الفصل}
+          meaning:
+            en: Six digits, year plus 10 for fall, 20 for spring, 30 for summer (202610 is Fall 2026).
+            ar: ستة أرقام، السنة ثم 10 للخريف و20 للربيع و30 للصيف (202610 هو خريف 2026).
+      instructions:
+        - Term codes are the year plus 10 for fall, 20 for spring and 30 for summer.
+        - Answer in the language the person asked in; each member's words in other languages are in its meta.translations.
+        - Never state a number that did not come from a tool.

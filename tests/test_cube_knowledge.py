@@ -25,6 +25,20 @@ CUBES = load('cubes')
 MEMBERS = [(c, m) for c in CUBES for k in ('measures', 'dimensions') for m in c.get(k, []) if m.get('public', True)]
 
 
+def _translated(meta: dict[str, Any] | None) -> set[str]:
+    return set((meta or {}).get('translations') or {})
+
+
+# The languages the model is written in: English (the primary language, DEC-038) and every language any of its words use. No language
+# is named here (DEC-037); a model that uses one must use it everywhere.
+LANGUAGES = (
+    {'en'}
+    | {code for c in CUBES for code in _translated(c.get('meta'))}
+    | {code for _, m in MEMBERS for code in _translated(m.get('meta'))}
+)
+OTHER = LANGUAGES - {'en'}
+
+
 def texts(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value]
@@ -33,24 +47,27 @@ def texts(value: Any) -> list[str]:
 
 
 @pytest.mark.parametrize('cube', CUBES, ids=lambda c: c['name'])
-def test_every_cube_has_a_steward_a_version_and_an_arabic_title(cube: dict[str, Any]) -> None:
+def test_every_cube_has_a_steward_a_version_and_a_title_in_each_language(cube: dict[str, Any]) -> None:
     meta = cube.get('meta', {})
     assert meta.get('steward') and meta.get('definition_version'), f'{cube["name"]}: steward and definition_version'
-    assert (meta.get('ar') or {}).get('title'), f'{cube["name"]}: meta.ar.title'
+    for code in OTHER:
+        assert ((meta.get('translations') or {}).get(code) or {}).get('title'), f'{cube["name"]}: meta.translations.{code}.title'
 
 
 @pytest.mark.parametrize(('cube', 'member'), MEMBERS, ids=lambda x: x['name'])
-def test_every_public_member_has_a_description_and_an_arabic_title(cube: dict[str, Any], member: dict[str, Any]) -> None:
+def test_every_public_member_has_a_description_and_a_title_in_each_language(cube: dict[str, Any], member: dict[str, Any]) -> None:
     where = f'{cube["name"]}.{member["name"]}'
     assert member.get('title') and member.get('description'), f'{where}: title and description'
-    assert (member.get('meta', {}).get('ar') or {}).get('title'), f'{where}: meta.ar.title'
+    for code in OTHER:
+        assert (((member.get('meta') or {}).get('translations') or {}).get(code) or {}).get('title'), f'{where}: translations.{code}'
 
 
 @pytest.mark.parametrize(('cube', 'member'), [(c, m) for c, m in MEMBERS if (m.get('meta') or {}).get('metric')], ids=lambda x: x['name'])
 def test_a_metric_exposed_to_the_ams_has_synonyms_and_an_explanation(cube: dict[str, Any], member: dict[str, Any]) -> None:
     meta = member['meta']
-    assert meta.get('synonyms', {}).get('en') and meta.get('synonyms', {}).get('ar'), 'synonyms in both languages'
-    assert meta.get('knowledge', {}).get('en') and meta.get('knowledge', {}).get('ar'), 'an explanation in both languages'
+    for code in LANGUAGES:
+        assert meta.get('synonyms', {}).get(code), f'synonyms in {code}'
+        assert meta.get('knowledge', {}).get(code), f'an explanation in {code}'
 
 
 def test_the_words_hold_nothing_that_looks_personal() -> None:
@@ -58,7 +75,7 @@ def test_the_words_hold_nothing_that_looks_personal() -> None:
     assert [t for t in every if PERSONAL.search(t)] == []
 
 
-def test_the_institution_view_fits_the_prompt_budget() -> None:
-    meta = next(v for v in load('views') if v['name'] == 'institution')['meta']
-    assert meta['instructions'] and meta['glossary']
-    assert sum(len(t) for t in texts([meta['instructions'], meta['glossary']])) < GLOSSARY_CHARS
+def test_the_glossary_and_instructions_fit_the_prompt_budget() -> None:
+    metas = [v.get('meta') or {} for v in load('views')]
+    words = [[m.get('instructions'), m.get('glossary')] for m in metas]
+    assert sum(len(t) for t in texts(words)) < GLOSSARY_CHARS

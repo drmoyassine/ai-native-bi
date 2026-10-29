@@ -339,9 +339,9 @@ async def test_the_monthly_budgets_stop_a_message(rig: Rig) -> None:
     rig.ctx.person_monthly_tokens = 1
     refused = await rig.user.post(f'/app/api/conversations/{cid}/messages', json={'text': 'again'}, headers=APP)
     assert refused.status_code == 429 and 'budget of you' in refused.json()['detail']
-    rig.ctx.person_monthly_tokens, rig.ctx.institution_monthly_tokens = 10_000_000, 1
+    rig.ctx.person_monthly_tokens, rig.ctx.organization_monthly_tokens = 10_000_000, 1
     assert (
-        'budget of the institution'
+        'budget of the organization'
         in (await rig.user.post(f'/app/api/conversations/{cid}/messages', json={'text': 'again'}, headers=APP)).json()['detail']
     )
 

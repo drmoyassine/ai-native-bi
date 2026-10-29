@@ -47,7 +47,7 @@ def _cube(ctx: ToolContext) -> CubeClient:
 
 
 async def list_metrics(ctx: ToolContext) -> dict[str, Any]:
-    """List the governed measures and dimensions the institution defines (name, title, type, description).
+    """List the governed measures and dimensions the organization defines (name, title, type, description).
     Call this first for any question about numbers, and before querying or charting, to learn what exists and what each is called."""
     try:
         members = await _cube(ctx).meta()
@@ -57,12 +57,12 @@ async def list_metrics(ctx: ToolContext) -> dict[str, Any]:
 
 
 async def search_knowledge(ctx: ToolContext, query: str) -> dict[str, Any]:
-    """Find governed metrics and glossary terms by the institution's own words, in English or Arabic: names, synonyms, descriptions
+    """Find governed metrics and glossary terms by the organization's own words, in any of its languages: names, synonyms, descriptions
     and explanations of what a metric counts. Call this when a question uses a word you do not see
     in list_metrics, or to explain a metric."""
     cube = _cube(ctx)
     try:
-        return knowledge.search(await cube.meta(), await cube.institution(), query)
+        return knowledge.search(await cube.meta(), await cube.words(), query)
     except CubeError as e:
         return {'error': str(e)}
 

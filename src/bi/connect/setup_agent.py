@@ -25,16 +25,16 @@ from .files import DRAFT
 
 Confidence = Literal['high', 'medium', 'low']
 USAGE = UsageLimits(request_limit=4, output_tokens_limit=8_000)
-INSTRUCTIONS = """You help set up an institution's data. A file or table has been found; its columns must be matched to the parts \
+INSTRUCTIONS = """You help set up an organization's data. A file or table has been found; its columns must be matched to the parts \
 of a dataset. Reply only with the structured result.
 
 Rules:
 - For each part, choose the one column that supplies it, or none when no column does. Use a column's name exactly as given.
 - Judge by what the column holds (its summary, and the sample rows when you have them), not only by its header: a column called \
-"Term" that holds codes like 202620 is a term code, not a term name.
+"Period" that holds codes like 202620 is a period code, not a period name.
 - A column can supply only one part. A column marked personal is not to be chosen unless the part clearly needs it.
 - Give confidence "high" only when the header and the contents agree. Use "low" when you are guessing; a person decides those.
-- Give each choice one short reason, in plain words, that a registrar can check.
+- Give each choice one short reason, in plain words, that the data's owner can check.
 - If the column names look like they are not on the row that was found (for example a title row was taken as the header), give the \
 row number where the real column names are, and why. Otherwise leave header_row empty.
 - For each column you are sure about, add a few words on what it holds in column_notes.
@@ -177,7 +177,7 @@ async def tokens_this_month(pool: AsyncConnectionPool) -> int:
 
 
 async def process_setup(
-    pool: AsyncConnectionPool, model_for: ModelFor, sync_id: str, institution_cap: int | None = None, used_elsewhere: int = 0
+    pool: AsyncConnectionPool, model_for: ModelFor, sync_id: str, organization_cap: int | None = None, used_elsewhere: int = 0
 ) -> str:
     """Works one setup request for a sync waiting for review: proposes a mapping, or says why it did not. The outcome is kept on the sync
     (`agent`), never raised: the review shows the rules' proposal whatever happens here."""
@@ -199,8 +199,8 @@ async def process_setup(
     chosen = await setup_model(pool)
     if chosen is None:
         return await finish('none', reason='No model is chosen for building: an admin picks one on the Models page.')
-    if institution_cap is not None and await tokens_this_month(pool) + used_elsewhere >= institution_cap:
-        return await finish('none', reason="The institution's monthly token budget is used up.")
+    if organization_cap is not None and await tokens_this_month(pool) + used_elsewhere >= organization_cap:
+        return await finish('none', reason="The organization's monthly token budget is used up.")
     await store.update_sync(pool, sync_id, agent={**request, 'state': 'running'})
 
     dataset, layout_id = row['dataset'], row['layout_id']

@@ -81,7 +81,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-038
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:36:43.103Z'
+  at: '2026-10-29T07:21:13.230Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -147,8 +147,11 @@ related_tasks:
     name: 'Data model M7: identity across sources'
     url: /TASKS.md#TASK-039
   - id: TASK-040
-    name: 'Data model M0: out with the built-in domain'
+    name: 'Data model M0a: out with the built-in domain (code)'
     url: /TASKS.md#TASK-040
+  - id: TASK-041
+    name: 'Data model M0b: template models installed by generation'
+    url: /TASKS.md#TASK-041
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 

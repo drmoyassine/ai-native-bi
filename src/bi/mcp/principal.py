@@ -143,7 +143,8 @@ async def link_identity(pool: AsyncConnectionPool, issuer: str, subject: str, em
 
 
 def scope_of(entries: Any) -> str:
-    """'all' when the person may see the institution; 'limited' for org units or programs only (refused until Cube enforces it)."""
+    """'all' when the person may see the whole organization (the AMS's scope type for it, contract 6.2); 'limited' for narrower
+    scopes (refused until Cube enforces it)."""
     if not isinstance(entries, list):
         return 'none'
     if any(isinstance(e, dict) and e.get('type') == 'institution' for e in entries):

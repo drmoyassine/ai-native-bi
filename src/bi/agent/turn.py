@@ -179,13 +179,13 @@ async def process_turn(deps: TurnDeps, run_id: str) -> str:
     status, stop_reason, error = 'done', 'end_turn', None
     try:
         model, settings = await deps.model_for(conv)
-        institution = ''
+        words = ''
         if deps.cube is not None:
             try:
-                institution = knowledge.prompt_text(await deps.cube.institution())  # frozen for the turn
+                words = knowledge.prompt_text(await deps.cube.words())  # frozen for the turn
             except CubeError:
-                pass  # without the institution's words the agent still works, from the tools
-        instructions = MODES[conv['mode']] + (f'\n\n{institution}' if institution else '')
+                pass  # without the organization's words the agent still works, from the tools
+        instructions = MODES[conv['mode']] + (f'\n\n{words}' if words else '')
         agent: Agent[AgentDeps, str] = Agent(model, instructions=instructions, toolsets=[ask_tools], deps_type=AgentDeps, retries=2)
         history = await store.read_messages(pool, conversation_id)
         tool_deps = AgentDeps(

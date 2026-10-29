@@ -240,3 +240,15 @@ person's interface language), `/app/api/public/branding`, `/organization`, `/me/
 the AMS's oklch tokens, script font stacks, Button, Card and Input, its sidebar shell with a drawer on small screens, its sign-in
 page, and a Settings → Organization page. Older pages keep their class names restyled on the tokens; the dark theme is gone (the AMS
 has none). Checked in a browser: sign-in, settings, Connect data, Arabic right to left, the drawer at phone width.
+
+## 2026-10-29 — M0a: the built-in domain moved out of the code
+
+`src/bi/packs` holds everything about a language or a domain, as data: language packs (English and Arabic: words that suggest
+personal, identifying or total rows; made-up names and letters for masking; folding for search), the language registry, and the
+higher-education template (the enrollment dataset's parts, labels and aliases, formerly `SHAPES`). Code applies any pack and names
+none. Organizations install templates in Settings (migration 0013); without one, nothing can be fed; the API installs at start any
+template whose datasets streams already feed, so staging keeps working. Metric words are keyed by language code
+(`meta.translations`, glossary `{term, meaning}` by language); the glossary view is found by its meta, not its name. "Institution"
+became "organization" (`AGENT_ORGANIZATION_MONTHLY_TOKENS`, the old name read for one release). `tests/test_agnostic.py` fails on a
+domain word or a language's letters outside packs; the files waiting for M0b (the template's dbt and Cube models) are listed and the
+list can only shrink. TASK-040 completed; M0b is TASK-041.

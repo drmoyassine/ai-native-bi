@@ -80,13 +80,13 @@ class CubeClient:
         members: list[dict[str, Any]] = []
         for cube in await self.cubes():
             if cube.get('type') == 'view':
-                continue  # views carry words for agents (institution), not metrics
+                continue  # views carry words for agents (the organization's glossary), not metrics
             for kind in ('measures', 'dimensions'):
                 for m in cube.get(kind, []):
                     members.append(
                         {
                             'name': m['name'],
-                            'title': m.get('shortTitle') or m.get('title') or m['name'],  # 'Headcount', not 'Enrollment Headcount'
+                            'title': m.get('shortTitle') or m.get('title') or m['name'],  # 'Count', not 'Orders Count'
                             'type': m.get('type'),
                             'agg_type': m.get('aggType'),
                             'kind': kind[:-1],
@@ -97,10 +97,14 @@ class CubeClient:
                     )
         return members
 
-    async def institution(self) -> dict[str, Any]:
-        """The `institution` view's glossary and instructions (docs/context-spec.md section 4); empty when the model has none."""
+    async def words(self) -> dict[str, Any]:
+        """The organization's glossary and instructions: from every view whose meta carries them (docs/context-spec.md section 4);
+        empty when the model has none. No view is named in code (DEC-037)."""
+        glossary: list[Any] = []
+        instructions: list[Any] = []
         for cube in await self.cubes():
-            if cube.get('name') == 'institution' and cube.get('type') == 'view':
+            if cube.get('type') == 'view':
                 meta = cube.get('meta') or {}
-                return {'glossary': list(meta.get('glossary') or []), 'instructions': list(meta.get('instructions') or [])}
-        return {'glossary': [], 'instructions': []}
+                glossary += list(meta.get('glossary') or [])
+                instructions += list(meta.get('instructions') or [])
+        return {'glossary': glossary, 'instructions': instructions}

@@ -47,8 +47,8 @@ class Env(BaseModel):
     """The built web app to serve at / (the image sets it)."""
     BI_SECRETS_KEY: Annotated[str, StringConstraints(min_length=43, max_length=44)] | None = None
     """The key of the secret store (32 random bytes, base64url; scripts/make_env.py writes one). Without it: no provider keys."""
-    AGENT_INSTITUTION_MONTHLY_TOKENS: Annotated[int, Field(gt=0)] = 100_000_000
-    """The hard monthly cap of the institution (input plus output tokens of every turn)."""
+    AGENT_ORGANIZATION_MONTHLY_TOKENS: Annotated[int, Field(gt=0)] = 100_000_000
+    """The hard monthly cap of the organization (input plus output tokens of every turn)."""
     AGENT_PERSON_MONTHLY_TOKENS: Annotated[int, Field(gt=0)] = 10_000_000
     """The monthly share of each person."""
     SUPPRESSION_THRESHOLD: Annotated[int, Field(ge=1)] = 5
@@ -79,9 +79,16 @@ class Env(BaseModel):
     ADMIN_NAME: Annotated[str, StringConstraints(min_length=1)] = 'Administrator'
 
 
+RENAMED = {'AGENT_INSTITUTION_MONTHLY_TOKENS': 'AGENT_ORGANIZATION_MONTHLY_TOKENS'}
+"""Variables renamed (DEC-037), read under their old name until the next release."""
+
+
 def load_env(source: Mapping[str, str] | None = None) -> Env:
     """Reads the environment; an empty value (as in a copied .env.example) means "not set"."""
-    values = os.environ if source is None else source
+    values = dict(os.environ if source is None else source)
+    for old, new in RENAMED.items():  # an old name still works for one release, unless the new one is set
+        if values.get(old) and not values.get(new):
+            values[new] = values[old]
     clean = {k: v for k, v in values.items() if k in Env.model_fields and v != ''}
     return Env.model_validate(clean)
 

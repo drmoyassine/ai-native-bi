@@ -67,9 +67,9 @@ def data_path(kind: str, base_url: str | None) -> str:
     return {
         'anthropic': 'Anthropic, under its terms',
         'openai': 'OpenAI, under its terms',
-        'openai_compatible': f"The server at {base_url}: the institution's own servers if it runs there, otherwise a third party",
+        'openai_compatible': f"The server at {base_url}: the organization's own servers if it runs there, otherwise a third party",
         'openrouter': 'OpenRouter and the upstream provider it routes to',
-        'ollama': f"The Ollama server at {base_url}, normally the institution's own: nothing leaves",
+        'ollama': f"The Ollama server at {base_url}, normally the organization's own: nothing leaves",
     }[kind]
 
 

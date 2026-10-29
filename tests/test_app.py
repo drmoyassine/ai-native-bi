@@ -38,7 +38,7 @@ class FakeCube:
     async def meta(self) -> list[dict[str, Any]]:
         return MEMBERS
 
-    async def institution(self) -> dict[str, Any]:
+    async def words(self) -> dict[str, Any]:
         return {'glossary': [], 'instructions': ['Term codes are year plus 10 for fall.']}
 
     async def load(self, query: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
@@ -351,3 +351,33 @@ async def test_the_organization_is_configured_by_an_admin_and_branding_is_public
         'accent_color': '#1d3557',
     }
     assert (await client.put('/app/api/organization', json={'name': 'y'}, headers=APP)).status_code == 401
+
+
+async def test_what_sources_can_feed_comes_from_the_installed_templates(
+    pool: AsyncConnectionPool, app: tuple[httpx.AsyncClient, list[str], FakeCube]
+) -> None:
+    from bi import organization
+
+    client, _, _ = app
+    await signed_in(client)
+    names = [t['name'] for t in (await client.get('/app/api/templates')).json()['templates']]
+    assert 'higher-education' in names
+    try:
+        put = await client.put('/app/api/organization', json={'installed_templates': []}, headers=APP)
+        assert put.status_code == 200 and (await client.get('/app/api/sources')).json()['datasets'] == []  # nothing built in
+        assert (await client.get('/app/api/me')).json()['datasets'] == []
+        bad = await client.put('/app/api/organization', json={'installed_templates': ['no-such-template']}, headers=APP)
+        assert bad.status_code == 422
+        async with pool.connection() as conn:  # data already feeds a template's dataset: starting the API installs it again
+            await conn.execute(
+                """insert into source (name, slug, type) values ('Fed', 'fed', 'file');
+                   insert into source_stream (source_id, name, raw_table, dataset) select id, 'files', 'fed', 'enrollment'
+                   from source where slug = 'fed'"""
+            )
+        assert await organization.install_fed_templates(pool) == ['higher-education']
+        assert await organization.install_fed_templates(pool) == []
+        assert [d['name'] for d in (await client.get('/app/api/sources')).json()['datasets']] == ['enrollment']
+    finally:
+        async with pool.connection() as conn:
+            await conn.execute("delete from source where slug = 'fed'")
+            await conn.execute("update organization set installed_templates = '{higher-education}'")

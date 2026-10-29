@@ -38,6 +38,10 @@ export const EN_CATALOGUE = {
   'settings.accentUnreadable': 'Choose a darker colour: white text on it is hard to read.',
   'settings.accentPreview': 'A button',
   'settings.accentDefault': 'Use the default',
+  'settings.templates': 'Templates',
+  'settings.templatesHint':
+    'Ready-made definitions to start from. What an installed template brings can be fed by sources; nothing is built in.',
+  'settings.templatesNone': 'No templates are available.',
   'settings.save': 'Save',
   'settings.saved': 'Saved.',
   'settings.readOnly': 'Only an admin can change these settings.',

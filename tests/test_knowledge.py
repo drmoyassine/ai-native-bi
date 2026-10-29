@@ -12,14 +12,14 @@ HEADCOUNT: dict[str, Any] = {
     'cube': 'Enrollment',
     'meta': {
         'metric': 'enrollment_headcount',
-        'ar': {'title': 'عدد الطلاب', 'description': ''},
+        'translations': {'ar': {'title': 'عدد الطلاب', 'description': ''}},
         'synonyms': {'en': ['number of students', 'student count'], 'ar': ['عدد المسجلين']},
         'knowledge': {'en': 'Counts each student once per term.'},
     },
 }
 PROGRAM: dict[str, Any] = {'name': 'enrollment.program', 'title': 'Program', 'kind': 'dimension', 'cube': 'Enrollment', 'meta': {}}
 INSTITUTION: dict[str, Any] = {
-    'glossary': [{'term': 'Census date', 'ar': 'تاريخ الإحصاء', 'en': 'The day a roster is frozen.'}],
+    'glossary': [{'term': {'en': 'Census date', 'ar': 'تاريخ الإحصاء'}, 'meaning': {'en': 'The day a roster is frozen.'}}],
     'instructions': ['Term codes are year plus 10 for fall.'],
 }
 
@@ -46,7 +46,7 @@ def test_an_explanation_is_searchable_and_nothing_matches_nonsense() -> None:
 
 def test_the_glossary_is_searched_too() -> None:
     found = knowledge.search([], INSTITUTION, 'census')
-    assert [g['term'] for g in found['glossary']] == ['Census date']
+    assert [g['term']['en'] for g in found['glossary']] == ['Census date']
     assert knowledge.search([], INSTITUTION, 'تاريخ الإحصاء')['glossary']
 
 

@@ -5,21 +5,14 @@ shape only, never with values. The person on the page and the model see the same
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from psycopg import sql
 from psycopg_pool import AsyncConnectionPool
 
-# A column that names or reaches a person: never shown as values, never mapped unless a person chooses it.
-PERSONAL_NAME = re.compile(
-    r'(^|[\W_])(name|names|first|last|surname|family|email|e-mail|mail|phone|mobile|tel|address|street|dob|birth|birthdate|'
-    r'national|cpr|ssn|passport|iqama|gender|sex|nationality|guardian|parent)($|[\W_])'
-    r'|اسم|بريد|هاتف|جوال|عنوان|ميلاد|الهوية|الجنسية|الجنس|ولي الأمر|الرقم الشخصي|جواز',
-    re.IGNORECASE,
-)
-# A column that identifies a record: shown as a count and a shape.
-ID_NAME = re.compile(r'(^|[\W_])(id|ids|identifier|key|number|no|code)($|[\W_])|رقم|الرقم', re.IGNORECASE)
+from .. import packs
+
+# Which column names suggest a person or a record's identifier comes from the language packs (bi.packs), never from code.
 METADATA = {'_bi_file_name', '_bi_file_sha256', '_bi_sheet', '_bi_sync_id', '_bi_layout', '_bi_row', '_bi_as_of', '_bi_loaded_at'}
 TEXT_TYPES = {'text', 'character varying', 'character', 'varchar'}
 NUMBER_TYPES = {'integer', 'bigint', 'smallint', 'numeric', 'double precision', 'real'}
@@ -125,7 +118,7 @@ async def _profile_column(
         if lo and lo[0][0] is not None:
             out['min'], out['max'] = (v.isoformat() if hasattr(v, 'isoformat') else float(v) for v in lo[0])
 
-    personal = bool(PERSONAL_NAME.search(column)) or (dtype in TEXT_TYPES and await share(_EMAIL_RE) >= 0.5)
+    personal = packs.looks_personal(column) or (dtype in TEXT_TYPES and await share(_EMAIL_RE) >= 0.5)
     unique = non_null >= 20 and distinct >= 0.9 * non_null
     if personal:
         out['kind'] = 'personal'  # a count and a shape; never values, never mapped unless a person chooses it
@@ -133,7 +126,7 @@ async def _profile_column(
     elif dtype in DATE_TYPES or (dtype in TEXT_TYPES and non_null and await share(_DATE_RE) >= 0.9):
         out['kind'] = 'date'
         await span('date')
-    elif bool(ID_NAME.search(column)) or unique:
+    elif packs.looks_identifying(column) or unique:
         out['kind'] = 'identifier'  # a count and a shape; its values are never shown
         out['patterns'] = await patterns()
     elif dtype in NUMBER_TYPES or (dtype in TEXT_TYPES and non_null and distinct > MAX_CATEGORIES and await share(_NUMBER_RE) >= 0.9):

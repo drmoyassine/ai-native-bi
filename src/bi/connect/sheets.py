@@ -1,4 +1,4 @@
-"""Finding the table in a spreadsheet (spec § 6.2). An export is rarely a table from its first cell: a title, the institution's name or
+"""Finding the table in a spreadsheet (spec § 6.2). An export is rarely a table from its first cell: a title, the organization's name or
 "Report run on …" sit above the header, a header can span two rows, columns can be empty and a total can close it. The header row is
 scored among the first rows; a person can choose another. Cells are kept as text exactly as written (dates in ISO form)."""
 
@@ -13,6 +13,8 @@ from typing import Any
 
 from python_calamine import CalamineWorkbook
 
+from .. import packs
+
 SPREADSHEETS = {'.xlsx', '.xlsm', '.xlsb', '.xls', '.ods'}
 FILE_SUFFIXES = SPREADSHEETS | {'.csv'}
 SCAN_ROWS = 30
@@ -21,7 +23,6 @@ SAMPLE_ROWS = 20
 """How many rows below a candidate are looked at to judge it."""
 _NUMBER = re.compile(r'^[-+]?\d[\d,]*(\.\d+)?%?$')
 _DATE = re.compile(r'^(\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?)?|\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})$')
-_TOTAL = re.compile(r'^\s*(grand\s+)?total\b|^\s*(المجموع|الإجمالي|إجمالي)', re.IGNORECASE)
 
 
 class SheetError(ValueError):
@@ -207,7 +208,7 @@ def read_table(path: Path, sheet: str | None = None, header_row: int | None = No
     dropped_total = 0
     if rows:
         first = next((v for v in rows[-1].values() if v is not None), '')
-        if first and _TOTAL.match(first):
+        if first and packs.looks_like_total(first):
             rows.pop()
             numbers.pop()
             dropped_total = 1

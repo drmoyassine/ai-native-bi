@@ -13,9 +13,9 @@ from .. import mapping
 from ..connect.profile import profile_table
 
 
-def datasets() -> list[str]:
-    """The datasets the metric layer is built on (bi.mapping): what a source can feed."""
-    return mapping.datasets()
+async def datasets(pool: AsyncConnectionPool) -> list[str]:
+    """The datasets the metric layer is built on: those of the templates the organization installed (bi.mapping)."""
+    return await mapping.installed_datasets(pool)
 
 
 class CatalogError(ValueError):
@@ -51,7 +51,7 @@ async def list_datasets(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
     """The datasets (built for the metric layer) and the sources' raw tables, with row counts and their last load."""
     streams = await _streams(pool)
     out: list[dict[str, Any]] = []
-    for name in datasets():
+    for name in await datasets(pool):
         entry: dict[str, Any] = {'dataset': name, 'kind': 'dataset', 'tables': {},
                                  'sources': [s['name'] for s in streams if s['dataset'] == name]}  # fmt: skip
         if await _table_exists(pool, 'analytics', name):
@@ -71,12 +71,13 @@ async def list_datasets(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
 async def describe_dataset(pool: AsyncConnectionPool, name: str, threshold: int) -> dict[str, Any]:
     """The profile of a dataset (its analytics table) or of a source's raw table. Never a row."""
     streams = {s['raw_table']: s for s in await _streams(pool)}
-    if name in datasets():
+    known_datasets = await datasets(pool)
+    if name in known_datasets:
         schema, extra = 'analytics', {'sources': [s['name'] for s in streams.values() if s['dataset'] == name]}
     elif name in streams:
         schema, extra = 'raw', {'source': streams[name]['name'], 'feeds': streams[name]['dataset']}
     else:
-        known = [*datasets(), *streams]
+        known = [*known_datasets, *streams]
         raise CatalogError(f'unknown dataset "{name}" (known: {", ".join(known)})')
     result: dict[str, Any] = {'dataset': name, **extra, 'tables': {}}
     if await _table_exists(pool, schema, name):

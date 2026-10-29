@@ -12,6 +12,9 @@ from typing import Any, Literal
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
+from . import packs
+from .languages import PRIMARY_LANGUAGE
+
 Expects = Literal['key', 'date', 'text']
 
 
@@ -27,43 +30,33 @@ class Field:
     """Other names an export is likely to use (compared without case, spaces or punctuation)."""
 
 
-# The governed shape of each dataset the metric layer is built on. A stream that feeds no dataset is kept in raw and nothing more.
-SHAPES: dict[str, list[Field]] = {
-    'enrollment': [
-        Field(
-            'student_id', True, 'Student ID', 'Identifies each student, such as a student number. Used to count students, never shown.',
-            'key', ('studentid', 'studentnumber', 'studentno', 'sid', 'idbanner', 'id', 'رقمالطالب', 'الرقمالجامعي'),
-        ),
-        Field(
-            'term_code', True, 'Term code', 'The code of the term (semester) the row is about, such as 202610.',
-            'key', ('termcode', 'termid', 'semestercode', 'periodcode', 'term', 'semester', 'رمزالفصل', 'الفصل'),
-        ),
-        Field(
-            'term', False, 'Term name', 'The term as people name it, such as Fall 2026.',
-            'text', ('termname', 'termlabel', 'termdescription', 'semestername', 'semesterlabel', 'semesterdescription', 'اسمالفصل'),
-        ),
-        Field(
-            'term_start', True, 'Term start date', 'The first day of the term.',
-            'date', ('termstart', 'termstartdate', 'startdate', 'semesterstart', 'begindate', 'بدايةالفصل'),
-        ),
-        Field(
-            'term_end', False, 'Term end date', 'The last day of the term.',
-            'date', ('termend', 'termenddate', 'enddate', 'semesterend', 'نهايةالفصل'),
-        ),
-        Field(
-            'program', False, 'Program', 'The program or major the student is enrolled in.',
-            'text', ('programme', 'major', 'programcode', 'programname', 'degreeprogram', 'البرنامج', 'التخصص'),
-        ),
-        Field(
-            'level', False, 'Level', 'The level of study, such as bachelor or master.',
-            'text', ('studentlevel', 'degreelevel', 'levelcode', 'academiclevel', 'classlevel', 'المستوى'),
-        ),
-        Field(
-            'status', False, 'Enrollment status', 'Whether the student is enrolled, withdrawn, and so on.',
-            'text', ('enrollmentstatus', 'enrolmentstatus', 'registrationstatus', 'studentstatus', 'الحالة'),
-        ),
-    ]
-}  # fmt: skip
+def _field(part: dict[str, Any]) -> Field:
+    return Field(
+        name=part['name'],
+        required=bool(part.get('needed', False)),
+        label=part.get('label', {}).get(PRIMARY_LANGUAGE, part['name']),
+        description=part.get('description', {}).get(PRIMARY_LANGUAGE, ''),
+        expects=part.get('expects', 'text'),
+        aliases=tuple(norm(a) for a in part.get('aliases', [])),
+    )
+
+
+def shapes() -> dict[str, list[Field]]:
+    """What each dataset needs, from the templates shipped (bi.packs, DEC-037): the BI itself defines none. A stream that feeds no dataset
+    is kept in raw and nothing more."""
+    out: dict[str, list[Field]] = {}
+    for template in packs.templates().values():
+        for name, dataset in (template.get('datasets') or {}).items():
+            out[name] = [_field(p) for p in dataset.get('parts', [])]
+    return out
+
+
+def dataset_label(name: str) -> str:
+    for template in packs.templates().values():
+        dataset = (template.get('datasets') or {}).get(name)
+        if dataset:
+            return str(dataset.get('label', {}).get(PRIMARY_LANGUAGE, name))
+    return name
 
 
 class MappingError(ValueError):
@@ -76,11 +69,19 @@ def norm(name: str) -> str:
 
 
 def fields(dataset: str) -> list[Field]:
-    return SHAPES.get(dataset, [])
+    return shapes().get(dataset, [])
 
 
-def datasets() -> list[str]:
-    return sorted(SHAPES)
+def datasets(installed: list[str]) -> list[str]:
+    """The datasets of the templates the organization installed: what a source can feed."""
+    templates = packs.templates()
+    return sorted(d for t in installed if t in templates for d in (templates[t].get('datasets') or {}))
+
+
+async def installed_datasets(pool: AsyncConnectionPool) -> list[str]:
+    async with pool.connection() as conn:
+        row = await (await conn.execute('select installed_templates from organization')).fetchone()
+    return datasets(list(row[0]) if row else [])
 
 
 def fits(field: Field, kind: str | None) -> bool:
@@ -210,4 +211,4 @@ async def inputs(pool: AsyncConnectionPool, dataset: str) -> list[dict[str, Any]
 
 
 async def dbt_vars(pool: AsyncConnectionPool) -> dict[str, Any]:
-    return {f'{d}_inputs': await inputs(pool, d) for d in datasets()}
+    return {f'{d}_inputs': await inputs(pool, d) for d in shapes()}

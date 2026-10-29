@@ -1,5 +1,5 @@
 """Masked sample rows for the setup agent (DEC-032, DEC-035; docs/setup-agent-spec.md § 3). While a source is being set up, a few rows
-help the agent tell a term code from a term name. Before any row leaves the BI every value is made safe, by a pure function of the
+help the agent tell a code from a name. Before any row leaves the BI every value is made safe, by a pure function of the
 column's profile kind and the value, in code and not in a prompt:
 
 * personal columns get made-up values of the same shape and script (a name becomes another name, an email an example address);
@@ -22,13 +22,12 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
+from .. import packs
+
 SAMPLE_ROWS = 20
 """DEC-032's limit: the most rows of a table that may be sent (a setting can only lower it)."""
 RARE = '[rare value]'
 _ISO_DATE = re.compile(r'^\d{4}-\d{2}-\d{2}')
-_ARABIC = re.compile(r'[؀-ۿ]')
-LATIN_NAMES = ['Mariam', 'Yousif', 'Layla', 'Omar', 'Noor', 'Karim', 'Salma', 'Faisal', 'Dana', 'Tariq', 'Hessa', 'Rami', 'Aya', 'Zaid']
-ARABIC_NAMES = ['مريم', 'يوسف', 'ليلى', 'عمر', 'نور', 'كريم', 'سلمى', 'فيصل', 'دانة', 'طارق', 'حصة', 'رامي', 'آية', 'زيد']
 FREE_TEXT_KINDS = {'text', 'other', None}
 PASS_THROUGH = {'category', 'boolean', 'date', 'number'}
 IDENTIFYING = {'personal', 'identifier'}
@@ -36,7 +35,7 @@ IDENTIFYING = {'personal', 'identifier'}
 
 class Masker:
     """Makes one sample safe. The fakes are drawn from a random source nobody can reproduce, and a value always maps to the same fake
-    within the sample, so a repeated student stays one student."""
+    within the sample, so a repeated person stays one person."""
 
     def __init__(self, profile: dict[str, dict[str, Any]], rng: random.Random | None = None) -> None:
         self.profile = profile
@@ -92,7 +91,7 @@ class Masker:
             return self._fake(column, text, date)
         letters = re.sub(r'[\W\d_]+', ' ', text).split()
         if letters and len(letters) == len(text.split()):  # words only: a name
-            pool = ARABIC_NAMES if _ARABIC.search(text) else LATIN_NAMES
+            pool = packs.pack_for(text).fake_names or packs.fallback().fake_names  # made-up names in the text's own script
             return self._fake(column, text, lambda: ' '.join(self.rng.choice(pool) for _ in text.split()))
         return self._same_shape(column, text)
 
@@ -102,10 +101,10 @@ class Masker:
             for ch in text:
                 if ch.isdigit():
                     out.append(str(self.rng.randrange(10)))
-                elif _ARABIC.match(ch):
-                    out.append(self.rng.choice('ابتجحدرزسصطعفقكلمنهوي'))
-                elif ch.isalpha():  # any other script (Latin, Cyrillic, CJK…) becomes Latin of the same case
-                    out.append(self.rng.choice('ABCDEFGHJKLMNPQRSTUVWXYZ' if ch.isupper() else 'abcdefghjkmnpqrstuvwxyz'))
+                elif ch.isalpha():  # a letter of the pack for its script; a script no pack covers gets the fallback's letters
+                    pack = packs.pack_for(ch)
+                    letters = (pack.fake_upper if ch.isupper() else pack.fake_lower) or pack.fake_lower or pack.fake_upper
+                    out.append(self.rng.choice(letters))
                 else:
                     out.append(ch)
             return ''.join(out)

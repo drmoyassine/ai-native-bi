@@ -1,0 +1,12 @@
+# English language pack (DEC-037): data, not code. Words that suggest a column names or reaches a person, or identifies a record; made-up
+# names and letters for masking samples (DEC-032); nothing to fold for search beyond Unicode's own rules.
+code: en
+letters: '[A-Za-z]'
+match: word # a word of the column name, not any part of it
+personal_words: [name, names, first, last, surname, family, email, e-mail, mail, phone, mobile, tel, address, street, dob, birth,
+  birthdate, national, cpr, ssn, passport, iqama, gender, sex, nationality, guardian, parent]
+total_words: [grand total, total] # a row starting with one of these is a total, not data
+identifier_words: [id, ids, identifier, key, number, 'no', code]
+fake_names: [Mariam, Yousif, Layla, Omar, Noor, Karim, Salma, Faisal, Dana, Tariq, Hessa, Rami, Aya, Zaid]
+fake_letters_upper: ABCDEFGHJKLMNPQRSTUVWXYZ
+fake_letters_lower: abcdefghjkmnpqrstuvwxyz
