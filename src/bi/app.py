@@ -145,7 +145,7 @@ def create_router(ctx: AppContext) -> APIRouter:
         org = await organization.get(ctx.pool)
         return {
             'user': user.__dict__,
-            'datasets': mapping.datasets(),
+            'datasets': await mapping.installed_datasets(ctx.pool),
             'organization': org,
             'language': await organization.user_language(ctx.pool, user.id),
             'locale': await organization.locale_for(ctx.pool, user.id),
@@ -160,6 +160,10 @@ def create_router(ctx: AppContext) -> APIRouter:
     @router.get('/languages')
     async def languages(user: Signed) -> dict[str, Any]:
         return {'languages': organization.languages_json()}
+
+    @router.get('/templates')
+    async def templates(user: Signed) -> dict[str, Any]:
+        return {'templates': organization.templates_json()}
 
     @router.put('/organization')
     async def update_organization(body: organization.OrganizationPatch, user: Signed) -> dict[str, Any]:
@@ -188,18 +192,14 @@ def create_router(ctx: AppContext) -> APIRouter:
 
     @router.get('/knowledge')
     async def knowledge_page(user: Signed, client: Annotated[CubeClient, Depends(cube)], q: str = '') -> dict[str, Any]:
-        """The Metrics page: every governed member with its words in both languages; `q` searches them (docs/context-spec.md section 4)."""
+        """The Metrics page: every governed member with its words in each language; `q` searches them (docs/context-spec.md section 4)."""
         try:
-            members, institution = await client.meta(), await client.institution()
+            members, words = await client.meta(), await client.words()
         except CubeError as e:
             raise HTTPException(CUBE_FAILED, str(e)) from e
         if q.strip():
-            return {**knowledge.search(members, institution, q), 'instructions': institution['instructions']}
-        return {
-            'members': [knowledge.brief(m) for m in members],
-            'glossary': institution['glossary'],
-            'instructions': institution['instructions'],
-        }
+            return {**knowledge.search(members, words, q), 'instructions': words['instructions']}
+        return {'members': [knowledge.brief(m) for m in members], 'glossary': words['glossary'], 'instructions': words['instructions']}
 
     async def chart_rows(chart: ChartDefinition, client: CubeClient) -> list[dict[str, Any]]:
         try:

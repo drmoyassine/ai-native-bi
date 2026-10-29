@@ -239,7 +239,7 @@ async def test_a_missing_model_a_spent_budget_a_failing_model_and_an_approved_la
 
     await set_provider(pool, samples=False)
     spent = await waiting_sync(pool, tmp_path, 'Spent', by_admin=True)
-    assert await process_setup(pool, Recorder(GOOD).model_for, spent, institution_cap=1, used_elsewhere=5) == 'none'
+    assert await process_setup(pool, Recorder(GOOD).model_for, spent, organization_cap=1, used_elsewhere=5) == 'none'
     ended = await store.get_sync(pool, spent)
     assert ended is not None and 'budget' in ended['agent']['reason']
 
@@ -284,7 +284,7 @@ async def test_a_suggested_header_row_a_person_changing_a_choice_and_the_budget_
 
     from bi.agent.routes import tokens_used
 
-    assert await tokens_used(pool) > 0  # the setup agent's calls count against the institution's budget
+    assert await tokens_used(pool) > 0  # the setup agent's calls count against the organization's budget
     assert await tokens_used(pool, me[0].id) == 0  # and not against a person
 
 
@@ -309,7 +309,7 @@ async def test_the_worker_asks_the_agent_after_a_file_goes_to_review_and_the_age
         queue = create_queue(
             database_url(DB),
             load=LoadDeps(pool=pool, storage=storage, database_url=database_url(DB), suppression_threshold=5),
-            agent=AgentWorkerDeps(turn=turn, secrets=None, http=http, institution_monthly_tokens=10_000_000),
+            agent=AgentWorkerDeps(turn=turn, secrets=None, http=http, organization_monthly_tokens=10_000_000),
         )
         async with queue.open_async():
             await enqueue_load(queue, sync)

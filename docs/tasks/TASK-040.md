@@ -1,9 +1,10 @@
 ---
-title: 'Data model M0: out with the built-in domain'
+title: 'Data model M0a: out with the built-in domain (code)'
 description: >-
-  Organisation settings (languages, calendar, personal-data patterns), language packs, the higher-education template and
-  Arabic pack as data, neutral wording, the domain-word check in CI (docs/data-model-spec.md section 12)
-status: pending
+  Language packs and the language registry as data, the higher-education template holds the dataset parts, installed
+  templates per organization, neutral wording, institution renamed organization, the domain-word and language checks in
+  CI
+status: completed
 priority: P0
 id: TASK-040
 last_updated: '2026-10-29'
@@ -25,6 +26,6 @@ related_decisions:
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:25:07.808Z'
+  at: '2026-10-29T07:21:12.485Z'
 ---
-# TASK-040 — Data model M0: out with the built-in domain
+# TASK-040 — Data model M0a: out with the built-in domain (code)

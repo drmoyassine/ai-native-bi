@@ -1,0 +1,54 @@
+# Higher-education template (DEC-037): configuration an organization installs, changes or ignores; never code. Today it holds the
+# term enrollment dataset the BI was first built on. Its dbt models and Cube files still live in src/bi/transform and cube/model until
+# templates are installed by generation (data model M1/M2, docs/data-model-spec.md section 13); then they move here.
+name: higher-education
+label: {en: Higher education, ar: التعليم العالي}
+languages: [en, ar]
+datasets:
+  enrollment:
+    label: {en: Enrollment, ar: التسجيل}
+    description: {en: 'Who is on each term''s roster: one row per student and term.'}
+    parts:
+      - name: student_id
+        needed: true
+        expects: key
+        label: {en: Student ID, ar: رقم الطالب}
+        description: {en: Identifies each student, such as a student number. Used to count students, never shown.}
+        aliases: [studentid, studentnumber, studentno, sid, idbanner, id, رقمالطالب, الرقمالجامعي]
+      - name: term_code
+        needed: true
+        expects: key
+        label: {en: Term code, ar: رمز الفصل}
+        description: {en: 'The code of the term (semester) the row is about, such as 202610.'}
+        aliases: [termcode, termid, semestercode, periodcode, term, semester, رمزالفصل, الفصل]
+      - name: term
+        expects: text
+        label: {en: Term name, ar: اسم الفصل}
+        description: {en: 'The term as people name it, such as Fall 2026.'}
+        aliases: [termname, termlabel, termdescription, semestername, semesterlabel, semesterdescription, اسمالفصل]
+      - name: term_start
+        needed: true
+        expects: date
+        label: {en: Term start date, ar: بداية الفصل}
+        description: {en: The first day of the term.}
+        aliases: [termstart, termstartdate, startdate, semesterstart, begindate, بدايةالفصل]
+      - name: term_end
+        expects: date
+        label: {en: Term end date, ar: نهاية الفصل}
+        description: {en: The last day of the term.}
+        aliases: [termend, termenddate, enddate, semesterend, نهايةالفصل]
+      - name: program
+        expects: text
+        label: {en: Program, ar: البرنامج}
+        description: {en: The program or major the student is enrolled in.}
+        aliases: [programme, major, programcode, programname, degreeprogram, البرنامج, التخصص]
+      - name: level
+        expects: text
+        label: {en: Level, ar: المستوى}
+        description: {en: 'The level of study, such as bachelor or master.'}
+        aliases: [studentlevel, degreelevel, levelcode, academiclevel, classlevel, المستوى]
+      - name: status
+        expects: text
+        label: {en: Enrollment status, ar: حالة التسجيل}
+        description: {en: 'Whether the student is enrolled, withdrawn, and so on.'}
+        aliases: [enrollmentstatus, enrolmentstatus, registrationstatus, studentstatus, الحالة]

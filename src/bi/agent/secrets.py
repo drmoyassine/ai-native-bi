@@ -1,4 +1,4 @@
-"""The secret store (DEC-020): values encrypted with AES-GCM in the `secret` table, behind a small interface the institution's vault can
+"""The secret store (DEC-020): values encrypted with AES-GCM in the `secret` table, behind a small interface the organization's vault can
 replace. The agent, the model and the logs only ever see a handle (`secret://name`), never a value."""
 
 from __future__ import annotations

@@ -135,8 +135,8 @@ class AgentWorkerDeps:
     turn: TurnDeps
     secrets: SecretStore | None
     http: httpx.AsyncClient
-    institution_monthly_tokens: int | None = None
-    """The institution's monthly token budget, which the setup agent's calls count against (DEC-020)."""
+    organization_monthly_tokens: int | None = None
+    """The organization's monthly token budget, which the setup agent's calls count against (DEC-020)."""
 
 
 def create_queue(
@@ -167,7 +167,7 @@ def create_queue(
 
         async def setup_propose(sync_id: str) -> None:
             # Never retried: process_setup records how it ended on the sync, and a failure leaves the rules' proposal standing.
-            outcome = await process_setup(agent.turn.pool, agent.turn.model_for, sync_id, agent.institution_monthly_tokens)
+            outcome = await process_setup(agent.turn.pool, agent.turn.model_for, sync_id, agent.organization_monthly_tokens)
             log('info', 'setup agent', sync=sync_id, outcome=outcome)
 
         app.task(name=SETUP_TASK, queue=AGENT_QUEUE)(setup_propose)

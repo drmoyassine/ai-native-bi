@@ -193,7 +193,7 @@ The BI was built on one university's enrollment exports, and that shows. All of 
 | "institution" for the organisation (`AGENT_INSTITUTION_MONTHLY_TOKENS`, interface text) | "organisation"; the old variable read as an alias for one release |
 | the dataset choice on Add a source | proposed after the first read |
 
-**Kept out by CI**: a test scans `src/bi`, `web/src` and generated-model templates for a list of domain words (student, enrol,
+**Kept out by CI** (`tests/test_agnostic.py`, built): a test scans `src/bi`, `web/src` and generated-model templates for a list of domain words (student, enrol,
 registrar, program, term code, faculty, patient, customer, invoice, …) and fails outside `templates/` and test fixtures. The list is
 broad on purpose; a word that is genuinely neutral in context is allowed by name, in the test, with a reason. Tests use made-up data
 from more than one template, so the code is exercised on more than one domain.
@@ -204,7 +204,8 @@ The AMS integration (contract) stays: it is a connected system that reads metric
 
 | Step | Scope | Done when |
 |---|---|---|
-| **M0. Out with the built-in domain** | Organisation settings (languages, calendar, personal-data patterns); language packs; the higher-education template and Arabic pack as data; neutral wording; the domain-word check in CI | The check passes; the BI starts empty without templates; installing the template gives today's behaviour |
+| **M0a. Out with the built-in domain (code)** — built 2026-10-29 | Language packs and the language registry as data (`src/bi/packs`); the higher-education template holds the dataset parts; installed templates per organization (Settings); neutral wording; "institution" renamed "organization"; the domain-word and language checks in CI (`tests/test_agnostic.py`) | The checks pass; without a template the BI offers nothing to feed; with it, today's behaviour |
+| **M0b. Template models installed** (with M1/M2) | The template's dbt models and Cube files move into the template and are installed by generation | The waiting list in `tests/test_agnostic.py` is empty |
 | **M1. Definitions** | `model_subject`, `model_entity`, `model_event` with drafts, approval, versions; templates install as definitions; mapping and setup agent read them; `SHAPES` removed | Connect data's parts come from the installed template's events |
 | **M2. Generated warehouse** | staging, core, cohorts schemas; dbt models generated; official-load setting; Cube reads core | A metric from the template answers the AMS from generated models |
 | **M3. The Model page** | Subjects, entities, events edited in the app; steward approval; what-changes preview | A person defines a new event in the UI and it is generated after approval |

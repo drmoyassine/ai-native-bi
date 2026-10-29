@@ -1,1 +1,1 @@
-"""AI-native BI: the institution's business intelligence platform (see ARCHITECTURE.md)."""
+"""AI-native BI: the organization's business intelligence platform (see ARCHITECTURE.md)."""

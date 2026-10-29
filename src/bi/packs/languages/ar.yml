@@ -1,0 +1,13 @@
+# Arabic language pack (DEC-037): data, not code. Used for any text in Arabic script, whatever the organization's languages.
+code: ar
+letters: '[؀-ۿ]'
+match: part # Arabic words take prefixes (ال, و): any part of the column name
+personal_words: [اسم, بريد, هاتف, جوال, عنوان, ميلاد, الهوية, الجنسية, الجنس, ولي الأمر, الرقم الشخصي, جواز]
+total_words: [المجموع, الإجمالي, إجمالي]
+identifier_words: [رقم, الرقم]
+fake_names: [مريم, يوسف, ليلى, عمر, نور, كريم, سلمى, فيصل, دانة, طارق, حصة, رامي, آية, زيد]
+fake_letters_upper: ابتجحدرزسصطعفقكلمنهوي
+fake_letters_lower: ابتجحدرزسصطعفقكلمنهوي
+# Search: marks removed and letter variants folded, so a word matches however it is written.
+strip: '[ؐ-ًؚ-ٰٟـ]'
+fold: {أ: ا, إ: ا, آ: ا, ى: ي, ة: ه}

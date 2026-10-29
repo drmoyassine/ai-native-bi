@@ -12,6 +12,8 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
    configuration made in the app and approved by a person; domain content ships only as templates and language packs (data). CI
    checks it. Model: `docs/data-model-spec.md` (DEC-036). The AMS's patterns apply (DEC-038): configuration is data, never code;
    one code path tested on several templates, one right-to-left; English plus one secondary language; interface text through `t()`.
+   Language packs, the language registry and templates live in `src/bi/packs` (data); `tests/test_agnostic.py` fails on a domain
+   word or a language's letters anywhere else.
 1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `src/bi/contract.py` mirrors the AMS's
    `packages/shared/src/collection.ts`. Change the AMS first, then mirror it here. Never add a field the AMS does not know.
    The copy is not edited by hand: the AMS's `contract-sync` workflow opens a pull request (`ams-contract-sync`) with the new

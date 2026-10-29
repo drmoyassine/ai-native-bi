@@ -46,7 +46,7 @@ const KIND_LABELS: Record<string, string> = {
 const NEEDS_ADDRESS = ['openai_compatible', 'ollama'];
 const NEEDS_KEY = ['anthropic', 'openai', 'openrouter'];
 
-/** Admin: the providers the institution uses, their keys (kept in the secret store, never shown again), the models each lists,
+/** Admin: the providers the organization uses, their keys (kept in the secret store, never shown again), the models each lists,
  * and which of them people may use. A model is allowed only if it calls tools, which the agent needs. */
 export function Providers() {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -74,8 +74,18 @@ export function Providers() {
           The secret store is not configured, so keys cannot be saved. Set BI_SECRETS_KEY (python3 scripts/make_env.py) and restart.
         </p>
       )}
-      {notice && <p className="note" role="status">{notice}</p>}
-      <AddProvider kinds={kinds} onAdded={async (error) => { setNotice(error ? `Added, but its models could not be listed: ${error}` : null); await refresh(); }} />
+      {notice && (
+        <p className="note" role="status">
+          {notice}
+        </p>
+      )}
+      <AddProvider
+        kinds={kinds}
+        onAdded={async (error) => {
+          setNotice(error ? `Added, but its models could not be listed: ${error}` : null);
+          await refresh();
+        }}
+      />
       {providers.length === 0 && <p className="hint">No provider yet. Add one to let people ask questions.</p>}
       {providers.map((p) => (
         <div className="card provider" key={p.id}>
@@ -169,12 +179,24 @@ function AddProvider({ kinds, onAdded }: { kinds: string[]; onAdded: (fetchError
       <button type="submit" disabled={busy}>
         Add provider
       </button>
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }
 
-function ModelList({ provider, onChange, onNotice }: { provider: Provider; onChange: () => Promise<void>; onNotice: (s: string | null) => void }) {
+function ModelList({
+  provider,
+  onChange,
+  onNotice,
+}: {
+  provider: Provider;
+  onChange: () => Promise<void>;
+  onNotice: (s: string | null) => void;
+}) {
   const [models, setModels] = useState<ProviderModel[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -201,7 +223,10 @@ function ModelList({ provider, onChange, onNotice }: { provider: Provider; onCha
     }
   }
 
-  async function set(m: ProviderModel, patch: Partial<Pick<ProviderModel, 'allowed_ask' | 'allowed_build' | 'default_ask' | 'default_build'>>) {
+  async function set(
+    m: ProviderModel,
+    patch: Partial<Pick<ProviderModel, 'allowed_ask' | 'allowed_build' | 'default_ask' | 'default_build'>>,
+  ) {
     setBusy(m.model_id);
     setError(null);
     const next = { ...m, ...patch };
@@ -234,7 +259,11 @@ function ModelList({ provider, onChange, onNotice }: { provider: Provider; onCha
           Refresh the list
         </button>
       </p>
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       <table>
         <thead>
           <tr>
@@ -256,19 +285,47 @@ function ModelList({ provider, onChange, onNotice }: { provider: Provider; onCha
                 {!m.available && <span className="note"> (no longer listed)</span>}
               </td>
               <td className="num">{m.context_window ? m.context_window.toLocaleString() : ''}</td>
-              <td title={m.tool_support_via ? `known from ${m.tool_support_via}` : 'tested the first time it is allowed'}>{m.tool_support}</td>
+              <td title={m.tool_support_via ? `known from ${m.tool_support_via}` : 'tested the first time it is allowed'}>
+                {m.tool_support}
+              </td>
               <td className="num">{price(m)}</td>
               <td>
-                <input type="checkbox" aria-label={`Allow ${m.model_id} for asking`} checked={m.allowed_ask} disabled={busy === m.model_id || !m.available} onChange={(e) => void set(m, { allowed_ask: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  aria-label={`Allow ${m.model_id} for asking`}
+                  checked={m.allowed_ask}
+                  disabled={busy === m.model_id || !m.available}
+                  onChange={(e) => void set(m, { allowed_ask: e.target.checked })}
+                />
               </td>
               <td>
-                <input type="radio" name={`default-ask-${provider.id}`} aria-label={`${m.model_id} is the default for asking`} checked={m.default_ask} disabled={!m.allowed_ask || busy === m.model_id} onChange={() => void set(m, { default_ask: true })} />
+                <input
+                  type="radio"
+                  name={`default-ask-${provider.id}`}
+                  aria-label={`${m.model_id} is the default for asking`}
+                  checked={m.default_ask}
+                  disabled={!m.allowed_ask || busy === m.model_id}
+                  onChange={() => void set(m, { default_ask: true })}
+                />
               </td>
               <td>
-                <input type="checkbox" aria-label={`Allow ${m.model_id} for building`} checked={m.allowed_build} disabled={busy === m.model_id || !m.available} onChange={(e) => void set(m, { allowed_build: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  aria-label={`Allow ${m.model_id} for building`}
+                  checked={m.allowed_build}
+                  disabled={busy === m.model_id || !m.available}
+                  onChange={(e) => void set(m, { allowed_build: e.target.checked })}
+                />
               </td>
               <td>
-                <input type="radio" name={`default-build-${provider.id}`} aria-label={`${m.model_id} is the default for building`} checked={m.default_build} disabled={!m.allowed_build || busy === m.model_id} onChange={() => void set(m, { default_build: true })} />
+                <input
+                  type="radio"
+                  name={`default-build-${provider.id}`}
+                  aria-label={`${m.model_id} is the default for building`}
+                  checked={m.default_build}
+                  disabled={!m.allowed_build || busy === m.model_id}
+                  onChange={() => void set(m, { default_build: true })}
+                />
               </td>
             </tr>
           ))}

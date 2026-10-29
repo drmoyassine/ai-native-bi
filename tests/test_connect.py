@@ -181,8 +181,11 @@ async def test_uploads_become_syncs_of_a_file_source_to_load_again() -> None:
     try:
         async with pool.connection() as conn:
             await conn.execute('create table schema_migration (name text primary key, applied_at timestamptz not null default now())')
-            await conn.execute("insert into schema_migration (name) values ('0010_connect.sql'), ('0011_setup_agent.sql')")
-        await migrate(pool)  # everything before Connect data
+            await conn.execute(
+                "insert into schema_migration (name) values ('0010_connect.sql'), ('0011_setup_agent.sql'), ('0012_organization.sql'),"
+                " ('0013_templates.sql')"
+            )
+        await migrate(pool)  # everything before Connect data (and nothing after it)
         await accounts.create_user(pool, 'ie@example.edu', 'IE', 'a-long-password-0123')
         async with pool.connection() as conn:
             await conn.execute(

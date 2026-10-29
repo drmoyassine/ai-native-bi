@@ -14,14 +14,20 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   const res = await fetch(`/app/api${path}`, {
     method,
     credentials: 'same-origin',
-    headers: { ...(method === 'GET' ? {} : { 'X-BI-App': '1' }), ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}) },
+    headers: {
+      ...(method === 'GET' ? {} : { 'X-BI-App': '1' }),
+      ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
+    },
     body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = (data as { detail?: unknown }).detail;
-    throw new ApiError(res.status, typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d) => d.msg).join('; ') : `error ${res.status}`);
+    throw new ApiError(
+      res.status,
+      typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d) => d.msg).join('; ') : `error ${res.status}`,
+    );
   }
   return data as T;
 }
@@ -46,6 +52,15 @@ export interface Organization {
   secondary_language: string | null;
   default_locale: string;
   accent_color: string | null;
+  installed_templates: string[];
+}
+
+/** A template (DEC-037): configuration the organization installs, changes or ignores. Labels are by language code. */
+export interface Template {
+  name: string;
+  label: Record<string, string>;
+  languages: string[];
+  datasets: { name: string; label: Record<string, string> }[];
 }
 
 export interface Me {
@@ -180,7 +195,7 @@ export interface ConversationSummary {
 
 export interface Usage {
   person: { used: number; cap: number };
-  institution: { used: number; cap: number };
+  organization: { used: number; cap: number };
   month_start: string;
 }
 

@@ -1,4 +1,4 @@
-"""The BI's own accounts and their sessions (ROADMAP-009; single sign-on with the institution comes later, ROADMAP-005).
+"""The BI's own accounts and their sessions (ROADMAP-009; single sign-on with the organization comes later, ROADMAP-005).
 
 Passwords are hashed with Argon2id. A session is a random token in an HttpOnly cookie; only its SHA-256 is stored, so a copy of the
 database signs nobody in.

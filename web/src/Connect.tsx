@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { api, type Reason, type Review, type Source, type SourceSummary, type SourceType, type Sync, type SyncStatus, type User } from './api';
+import {
+  api,
+  type Reason,
+  type Review,
+  type Source,
+  type SourceSummary,
+  type SourceType,
+  type Sync,
+  type SyncStatus,
+  type User,
+} from './api';
 
-// Connect data (docs/connect-data-spec.md): the institution's sources, a file being one type among several. A source is made, its data
+// Connect data (docs/connect-data-spec.md): the organization's sources, a file being one type among several. A source is made, its data
 // sent or synced, what was found is checked, and a BI admin approves before anything reaches the analytics.
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -50,8 +60,8 @@ export function Connect({ user }: { user: User }) {
         </button>
       </div>
       <p className="note">
-        Each source is a place the organization&apos;s data comes from: exports you upload today, and databases, folders and other systems as
-        they are added. Nothing reaches the analytics until a BI admin approves it.
+        Each source is a place the organization&apos;s data comes from: exports you upload today, and databases, folders and other systems
+        as they are added. Nothing reaches the analytics until a BI admin approves it.
       </p>
       {listing.sources.length === 0 ? (
         <div className="card empty">
@@ -128,7 +138,7 @@ function AddSource({ listing, onCancel, onMade }: { listing: Listing; onCancel: 
           <h2>2. Name it, and say what it feeds</h2>
           <label>
             Name
-            <input name="name" required maxLength={80} placeholder="Registrar enrollment exports" />
+            <input name="name" required maxLength={80} placeholder="Monthly exports" />
           </label>
           <label>
             What its data is
@@ -444,7 +454,12 @@ function ReviewPanel({ syncId, user, onDone }: { syncId: string; user: User; onD
         </button>
       </div>
 
-      <AgentNote review={review} user={user} onAsk={() => void act(`/syncs/${syncId}/ask-agent`)} onHeader={(row) => void act(`/syncs/${syncId}/header`, { row })} />
+      <AgentNote
+        review={review}
+        user={user}
+        onAsk={() => void act(`/syncs/${syncId}/ask-agent`)}
+        onHeader={(row) => void act(`/syncs/${syncId}/header`, { row })}
+      />
 
       <h3>The columns</h3>
       <div className="table-wrap">

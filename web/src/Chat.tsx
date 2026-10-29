@@ -4,7 +4,16 @@ import { apply, stopNote, type AgentEvent, type ChatState, type Item } from './a
 import type { ChartDefinition, GovernedMember, Row } from './chart';
 import { ChartView } from './ChartView';
 
-const EVENT_TYPES = ['turn.started', 'text.delta', 'tool.started', 'tool.finished', 'result.table', 'result.chart', 'turn.finished', 'turn.failed'];
+const EVENT_TYPES = [
+  'turn.started',
+  'text.delta',
+  'tool.started',
+  'tool.finished',
+  'result.table',
+  'result.chart',
+  'turn.finished',
+  'turn.failed',
+];
 const EMPTY: ChatState = { items: [], end: null };
 
 const TOOL_LABELS: Record<string, string> = {
@@ -44,7 +53,11 @@ export function Chat() {
         <ul>
           {conversations.map((c) => (
             <li key={c.id}>
-              <button className={selected === c.id ? 'active' : ''} onClick={() => setSelected(c.id)} title={`${c.provider} · ${c.model_id}`}>
+              <button
+                className={selected === c.id ? 'active' : ''}
+                onClick={() => setSelected(c.id)}
+                title={`${c.provider} · ${c.model_id}`}
+              >
                 <span dir="auto">{c.title}</span>
               </button>
             </li>
@@ -77,7 +90,9 @@ function NewChat({ onStarted }: { onStarted: (id: string) => Promise<void> }) {
       .get<{ providers: ModelGroup[] }>('/models?mode=ask')
       .then(({ providers }) => {
         setGroups(providers);
-        const preferred = providers.flatMap((g) => g.models.map((m) => ({ g, m }))).find((x) => x.m.default) ?? providers.flatMap((g) => g.models.map((m) => ({ g, m })))[0];
+        const preferred =
+          providers.flatMap((g) => g.models.map((m) => ({ g, m }))).find((x) => x.m.default) ??
+          providers.flatMap((g) => g.models.map((m) => ({ g, m })))[0];
         if (preferred) setChoice(`${preferred.g.provider_id}\n${preferred.m.model_id}`);
       })
       .catch((err: Error) => setError(err.message));
@@ -103,7 +118,9 @@ function NewChat({ onStarted }: { onStarted: (id: string) => Promise<void> }) {
   return (
     <form className="card new-chat" onSubmit={start}>
       <h2>New conversation</h2>
-      {groups && groups.length === 0 && <p className="hint">No model is available yet. An admin adds a provider and allows its models under Models.</p>}
+      {groups && groups.length === 0 && (
+        <p className="hint">No model is available yet. An admin adds a provider and allows its models under Models.</p>
+      )}
       {groups && groups.length > 0 && (
         <>
           <label>
@@ -130,7 +147,11 @@ function NewChat({ onStarted }: { onStarted: (id: string) => Promise<void> }) {
           <button type="submit">Start</button>
         </>
       )}
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }
@@ -146,7 +167,10 @@ function Thread({ id, members, onTitle }: { id: string; members: GovernedMember[
   const bottom = useRef<HTMLDivElement>(null);
 
   const refreshUsage = useCallback(() => {
-    api.get<Usage>('/agent/usage').then(setUsage).catch(() => setUsage(null));
+    api
+      .get<Usage>('/agent/usage')
+      .then(setUsage)
+      .catch(() => setUsage(null));
   }, []);
 
   /** Follows a turn from an event id on; ends when the server says nothing more is coming. */
@@ -211,12 +235,14 @@ function Thread({ id, members, onTitle }: { id: string; members: GovernedMember[
     }
   }
 
-  const over = usage && (usage.person.used >= usage.person.cap || usage.institution.used >= usage.institution.cap);
+  const over = usage && (usage.person.used >= usage.person.cap || usage.organization.used >= usage.organization.cap);
 
   return (
     <>
       <div className="thread" aria-live="polite">
-        {state.items.length === 0 && !running && <p className="hint">Ask about the data, for example “How many students are enrolled by program?”</p>}
+        {state.items.length === 0 && !running && (
+          <p className="hint">Ask about the data, for example “What are the latest figures, by month?”</p>
+        )}
         {state.items.map((item, i) => (
           <Message key={i} item={item} members={members} />
         ))}
@@ -228,7 +254,11 @@ function Thread({ id, members, onTitle }: { id: string; members: GovernedMember[
         )}
         <div ref={bottom} />
       </div>
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       <form className="composer" onSubmit={send}>
         <textarea
           dir="auto"
@@ -263,9 +293,17 @@ function Thread({ id, members, onTitle }: { id: string; members: GovernedMember[
 function Message({ item, members }: { item: Item; members: GovernedMember[] }) {
   switch (item.kind) {
     case 'user':
-      return <p className="bubble user" dir="auto">{item.text}</p>;
+      return (
+        <p className="bubble user" dir="auto">
+          {item.text}
+        </p>
+      );
     case 'assistant':
-      return <p className="bubble assistant" dir="auto">{item.text}</p>;
+      return (
+        <p className="bubble assistant" dir="auto">
+          {item.text}
+        </p>
+      );
     case 'tool':
       return (
         <p className={`tool ${item.ok === false ? 'failed' : ''}`} title={item.args}>
@@ -277,11 +315,17 @@ function Message({ item, members }: { item: Item; members: GovernedMember[] }) {
       const definition: ChartDefinition = { version: 1, title: '', query: item.query, visual: { type: 'table' } };
       return (
         <div className="card result">
-          {item.rows.length === 0 ? <p className="hint">No data: nothing has been loaded for this yet.</p> : <ChartView definition={definition} rows={item.rows} members={members} />}
+          {item.rows.length === 0 ? (
+            <p className="hint">No data: nothing has been loaded for this yet.</p>
+          ) : (
+            <ChartView definition={definition} rows={item.rows} members={members} />
+          )}
           <p className="note">
             {item.row_count} row{item.row_count === 1 ? '' : 's'}
             {item.as_of ? ` · data as of ${item.as_of}` : ''}
-            {item.suppressed_cells > 0 ? ` · ${item.suppressed_cells} small count${item.suppressed_cells === 1 ? '' : 's'} hidden to protect privacy` : ''}
+            {item.suppressed_cells > 0
+              ? ` · ${item.suppressed_cells} small count${item.suppressed_cells === 1 ? '' : 's'} hidden to protect privacy`
+              : ''}
           </p>
         </div>
       );
@@ -309,11 +353,19 @@ function ProposedChart({ draftId, chart, members }: { draftId: string | null; ch
   return (
     <div className="card result">
       <p className="note">Proposed chart · a draft until a person publishes it</p>
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       {!rows && !error && <p className="hint">Loading…</p>}
       {rows && rows.length === 0 && <p className="hint">No data: nothing has been loaded for this yet.</p>}
       {rows && rows.length > 0 && <ChartView definition={chart} rows={rows} members={members} />}
-      {hidden > 0 && <p className="note">{hidden} small count{hidden === 1 ? '' : 's'} hidden to protect privacy</p>}
+      {hidden > 0 && (
+        <p className="note">
+          {hidden} small count{hidden === 1 ? '' : 's'} hidden to protect privacy
+        </p>
+      )}
     </div>
   );
 }

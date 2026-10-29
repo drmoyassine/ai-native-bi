@@ -6,7 +6,10 @@ language (DEC-037)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
+
+import yaml
 
 PRIMARY_LANGUAGE = 'en'
 
@@ -22,39 +25,13 @@ class Language:
     dir: Literal['ltr', 'rtl'] = 'ltr'
 
 
-LANGUAGES: tuple[Language, ...] = (
-    Language('en', 'English', 'English', 'latin'),
-    Language('ar', 'Arabic', 'العربية', 'arabic', 'rtl'),
-    Language('he', 'Hebrew', 'עברית', 'hebrew', 'rtl'),
-    Language('fa', 'Persian', 'فارسی', 'arabic', 'rtl'),
-    Language('ur', 'Urdu', 'اردو', 'arabic', 'rtl'),
-    Language('ps', 'Pashto', 'پښتو', 'arabic', 'rtl'),
-    Language('sd', 'Sindhi', 'سنڌي', 'arabic', 'rtl'),
-    Language('ku-Arab', 'Kurdish (Sorani)', 'کوردی', 'arabic', 'rtl'),
-    Language('fr', 'French', 'Français', 'latin'),
-    Language('es', 'Spanish', 'Español', 'latin'),
-    Language('pt', 'Portuguese', 'Português', 'latin'),
-    Language('de', 'German', 'Deutsch', 'latin'),
-    Language('it', 'Italian', 'Italiano', 'latin'),
-    Language('nl', 'Dutch', 'Nederlands', 'latin'),
-    Language('sv', 'Swedish', 'Svenska', 'latin'),
-    Language('pl', 'Polish', 'Polski', 'latin'),
-    Language('tr', 'Turkish', 'Türkçe', 'latin'),
-    Language('ru', 'Russian', 'Русский', 'cyrillic'),
-    Language('uk', 'Ukrainian', 'Українська', 'cyrillic'),
-    Language('el', 'Greek', 'Ελληνικά', 'greek'),
-    Language('zh-Hans', 'Chinese (Simplified)', '简体中文', 'cjk-sc'),
-    Language('zh-Hant', 'Chinese (Traditional)', '繁體中文', 'cjk-tc'),
-    Language('ja', 'Japanese', '日本語', 'cjk-jp'),
-    Language('ko', 'Korean', '한국어', 'cjk-kr'),
-    Language('hi', 'Hindi', 'हिन्दी', 'devanagari'),
-    Language('bn', 'Bengali', 'বাংলা', 'bengali'),
-    Language('th', 'Thai', 'ไทย', 'thai'),
-    Language('vi', 'Vietnamese', 'Tiếng Việt', 'latin'),
-    Language('id', 'Indonesian', 'Bahasa Indonesia', 'latin'),
-    Language('ms', 'Malay', 'Bahasa Melayu', 'latin'),
-    Language('sw', 'Swahili', 'Kiswahili', 'latin'),
-)
+def _registry() -> tuple[Language, ...]:
+    entries = yaml.safe_load((Path(__file__).parent / 'packs' / 'registry.yml').read_text(encoding='utf-8'))
+    return tuple(Language(e['code'], e['name_en'], e['native_name'], e['script'], e['dir']) for e in entries)
+
+
+LANGUAGES: tuple[Language, ...] = _registry()
+"""The registry (src/bi/packs/registry.yml): data, not code (DEC-037)."""
 
 BY_CODE = {lang.code: lang for lang in LANGUAGES}
 

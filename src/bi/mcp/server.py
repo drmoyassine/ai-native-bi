@@ -27,7 +27,7 @@ from ..cube import CubeClient, CubeError
 from .oidc import OidcIssuer
 from .principal import Principal, PrincipalVerifier
 
-INSTRUCTIONS = """The institution's governed metrics (its business intelligence). Every number comes from a governed metric layer.
+INSTRUCTIONS = """The organization's governed metrics (its business intelligence). Every number comes from a governed metric layer.
 Call list_metrics first to learn the measures and dimensions and their exact names, then query_metric with those names.
 Always tell the person the data's as-of date. Counts under the privacy threshold come back as null and are listed under
 `suppressed`: say they are hidden for privacy; never guess them, and never combine overlapping queries to recover them.
@@ -96,8 +96,8 @@ def build_server(ctx: McpContext) -> tuple[MCPServer, Starlette]:
         principal = Principal.from_claims(access.claims)
         if principal.scope != 'all':
             raise ToolError(
-                'your access is limited to some units or programs, which the BI cannot enforce yet, so nothing is answered rather than '
-                'too much; ask for institution-wide access or wait for scoped access'
+                'your access is limited to part of the organization, which the BI cannot enforce yet, so nothing is answered rather than '
+                'too much; ask for organization-wide access or wait for scoped access'
             )
         await _check_limits(ctx, principal, tool, arguments)
         tc = tools.ToolContext(pool=ctx.pool, cube=ctx.cube, user_id=principal.subject, suppression_threshold=ctx.suppression_threshold)

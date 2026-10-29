@@ -8,6 +8,7 @@ import httpx
 import uvicorn
 from psycopg_pool import AsyncConnectionPool
 
+from . import organization
 from .accounts import AccountError, Throttle, ensure_admin
 from .agent.routes import AgentContext
 from .agent.secrets import DbSecretStore
@@ -40,6 +41,9 @@ async def main() -> None:
         applied = await migrate(pool)
         if applied:
             log('info', 'migrated', applied=applied)
+        installed = await organization.install_fed_templates(pool)
+        if installed:
+            log('info', 'templates installed for data already fed', templates=installed)
         try:
             admin = admin_from_env(env)
             if admin and await ensure_admin(pool, *admin):
@@ -75,7 +79,7 @@ async def main() -> None:
                     secrets=secrets,
                     http=http,
                     enqueue_turn=lambda run_id, conversation_id: enqueue_turn(queue, run_id, conversation_id),
-                    institution_monthly_tokens=env.AGENT_INSTITUTION_MONTHLY_TOKENS,
+                    organization_monthly_tokens=env.AGENT_ORGANIZATION_MONTHLY_TOKENS,
                     person_monthly_tokens=env.AGENT_PERSON_MONTHLY_TOKENS,
                     suppression_threshold=env.SUPPRESSION_THRESHOLD,
                 ),

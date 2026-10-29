@@ -1,0 +1,33 @@
+# The language registry (DEC-038, from the AMS's packages/shared/src/languages.ts): how each language is written, so the interface
+# sets <html lang>, dir and the font stack. Data, not code (DEC-037). English first, then right-to-left languages, then the rest.
+- {code: en, name_en: English, native_name: English, script: latin, dir: ltr}
+- {code: ar, name_en: Arabic, native_name: العربية, script: arabic, dir: rtl}
+- {code: he, name_en: Hebrew, native_name: עברית, script: hebrew, dir: rtl}
+- {code: fa, name_en: Persian, native_name: فارسی, script: arabic, dir: rtl}
+- {code: ur, name_en: Urdu, native_name: اردو, script: arabic, dir: rtl}
+- {code: ps, name_en: Pashto, native_name: پښتو, script: arabic, dir: rtl}
+- {code: sd, name_en: Sindhi, native_name: سنڌي, script: arabic, dir: rtl}
+- {code: ku-Arab, name_en: 'Kurdish (Sorani)', native_name: کوردی, script: arabic, dir: rtl}
+- {code: fr, name_en: French, native_name: Français, script: latin, dir: ltr}
+- {code: es, name_en: Spanish, native_name: Español, script: latin, dir: ltr}
+- {code: pt, name_en: Portuguese, native_name: Português, script: latin, dir: ltr}
+- {code: de, name_en: German, native_name: Deutsch, script: latin, dir: ltr}
+- {code: it, name_en: Italian, native_name: Italiano, script: latin, dir: ltr}
+- {code: nl, name_en: Dutch, native_name: Nederlands, script: latin, dir: ltr}
+- {code: sv, name_en: Swedish, native_name: Svenska, script: latin, dir: ltr}
+- {code: pl, name_en: Polish, native_name: Polski, script: latin, dir: ltr}
+- {code: tr, name_en: Turkish, native_name: Türkçe, script: latin, dir: ltr}
+- {code: ru, name_en: Russian, native_name: Русский, script: cyrillic, dir: ltr}
+- {code: uk, name_en: Ukrainian, native_name: Українська, script: cyrillic, dir: ltr}
+- {code: el, name_en: Greek, native_name: Ελληνικά, script: greek, dir: ltr}
+- {code: zh-Hans, name_en: 'Chinese (Simplified)', native_name: 简体中文, script: cjk-sc, dir: ltr}
+- {code: zh-Hant, name_en: 'Chinese (Traditional)', native_name: 繁體中文, script: cjk-tc, dir: ltr}
+- {code: ja, name_en: Japanese, native_name: 日本語, script: cjk-jp, dir: ltr}
+- {code: ko, name_en: Korean, native_name: 한국어, script: cjk-kr, dir: ltr}
+- {code: hi, name_en: Hindi, native_name: हिन्दी, script: devanagari, dir: ltr}
+- {code: bn, name_en: Bengali, native_name: বাংলা, script: bengali, dir: ltr}
+- {code: th, name_en: Thai, native_name: ไทย, script: thai, dir: ltr}
+- {code: vi, name_en: Vietnamese, native_name: Tiếng Việt, script: latin, dir: ltr}
+- {code: id, name_en: Indonesian, native_name: Bahasa Indonesia, script: latin, dir: ltr}
+- {code: ms, name_en: Malay, native_name: Bahasa Melayu, script: latin, dir: ltr}
+- {code: sw, name_en: Swahili, native_name: Kiswahili, script: latin, dir: ltr}

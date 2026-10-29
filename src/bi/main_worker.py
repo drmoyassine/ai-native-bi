@@ -36,7 +36,9 @@ async def main() -> None:
             env.DATABASE_URL,
             deps,
             load=load,
-            agent=AgentWorkerDeps(turn=turn, secrets=secrets, http=client, institution_monthly_tokens=env.AGENT_INSTITUTION_MONTHLY_TOKENS),
+            agent=AgentWorkerDeps(
+                turn=turn, secrets=secrets, http=client, organization_monthly_tokens=env.AGENT_ORGANIZATION_MONTHLY_TOKENS
+            ),
         )
         queues = [COLLECT_QUEUE, LOAD_QUEUE, AGENT_QUEUE]
         async with queue.open_async():

@@ -42,6 +42,8 @@ async def make_pool() -> AsyncIterator[PoolFactory]:
         pool = AsyncConnectionPool(url, open=False)
         await pool.open()
         await migrate(pool)
+        async with pool.connection() as conn:  # the tests' made-up data is the higher-education template's (DEC-037)
+            await conn.execute("update organization set installed_templates = '{higher-education}'")
         pools.append(pool)
         return pool
 

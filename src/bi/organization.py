@@ -8,9 +8,10 @@ from typing import Any
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, Field, field_validator
 
+from . import packs
 from .languages import BY_CODE, LANGUAGES, PRIMARY_LANGUAGE, effective_locale, is_readable_accent, secondary_language_problem
 
-_FIELDS = ('name', 'name_secondary', 'secondary_language', 'default_locale', 'accent_color')
+_FIELDS = ('name', 'name_secondary', 'secondary_language', 'default_locale', 'accent_color', 'installed_templates')
 
 
 class OrganizationPatch(BaseModel):
@@ -23,6 +24,7 @@ class OrganizationPatch(BaseModel):
     secondary_language: str | None = None
     default_locale: str | None = None
     accent_color: str | None = None
+    installed_templates: list[str] | None = None
 
     @field_validator('secondary_language')
     @classmethod
@@ -31,6 +33,16 @@ class OrganizationPatch(BaseModel):
         if problem:
             raise ValueError(problem)
         return v
+
+    @field_validator('installed_templates')
+    @classmethod
+    def _templates(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        unknown = [t for t in v if t not in packs.templates()]
+        if unknown:
+            raise ValueError(f'no template named {", ".join(unknown)}')
+        return sorted(set(v))
 
     @field_validator('accent_color')
     @classmethod
@@ -43,10 +55,14 @@ class OrganizationPatch(BaseModel):
 async def get(pool: AsyncConnectionPool) -> dict[str, Any]:
     async with pool.connection() as conn:
         row = await (
-            await conn.execute('select name, name_secondary, secondary_language, default_locale, accent_color from organization')
+            await conn.execute(
+                'select name, name_secondary, secondary_language, default_locale, accent_color, installed_templates from organization'
+            )
         ).fetchone()
     assert row is not None
-    return dict(zip(_FIELDS, row, strict=True))
+    out = dict(zip(_FIELDS, row, strict=True))
+    out['installed_templates'] = list(out['installed_templates'])
+    return out
 
 
 async def update(pool: AsyncConnectionPool, patch: OrganizationPatch, user_id: str) -> dict[str, Any]:
@@ -55,6 +71,8 @@ async def update(pool: AsyncConnectionPool, patch: OrganizationPatch, user_id: s
     merged = {**current, **changes}
     if merged['name'] is None:
         merged['name'] = ''
+    if merged['installed_templates'] is None:
+        merged['installed_templates'] = []
     if merged['default_locale'] not in (PRIMARY_LANGUAGE, merged['secondary_language']):
         if 'default_locale' in changes:
             raise ValueError('the default language must be English or the secondary language')
@@ -62,15 +80,8 @@ async def update(pool: AsyncConnectionPool, patch: OrganizationPatch, user_id: s
     async with pool.connection() as conn:
         await conn.execute(
             """update organization set name = %s, name_secondary = %s, secondary_language = %s, default_locale = %s,
-                                       accent_color = %s, updated_at = now(), updated_by = %s""",
-            [
-                merged['name'],
-                merged['name_secondary'],
-                merged['secondary_language'],
-                merged['default_locale'],
-                merged['accent_color'],
-                user_id,
-            ],
+                                       accent_color = %s, installed_templates = %s, updated_at = now(), updated_by = %s""",
+            [*(merged[f] for f in _FIELDS), user_id],
         )
     return merged
 
@@ -101,3 +112,29 @@ async def set_user_language(pool: AsyncConnectionPool, user_id: str, code: str |
 async def locale_for(pool: AsyncConnectionPool, user_id: str) -> str:
     org = await get(pool)
     return effective_locale(await user_language(pool, user_id), org['default_locale'], org['secondary_language'])
+
+
+def templates_json() -> list[dict[str, Any]]:
+    """The templates shipped (DEC-037): their names, labels, languages and the datasets each brings."""
+    return [
+        {
+            'name': name,
+            'label': t.get('label', {}),
+            'languages': t.get('languages', []),
+            'datasets': [{'name': d, 'label': v.get('label', {})} for d, v in (t.get('datasets') or {}).items()],
+        }
+        for name, t in packs.templates().items()
+    ]
+
+
+async def install_fed_templates(pool: AsyncConnectionPool) -> list[str]:
+    """Installs every template whose datasets a stream already feeds (data made before templates existed keeps working). Returns the
+    templates it installed."""
+    fed: dict[str, str] = {d: name for name, t in packs.templates().items() for d in (t.get('datasets') or {})}
+    async with pool.connection() as conn:
+        rows = await (await conn.execute('select distinct dataset from source_stream where dataset is not null')).fetchall()
+        installed = set((await get(pool))['installed_templates'])
+        missing = sorted({fed[r[0]] for r in rows if r[0] in fed} - installed)
+        if missing:
+            await conn.execute('update organization set installed_templates = %s', [sorted(installed | set(missing))])
+    return missing

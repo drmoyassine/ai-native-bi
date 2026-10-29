@@ -190,7 +190,7 @@ async def test_mcp_clients_are_told_to_sign_in_at_the_ams_and_its_tokens_work(po
             limited = token(sub='ams-unit', email='unit@example.edu', bi_scope=[{'type': 'org_unit', 'id': 'u', 'role': 'viewer'}])
             async with mcp_session(app, limited) as session:
                 result = await session.call_tool('list_datasets', {})
-                assert result.is_error and 'limited to some units' in str(result.content)
+                assert result.is_error and 'limited to part of the organization' in str(result.content)
     async with pool.connection() as conn:
         rows = await (await conn.execute("select client_id, issuer from access_log where tool = 'list_datasets' order by id")).fetchall()
     assert ('ams:claude', 'ams') in rows
