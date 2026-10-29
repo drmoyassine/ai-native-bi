@@ -1771,4 +1771,54 @@ related_tasks:
     url: /TASKS.md#TASK-040
 ---
 
+---
+
+## DEC-038 — Adopt the AMS's patterns for configuration, languages and the interface
+
+---
+title: Adopt the AMS's patterns for configuration, languages and the interface
+status: accepted
+context: >-
+  The owner asked the BI to adopt the AMS's agnostic patterns and its interface design and colours. The AMS keeps
+  accreditors as data ("frameworks are data, never code"), runs one code path against several fixtures, has a language
+  registry with English plus one secondary language, an English string catalogue behind t(), the organization's accent
+  colour and a shared design system (Tailwind tokens, shadcn-style components, a sidebar shell).
+decision: >-
+  The BI follows the same patterns. Configuration is data, never code: a code branch on a template, subject or
+  organization is forbidden, and anything not expressible in configuration is a schema change reviewed against every
+  template. One code path is tested against at least two templates of different domains, one of them in a right-to-left
+  language. Definitions are versioned: drafts, approval, published versions. Small rules are small JSON forms, never a
+  rule engine. Languages: English is the interface's primary language, an organization chooses one secondary language
+  from the registry (bi/languages.py, web/src/languages.ts); a person picks their interface language; <html lang>, dir
+  and the font stack follow it. Interface strings go through t() over an English catalogue (web/src/locales/en.ts); the
+  secondary language comes from a translation job (planned) and falls back to English. Organization settings hold the
+  name in both languages, the secondary and default languages and an accent colour that white text can be read on
+  (contrast 4.5); only the sign-in page's branding is public. The web app uses the AMS's tokens (oklch), Tailwind, its
+  Button, Card and Input, and its shell: a sidebar on wide screens, a drawer on small ones, logical (start/end)
+  properties for right-to-left.
+rationale: >-
+  Two products for the same people should look and behave alike, and the AMS's patterns already proved agnostic across
+  accreditors and languages.
+consequences: >-
+  Pages written before this keep their own class names, restyled on the AMS's tokens, and move to the components and t()
+  as they are touched; a catalogue coverage check and a lint rule against literal interface text follow, as in the AMS.
+  The dark theme is dropped (the AMS has none). The data model spec's languages (section 4) follow this registry.
+tags:
+  - agnostic
+  - interface
+  - i18n
+id: DEC-038
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:36:43.103Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:36:43.103Z'
+---
+
 <!-- End VEF generated items. -->

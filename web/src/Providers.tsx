@@ -17,7 +17,7 @@ interface Provider {
 }
 
 const SAMPLES_WARNING =
-  'Masked sample rows (at most 20 per table, personal columns replaced with made-up values) will be sent to this provider when an admin sets up a source. Use this only with a provider the institution has an agreement with, or a local one. Allow it?';
+  'Masked sample rows (at most 20 per table, personal columns replaced with made-up values) will be sent to this provider when an admin sets up a source. Use this only with a provider the organization has an agreement with, or a local one. Allow it?';
 
 interface ProviderModel {
   model_id: string;

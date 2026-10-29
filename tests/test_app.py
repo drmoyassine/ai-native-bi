@@ -319,3 +319,35 @@ async def test_the_metrics_page_reads_the_models_words(app: tuple[httpx.AsyncCli
     assert [m['name'] for m in page['members']] == [m['name'] for m in MEMBERS]
     assert page['instructions'] == ['Term codes are year plus 10 for fall.']
     assert (await client.get('/app/api/knowledge', params={'q': 'zzzz'})).json()['members'] == []
+
+
+async def test_the_organization_is_configured_by_an_admin_and_branding_is_public(
+    app: tuple[httpx.AsyncClient, list[str], FakeCube],
+) -> None:
+    client, _, _ = app
+    await signed_in(client)
+    put = await client.put(
+        '/app/api/organization',
+        json={'name': 'Example Org', 'secondary_language': 'ar', 'name_secondary': 'x', 'default_locale': 'ar', 'accent_color': '#1d3557'},
+        headers=APP,
+    )
+    assert put.status_code == 200, put.text
+    me = (await client.get('/app/api/me')).json()
+    assert me['organization']['name'] == 'Example Org' and me['locale'] == 'ar'
+    assert (await client.put('/app/api/me/language', json={'language': 'en'}, headers=APP)).status_code == 204
+    assert (await client.get('/app/api/me')).json()['locale'] == 'en'
+    assert (await client.put('/app/api/me/language', json={'language': 'fr'}, headers=APP)).status_code == 422  # not offered
+    for bad in ({'accent_color': '#ffff00'}, {'secondary_language': 'en'}, {'secondary_language': 'xx'}, {'surprise': 1}):
+        assert (await client.put('/app/api/organization', json=bad, headers=APP)).status_code == 422, bad
+    dropped = await client.put('/app/api/organization', json={'secondary_language': None}, headers=APP)
+    assert dropped.json()['organization']['default_locale'] == 'en'  # the default follows the language it pointed at
+    client.cookies.clear()
+    branding = (await client.get('/app/api/public/branding')).json()
+    assert branding == {
+        'name': 'Example Org',
+        'name_secondary': 'x',
+        'secondary_language': None,
+        'default_locale': 'en',
+        'accent_color': '#1d3557',
+    }
+    assert (await client.put('/app/api/organization', json={'name': 'y'}, headers=APP)).status_code == 401

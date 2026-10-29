@@ -76,9 +76,12 @@ related_decisions:
   - id: DEC-037
     name: The BI knows no organisation, industry or language; all domain meaning is configuration or a template
     url: /DECISIONS.md#DEC-037
+  - id: DEC-038
+    name: Adopt the AMS's patterns for configuration, languages and the interface
+    url: /DECISIONS.md#DEC-038
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:25:07.808Z'
+  at: '2026-10-29T06:36:43.103Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'

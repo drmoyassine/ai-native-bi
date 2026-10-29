@@ -1,7 +1,7 @@
 # Spec: The data model — configured, agnostic of organisation and industry
 
-Status: **draft for review, revised 2026-10-29.** Decisions DEC-036 (the model is configuration) and DEC-037 (no domain is built in;
-a rule without exception). Supersedes DEC-034 (the ontology as a reviewed file) and retires "dataset" (`bi.mapping.SHAPES`). Builds
+Status: **draft for review, revised 2026-10-29.** Decisions DEC-036 (the model is configuration), DEC-037 (no domain is built in;
+a rule without exception) and DEC-038 (the AMS's patterns for configuration, languages and the interface). Supersedes DEC-034 (the ontology as a reviewed file) and retires "dataset" (`bi.mapping.SHAPES`). Builds
 on DEC-004 (Cube is the only read path), DEC-006 (a person approves), DEC-010 (dbt), DEC-028 and DEC-029 (discovery and mappings per
 layout), DEC-033 (a metric's words live with its definition).
 
@@ -78,10 +78,14 @@ Consumers         charts and dashboards, the chat, MCP, connected systems (the A
 
 ## 4. Organisation settings
 
-- **Name and languages**: one primary language and any others; every label, description, synonym and explanation is entered per
-  language, and search matches in all of them. Text is normalised by Unicode rules for any script; extra folding rules for a language
-  (letter variants, marks) come with a **language pack** (data: folding rules, made-up names for masking, words that suggest personal or
+- **Name and languages** (DEC-038, as in the AMS): English is the interface's primary language; the organization chooses **one
+  secondary language** from a registry of about thirty (`bi/languages.py`), which says each language's direction and script. Every
+  label, description, synonym and explanation is entered in English and in the secondary language; each person chooses their interface
+  language; search matches in both. Text is normalised by Unicode rules for any script; extra folding rules for a language (letter
+  variants, marks) come with a **language pack** (data: folding rules, made-up names for masking, words that suggest personal or
   identifier columns), never with code.
+- **Branding**: the name in both languages and an accent colour (white text on it must reach a contrast of 4.5); the sign-in page shows
+  them, the only thing readable without signing in.
 - **Calendar**: the organisation's periods (month, quarter, term, season, fiscal year, shift), each with its dates, used to cut every
   metric over time and to say "a year later" in a cohort. Calendar years and months exist by default; any other period is defined.
 - **Privacy**: the suppression threshold (as today) and the patterns that mark a column personal, from the language packs and the
@@ -211,8 +215,22 @@ The AMS integration (contract) stays: it is a connected system that reads metric
 
 Database sources and APIs (C2 to C5) build on M2 and M4.
 
-## 14. Decisions
+## 14. Patterns adopted from the AMS (DEC-038)
 
+- **Configuration is data, never code.** A branch on a template, subject or organization (`if subject == ...`) is forbidden; what
+  configuration cannot express is a schema change, reviewed against every template.
+- **One code path, several fixtures.** Tests run the same code against at least two templates from different domains, one in a
+  right-to-left language, as the AMS runs WSCUC, ABET and an Arabic framework.
+- **Versioned definitions.** Drafts, approval, published versions; what is published is frozen, a change is a new version.
+- **Small rules as small JSON forms**, never a rule engine (the AMS's due rules and `applies_when` tags): a cohort's span, an
+  official-load rule, a matching rule.
+- **The organization's own words.** A glossary maps the organization's terms to the words of each template it installs.
+- **Interface text through t()**, over an English catalogue; the secondary language from a translation job, reviewed in the app.
+- **One look**: the AMS's tokens, components and shell.
+
+## 15. Decisions
+
+- **DEC-038**: the AMS's patterns for configuration, languages (English plus one secondary) and the interface.
 - **DEC-037**: the BI knows no organisation, industry or language; all domain meaning is configuration or a template (data), checked in
   CI. No exception.
 - **DEC-036** (supersedes DEC-034): subjects, entities, events, cohorts and metrics are defined in the app as drafts approved by the

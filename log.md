@@ -229,3 +229,14 @@ the subject's steward; dbt and Cube models are generated from them; the organisa
 are settings; domain content (today's university enrollment, Arabic handling) moves into a template and a language pack, which are data.
 A CI check will fail on domain words in code. DEC-037 (the rule, also CLAUDE.md rule 0), DEC-036 revised (supersedes DEC-034); M0 is
 TASK-040 (P0), M1 to M7 are TASK-031 and TASK-034 to TASK-039.
+
+## 2026-10-29 — The AMS's patterns and look adopted (DEC-038)
+
+Cloned the AMS read-only and took its patterns: configuration is data, never code (its "frameworks are data" rule); one code path
+tested on several templates, one right-to-left; versioned definitions; small JSON rules, no rule engine; a language registry with
+English plus one secondary language; interface text through t() over an English catalogue; the organization's accent colour. Built
+in the BI: organization settings (migration 0012: name in both languages, secondary and default language, accent colour; each
+person's interface language), `/app/api/public/branding`, `/organization`, `/me/language`, `/languages`; the web app on Tailwind with
+the AMS's oklch tokens, script font stacks, Button, Card and Input, its sidebar shell with a drawer on small screens, its sign-in
+page, and a Settings → Organization page. Older pages keep their class names restyled on the tokens; the dark theme is gone (the AMS
+has none). Checked in a browser: sign-in, settings, Connect data, Arabic right to left, the drawer at phone width.

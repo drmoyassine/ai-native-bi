@@ -55,7 +55,7 @@ export function Metrics() {
     <section>
       <h2>Metrics</h2>
       <p className="hint">
-        What the institution measures and what each word means, in English and Arabic. This is the definition the chat, the MCP server and
+        What the organization measures and what each word means, in its languages. This is the definition the chat, the MCP server and
         the AMS all read. To change one, propose the edit to its steward; it goes live when the pull request is merged.
       </p>
       <input placeholder="Search by any word or synonym, in English or Arabic" value={query} onChange={(e) => setQuery(e.target.value)} />
