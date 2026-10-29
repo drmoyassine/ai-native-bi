@@ -274,3 +274,11 @@ request). A read flattens nested fields to `parent__child` and goes through the 
 (migration 0015: `api` sources, `sync.endpoint`). A periodic job queues due reads of live sources. Found by the test: re-queueing after
 approval only accepted syncs with a stored file. Checked in a browser against a local paged API: connected, read, reviewed, approved,
 built; a second read loaded on its own. Drafting configurations from OpenAPI, incremental reads and frozen contracts are C2b (TASK-042).
+
+## 2026-10-29 — Merged and deployed; a slow Cube start; the plan from here
+
+PR #26 (Settings, M1, M0b, C2a) merged and deployed. The first deploy failed: Cube came up a little after its healthcheck gave up
+(20 checks every 5 s, no grace period), and the stack started on its own shortly after. Cube's healthcheck now has a 120 s grace period
+(#27). The AMS's contract sync of 2026-10-27 (6.2 person identity, 6.3 co-deployment) had never been merged; `contract.py` already
+matched it, so it merges as is (#28). Order from here (data model spec § 13): the Model page (M3), the organization calendar
+(TASK-043), the metric builder (M5), the cohort builder (M6), then the rest of M2, M4, M7, C2b and database sources.

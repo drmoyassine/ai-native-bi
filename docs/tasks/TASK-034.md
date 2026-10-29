@@ -1,6 +1,8 @@
 ---
 title: 'Data model M2: generated warehouse'
-description: staging, core and cohorts schemas; dbt models generated from definitions; official-load setting; Cube reads core
+description: >-
+  Generation is built (with M0b). Still to do: core and cohorts schemas, a shared dimension per entity, the
+  official-load setting per event, Cube reading core
 status: pending
 priority: P1
 id: TASK-034
@@ -20,6 +22,6 @@ related_decisions:
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:23:27.564Z'
+  at: '2026-10-29T09:23:51.480Z'
 ---
 # TASK-034 — Data model M2: generated warehouse
