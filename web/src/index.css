@@ -1,0 +1,160 @@
+@import 'tailwindcss';
+
+/* The AMS's design tokens (DEC-038), so both products look and read the same. The organization's accent colour replaces --primary
+   at run time (languages.ts applyAccent). */
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.2 0.02 260);
+  --muted: oklch(0.96 0.005 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --border: oklch(0.9 0.01 260);
+  --primary: oklch(0.35 0.08 260);
+  --primary-foreground: oklch(0.98 0 0);
+  --error: oklch(0.5 0.19 27);
+  --ok: oklch(0.5 0.13 150);
+  --warn: oklch(0.55 0.12 75);
+  /* The names the pages were written with, pointed at the tokens. */
+  --fg: var(--foreground);
+  --card: var(--background);
+  --line: var(--border);
+  --accent: var(--primary);
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+}
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--background); color: var(--foreground); font-family: var(--font-body); }
+
+/* Font stacks by script (the AMS's, DEC-038). <html data-script> is set from the language registry; every stack ends in system-ui,
+   and lists system fonts only (no web fonts to download). */
+:root { --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+html[data-script='arabic'] { --font-body: 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Segoe UI', Tahoma, 'Geeza Pro', 'Arabic Typesetting', system-ui, sans-serif; }
+html[data-script='hebrew'] { --font-body: 'Noto Sans Hebrew', 'Segoe UI', 'Arial Hebrew', Arial, system-ui, sans-serif; }
+html[data-script='cjk-sc'] { --font-body: system-ui, 'Noto Sans CJK SC', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', sans-serif; }
+html[data-script='cjk-tc'] { --font-body: system-ui, 'Noto Sans CJK TC', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Source Han Sans TC', sans-serif; }
+html[data-script='cjk-jp'] { --font-body: system-ui, 'Noto Sans CJK JP', 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', Meiryo, 'Source Han Sans JP', sans-serif; }
+html[data-script='cjk-kr'] { --font-body: system-ui, 'Noto Sans CJK KR', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Source Han Sans KR', sans-serif; }
+html[data-script='devanagari'] { --font-body: 'Noto Sans Devanagari', 'Nirmala UI', 'Kohinoor Devanagari', system-ui, sans-serif; }
+html[data-script='bengali'] { --font-body: 'Noto Sans Bengali', 'Nirmala UI', 'Kohinoor Bangla', system-ui, sans-serif; }
+html[data-script='thai'] { --font-body: 'Noto Sans Thai', 'Leelawadee UI', 'Thonburi', system-ui, sans-serif; }
+html[data-script='cyrillic'], html[data-script='greek'] { --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif; }
+html[data-script^='cjk'] body { overflow-wrap: anywhere; line-break: strict; }
+[dir='rtl'] .mirror-rtl { display: inline-block; transform: scaleX(-1); }
+
+/* The navigation drawer on small screens slides in from the start edge. */
+@keyframes drawer-in { from { transform: translateX(-100%); } }
+@keyframes drawer-in-rtl { from { transform: translateX(100%); } }
+.drawer-in { animation: drawer-in 180ms ease-out; }
+[dir='rtl'] .drawer-in { animation-name: drawer-in-rtl; }
+@media (prefers-reduced-motion: reduce) { .drawer-in { animation: none; } }
+
+/* The pages' own rules, on the tokens above. Layered, so a Tailwind utility on an element wins over them. */
+@layer base {
+  h1 { margin: 0 0 16px; font-size: 1.5rem; font-weight: 600; }
+  h2 { font-size: 1.125rem; font-weight: 600; margin: 24px 0 12px; }
+  h3 { font-weight: 600; }
+  p { margin-block: 0.5em; }
+  ul { list-style: disc; padding-inline-start: 1.25rem; }
+  a { color: var(--primary); }
+}
+@layer components {
+
+h1 { margin: 0 0 16px; font-size: 1.4rem; }
+h2 { font-size: 1.1rem; margin: 24px 0 12px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1px 2px rgb(0 0 0 / 0.05); }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--muted-foreground); }
+input, select, textarea, button { font: inherit; font-size: 0.875rem; padding: 0.5rem 0.75rem; border-radius: 0.375rem; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+button { cursor: pointer; }
+button[type='submit'] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); font-weight: 500; padding-inline: 1rem; }
+button[type='submit']:hover { opacity: 0.9; }
+button:disabled { opacity: 0.6; cursor: default; }
+button.link { border: none; background: none; color: var(--accent); padding: 0; }
+.upload, .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.9rem; }
+th, td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num { font-variant-numeric: tabular-nums; }
+.status { font-weight: 600; }
+.status.loaded { color: var(--ok); }
+.status.failed { color: var(--error); }
+.error { color: var(--error); margin: 4px 0; }
+.hint, .note { color: var(--muted-foreground); font-size: 0.9rem; }
+.center { text-align: center; margin-top: 30vh; }
+.echart { width: 100%; height: 420px; }
+.number { margin: 0; text-align: center; padding: 24px; }
+.number strong { display: block; font-size: 3rem; font-variant-numeric: tabular-nums; }
+details { margin-top: 16px; }
+pre { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow: auto; font-size: 0.8rem; }
+/* Logical properties (start/end, inline/block) so a right-to-left language needs no restyling. */
+th, td { text-align: start; }
+td.num { text-align: end; }
+.chat { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; }
+.chat aside { display: flex; flex-direction: column; gap: 8px; }
+.chat aside ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.chat aside button { inline-size: 100%; text-align: start; border: none; background: none; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat aside button.active { color: var(--fg); background: var(--card); font-weight: 600; box-shadow: inset 2px 0 0 var(--accent); }
+.thread-pane { min-inline-size: 0; }
+.thread { display: flex; flex-direction: column; gap: 10px; min-block-size: 40vh; max-block-size: 65vh; overflow-y: auto; padding-block-end: 8px; }
+.bubble { margin: 0; padding: 10px 14px; border-radius: 10px; max-inline-size: 85%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble.user { align-self: flex-end; background: var(--accent); color: #fff; }
+.bubble.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--line); }
+.tool { margin: 0; color: var(--muted-foreground); font-size: 0.85rem; }
+.tool.failed { color: var(--error); }
+.result { max-inline-size: 100%; overflow-x: auto; }
+.composer { display: flex; gap: 8px; margin-block-start: 12px; align-items: flex-end; }
+.composer textarea { flex: 1; font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); resize: vertical; }
+.composer button { background: var(--accent); color: #fff; border-color: var(--accent); }
+.usage { margin-block: 6px 0; }
+.new-chat { max-inline-size: 520px; display: flex; flex-direction: column; gap: 12px; }
+.new-chat h2 { margin: 0; }
+.provider { margin-block-start: 12px; }
+.provider-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+tr.gone { opacity: 0.55; }
+@media (max-width: 720px) { .chat { grid-template-columns: 1fr; } }
+.thread > * { flex-shrink: 0; }
+.made { margin-block: 12px; }
+.made pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+label.inline { flex-direction: row; align-items: center; gap: 6px; margin-block: 12px; }
+code { font-size: 0.85em; }
+/* Connect data */
+.page-head { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { margin: 0; }
+.sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-block-start: 16px; }
+.source-card, .type { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: start; font: inherit; color: var(--fg); }
+.source-name { font-weight: 600; }
+.source-state { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.badge { font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted-foreground); }
+.badge.live { color: var(--ok); border-color: var(--ok); }
+.badge.review, .badge.draft { color: var(--warn); border-color: var(--warn); }
+.badge.personal { color: var(--error); border-color: var(--error); }
+.status.review { color: var(--warn); }
+.status.stale { color: var(--muted-foreground); }
+.types { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.type.chosen { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.type .soon { font-size: 0.8rem; }
+.add-form { display: flex; flex-direction: column; gap: 12px; max-inline-size: 560px; margin-block-start: 16px; }
+.add-form h2 { margin: 0; }
+.review { margin-block: 16px; display: flex; flex-direction: column; gap: 8px; }
+.review h2, .review h3 { margin: 8px 0 0; }
+.review h3 { font-size: 1rem; }
+.review .controls label { flex-direction: row; align-items: center; gap: 8px; }
+.review .controls input { inline-size: 5em; }
+.mapping td:first-child { inline-size: 45%; }
+tr.chosen td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.empty { text-align: center; }
+.add-form button[type='submit'], .review button[type='submit'] { align-self: flex-start; }
+.table-wrap { overflow-x: auto; }
+@media (max-width: 720px) {
+      .mapping td { display: block; inline-size: 100%; }
+  .mapping td:first-child { inline-size: 100%; border-bottom: none; padding-block-end: 0; }
+}
+label.samples { align-items: flex-start; margin-block: 8px 0; }
+.agent-note { margin: 4px 0; padding: 8px 12px; border-inline-start: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; }
+.agent-note p { margin: 4px 0; }
+.reason.low { color: var(--warn); }
+}

@@ -9,7 +9,7 @@ status: In Progress
 priority: P1
 tags:
   - agent
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -68,9 +68,20 @@ related_decisions:
   - id: DEC-035
     name: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
     url: /DECISIONS.md#DEC-035
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+  - id: DEC-037
+    name: The BI knows no organisation, industry or language; all domain meaning is configuration or a template
+    url: /DECISIONS.md#DEC-037
+  - id: DEC-038
+    name: Adopt the AMS's patterns for configuration, languages and the interface
+    url: /DECISIONS.md#DEC-038
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T13:07:33.243Z'
+  by: process:vef-cli
+  at: '2026-10-29T06:36:43.103Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -109,7 +120,7 @@ related_tasks:
     name: 'Context K4: drafted documentation'
     url: /TASKS.md#TASK-030
   - id: TASK-031
-    name: 'Context K5: the ontology'
+    name: 'Data model M1: definitions'
     url: /TASKS.md#TASK-031
   - id: TASK-032
     name: 'Setup agent S1: masked samples'
@@ -117,6 +128,27 @@ related_tasks:
   - id: TASK-033
     name: 'Setup agent S2: mapping proposals'
     url: /TASKS.md#TASK-033
+  - id: TASK-034
+    name: 'Data model M2: generated warehouse'
+    url: /TASKS.md#TASK-034
+  - id: TASK-035
+    name: 'Data model M3: the Model page'
+    url: /TASKS.md#TASK-035
+  - id: TASK-036
+    name: 'Data model M4: targets proposed per stream'
+    url: /TASKS.md#TASK-036
+  - id: TASK-037
+    name: 'Data model M5: metric builder'
+    url: /TASKS.md#TASK-037
+  - id: TASK-038
+    name: 'Data model M6: cohort builder'
+    url: /TASKS.md#TASK-038
+  - id: TASK-039
+    name: 'Data model M7: identity across sources'
+    url: /TASKS.md#TASK-039
+  - id: TASK-040
+    name: 'Data model M0: out with the built-in domain'
+    url: /TASKS.md#TASK-040
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 

@@ -209,3 +209,34 @@ and typos forgiven), the chat prompt carries the instructions and glossary, and 
 `METRICS` table is gone: a measure is answerable to the AMS when it declares `meta.metric`, with period, dimensions, as-of and lineage
 read from Cube. CI checks completeness and personal-data-looking text. `docs/ams-contract-proposals.md` § 7 drafts a request for a
 metrics catalogue route. TASK-027 completed; next in stage A: K2 verified questions (TASK-028).
+
+## 2026-10-29 — Spec: the data model (subject areas, entities, events)
+
+The owner asked how Banner through an API, the student life cycle (application to employment), staff, courses and events fit together.
+`docs/data-model-spec.md` sets the hierarchy: a source per system connection and a stream per table or endpoint; an ontology of subject
+areas (each with a steward), entities and events that streams map onto (proposed after the first read, not asked on the form); a
+warehouse in four layers (raw, staging generated from mappings, core with shared dimensions and one fact per event, marts for life
+cycles); Cube views per subject area and lens; rates on cohorts; people matched across systems inside the warehouse. DEC-036; K5 becomes
+step M1 (TASK-031), M2 to M6 are TASK-034 to TASK-038. Draft for review, with six open questions (cohorts, census, applicant IDs,
+employment survey, next subject, history).
+
+## 2026-10-29 — The rule: agnostic and configuration-driven, no compromise
+
+The owner rejected institution-specific choices in the data model spec (cohort rules, census, which subject next) and set a rule
+without exception: the BI is agnostic of organisation and industry and driven by configuration throughout. `docs/data-model-spec.md`
+rewritten: subjects, entities, events, cohorts (a cohort builder) and metrics (a metric builder) are defined in the app and approved by
+the subject's steward; dbt and Cube models are generated from them; the organisation's languages, calendar and personal-data patterns
+are settings; domain content (today's university enrollment, Arabic handling) moves into a template and a language pack, which are data.
+A CI check will fail on domain words in code. DEC-037 (the rule, also CLAUDE.md rule 0), DEC-036 revised (supersedes DEC-034); M0 is
+TASK-040 (P0), M1 to M7 are TASK-031 and TASK-034 to TASK-039.
+
+## 2026-10-29 — The AMS's patterns and look adopted (DEC-038)
+
+Cloned the AMS read-only and took its patterns: configuration is data, never code (its "frameworks are data" rule); one code path
+tested on several templates, one right-to-left; versioned definitions; small JSON rules, no rule engine; a language registry with
+English plus one secondary language; interface text through t() over an English catalogue; the organization's accent colour. Built
+in the BI: organization settings (migration 0012: name in both languages, secondary and default language, accent colour; each
+person's interface language), `/app/api/public/branding`, `/organization`, `/me/language`, `/languages`; the web app on Tailwind with
+the AMS's oklch tokens, script font stacks, Button, Card and Input, its sidebar shell with a drawer on small screens, its sign-in
+page, and a Settings → Organization page. Older pages keep their class names restyled on the tokens; the dark theme is gone (the AMS
+has none). Checked in a browser: sign-in, settings, Connect data, Arabic right to left, the drawer at phone width.

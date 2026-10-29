@@ -6,6 +6,12 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
 
 ## Rules
 
+0. **Agnostic and configuration-driven, without exception** (DEC-037). The BI knows no organisation, industry or language: no domain
+   word (student, term, program, patient, customer …) and no language assumption in code, schema, prompts, interface, defaults or
+   hand-written models. Subjects, entities, events, cohorts, metrics, their words, languages, calendar and what is personal are
+   configuration made in the app and approved by a person; domain content ships only as templates and language packs (data). CI
+   checks it. Model: `docs/data-model-spec.md` (DEC-036). The AMS's patterns apply (DEC-038): configuration is data, never code;
+   one code path tested on several templates, one right-to-left; English plus one secondary language; interface text through `t()`.
 1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `src/bi/contract.py` mirrors the AMS's
    `packages/shared/src/collection.ts`. Change the AMS first, then mirror it here. Never add a field the AMS does not know.
    The copy is not edited by hand: the AMS's `contract-sync` workflow opens a pull request (`ams-contract-sync`) with the new
@@ -22,7 +28,8 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
    runs in a sandbox, credentials live in the secret store (never in code, the repository or logs), and access to sources is read-only.
 7. Stack (DEC-003): Python 3.12, FastAPI, Pydantic at every boundary, Procrastinate (queue on PostgreSQL), dlt for integrations,
    dbt for transforms, Cube for the metric layer, forward-only SQL migrations in `src/bi/migrations` (never edit an applied one),
-   pytest, ruff, mypy strict, structured JSON logs. The web app (web/, DEC-014): React, TypeScript strict, Vite, ECharts, Vitest;
+   pytest, ruff, mypy strict, structured JSON logs. The web app (web/, DEC-014, DEC-038): React, TypeScript strict, Vite, Tailwind with the AMS's tokens and components
+   (`web/src/components/ui`), i18next over `web/src/locales/en.ts`, ECharts, Vitest;
    charts are chart definitions (DEC-012), drawn only by `web/src/chart.ts`. Node builds the web app and runs VEF, nothing else.
 
 ## The agent (ROADMAP-003)

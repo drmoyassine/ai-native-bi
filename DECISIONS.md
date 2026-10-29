@@ -1570,7 +1570,7 @@ related_tasks:
 
 ---
 title: The ontology is a reviewed file that replaces SHAPES
-status: accepted
+status: superseded
 context: bi.mapping.SHAPES hard-codes one dataset's parts; agents and the mapping need the institution's entities and keys.
 decision: >-
   src/bi/ontology.yml declares entities, keys, attributes, relationships and which dataset parts and Cube members
@@ -1582,7 +1582,7 @@ tags:
   - ontology
   - connect-data
 id: DEC-034
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T10:45:22.295Z'
@@ -1591,12 +1591,18 @@ related_roadmap_items:
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T10:45:35.952Z'
+  by: process:vef-cli
+  at: '2026-10-29T06:24:55.986Z'
 related_tasks:
   - id: TASK-031
-    name: 'Context K5: the ontology'
+    name: 'Data model M1: definitions'
     url: /TASKS.md#TASK-031
+superseded_by:
+  id: DEC-036
+  name: >-
+    What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+    app; models generated
+  url: /DECISIONS.md#DEC-036
 ---
 
 ---
@@ -1645,6 +1651,174 @@ related_tasks:
   - id: TASK-033
     name: 'Setup agent S2: mapping proposals'
     url: /TASKS.md#TASK-033
+---
+
+---
+
+## DEC-036 — What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the app; models generated
+
+---
+title: >-
+  What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the app;
+  models generated
+status: accepted
+context: >-
+  The model is flat (source, stream, dataset), with one dataset (enrollment). The institution looks at its data by
+  subject and life cycle (students from application to employment, staff from hiring to separation), with stages coming
+  from different systems and rates that need cohorts (docs/data-model-spec.md).
+decision: >-
+  Subjects (each with a steward), entities, events, cohorts and metrics are defined in the app as drafts approved by the
+  subject's steward and versioned; the BI ships a student life-cycle template, not a fixed model. Streams are mapped
+  onto events and entities, proposed after the first read; "dataset" is retired. dbt models (staging per stream, core
+  per entity and event, a model per cohort) and the Cube model (cubes, views per subject, measures per metric with their
+  words) are generated from the approved definitions; Cube reads core and cohort models only; hand-written cubes remain
+  possible by pull request. Which load of a state is official for a period is a setting. Rates have stated numerators
+  and denominators and are hidden when the denominator is small. People are matched across systems inside the warehouse
+  by settings a person approves; unmatched records are counted, never guessed.
+rationale: >-
+  Which subjects exist, how a cohort is drawn and what a rate means differ between institutions and change over time;
+  the owner wants them configurable. Generating the models from definitions keeps them consistent and lets a new source
+  that supplies a known event add to it without new SQL.
+consequences: >-
+  Supersedes DEC-034 (the ontology as a reviewed file). The Model page, a metric builder and a cohort builder join the
+  app; today's enrollment becomes the template's term enrollment event, its AMS metric name kept. Delivery in steps M1
+  to M7 of docs/data-model-spec.md.
+tags:
+  - data-model
+  - ontology
+  - warehouse
+id: DEC-036
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:32.613Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.808Z'
+related_tasks:
+  - id: TASK-034
+    name: 'Data model M2: generated warehouse'
+    url: /TASKS.md#TASK-034
+  - id: TASK-035
+    name: 'Data model M3: the Model page'
+    url: /TASKS.md#TASK-035
+  - id: TASK-036
+    name: 'Data model M4: targets proposed per stream'
+    url: /TASKS.md#TASK-036
+  - id: TASK-037
+    name: 'Data model M5: metric builder'
+    url: /TASKS.md#TASK-037
+  - id: TASK-038
+    name: 'Data model M6: cohort builder'
+    url: /TASKS.md#TASK-038
+  - id: TASK-039
+    name: 'Data model M7: identity across sources'
+    url: /TASKS.md#TASK-039
+  - id: TASK-040
+    name: 'Data model M0: out with the built-in domain'
+    url: /TASKS.md#TASK-040
+---
+
+---
+
+## DEC-037 — The BI knows no organisation, industry or language; all domain meaning is configuration or a template
+
+---
+title: The BI knows no organisation, industry or language; all domain meaning is configuration or a template
+status: accepted
+context: >-
+  The BI was built on one university's enrollment exports, and its code, prompts, interface and tests name that domain
+  (students, terms, programs, registrar, English and Arabic). The owner set a rule without exception: fully agnostic of
+  organisation and industry, configuration-driven throughout.
+decision: >-
+  Nothing in the code, database schema, prompts, interface or defaults names a domain or assumes a language beyond the
+  interface's own. Subjects, entities, events, cohorts, metrics, their words, the organisation's languages, calendar and
+  what counts as personal are configuration, created in the app and approved by a person. Domain content ships only as
+  templates and language packs, which are data an organisation installs, changes or ignores; without them the BI works,
+  empty. A CI check fails on domain words in src/bi, web/src and generated-model templates outside templates and test
+  fixtures; tests run on made-up data from more than one template.
+rationale: >-
+  The same platform must serve any organisation; meaning hard-coded for one is a defect for every other, and it spreads
+  into prompts, mappings and metrics unless something checks for it.
+consequences: >-
+  Today's enrollment model, Cube files, SHAPES, Arabic-specific code and domain wording move into a higher-education
+  template and an Arabic language pack (data model M0, docs/data-model-spec.md section 12). English and Arabic words in
+  DEC-033 become the organisation's configured languages. "Institution" becomes "organisation", the old environment
+  variable read as an alias for one release. Applies to every future change.
+tags:
+  - data-model
+  - agnostic
+  - configuration
+id: DEC-037
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.166Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.808Z'
+related_tasks:
+  - id: TASK-040
+    name: 'Data model M0: out with the built-in domain'
+    url: /TASKS.md#TASK-040
+---
+
+---
+
+## DEC-038 — Adopt the AMS's patterns for configuration, languages and the interface
+
+---
+title: Adopt the AMS's patterns for configuration, languages and the interface
+status: accepted
+context: >-
+  The owner asked the BI to adopt the AMS's agnostic patterns and its interface design and colours. The AMS keeps
+  accreditors as data ("frameworks are data, never code"), runs one code path against several fixtures, has a language
+  registry with English plus one secondary language, an English string catalogue behind t(), the organization's accent
+  colour and a shared design system (Tailwind tokens, shadcn-style components, a sidebar shell).
+decision: >-
+  The BI follows the same patterns. Configuration is data, never code: a code branch on a template, subject or
+  organization is forbidden, and anything not expressible in configuration is a schema change reviewed against every
+  template. One code path is tested against at least two templates of different domains, one of them in a right-to-left
+  language. Definitions are versioned: drafts, approval, published versions. Small rules are small JSON forms, never a
+  rule engine. Languages: English is the interface's primary language, an organization chooses one secondary language
+  from the registry (bi/languages.py, web/src/languages.ts); a person picks their interface language; <html lang>, dir
+  and the font stack follow it. Interface strings go through t() over an English catalogue (web/src/locales/en.ts); the
+  secondary language comes from a translation job (planned) and falls back to English. Organization settings hold the
+  name in both languages, the secondary and default languages and an accent colour that white text can be read on
+  (contrast 4.5); only the sign-in page's branding is public. The web app uses the AMS's tokens (oklch), Tailwind, its
+  Button, Card and Input, and its shell: a sidebar on wide screens, a drawer on small ones, logical (start/end)
+  properties for right-to-left.
+rationale: >-
+  Two products for the same people should look and behave alike, and the AMS's patterns already proved agnostic across
+  accreditors and languages.
+consequences: >-
+  Pages written before this keep their own class names, restyled on the AMS's tokens, and move to the components and t()
+  as they are touched; a catalogue coverage check and a lint rule against literal interface text follow, as in the AMS.
+  The dark theme is dropped (the AMS has none). The data model spec's languages (section 4) follow this registry.
+tags:
+  - agnostic
+  - interface
+  - i18n
+id: DEC-038
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:36:43.103Z'
+related_roadmap_items:
+  - id: ROADMAP-003
+    name: 'Phase 2: the agent builds integrations and KPIs'
+    url: /ROADMAP.md#ROADMAP-003
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:36:43.103Z'
 ---
 
 <!-- End VEF generated items. -->

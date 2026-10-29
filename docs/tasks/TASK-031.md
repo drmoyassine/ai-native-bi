@@ -1,10 +1,12 @@
 ---
-title: 'Context K5: the ontology'
-description: src/bi/ontology.yml replaces SHAPES; mapping and agents read it
+title: 'Data model M1: definitions'
+description: >-
+  Subjects, entities and events stored with drafts, approval and versions; the student life-cycle template; mapping and
+  setup agent read them; SHAPES removed
 status: pending
 priority: P1
 id: TASK-031
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T10:45:35.952Z'
@@ -17,9 +19,9 @@ related_decisions:
     name: The ontology is a reviewed file that replaces SHAPES
     url: /DECISIONS.md#DEC-034
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T10:45:35.952Z'
+  by: process:vef-cli
+  at: '2026-10-29T06:23:26.884Z'
 ---
-# TASK-031 — Context K5: the ontology
+# TASK-031 — Data model M1: definitions
 
 docs/context-spec.md § 11, K5.

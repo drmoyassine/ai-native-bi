@@ -1059,15 +1059,17 @@ docs/context-spec.md § 11, K4.
 
 ---
 
-## TASK-031 — Context K5: the ontology
+## TASK-031 — Data model M1: definitions
 
 ---
-title: 'Context K5: the ontology'
-description: src/bi/ontology.yml replaces SHAPES; mapping and agents read it
+title: 'Data model M1: definitions'
+description: >-
+  Subjects, entities and events stored with drafts, approval and versions; the student life-cycle template; mapping and
+  setup agent read them; SHAPES removed
 status: pending
 priority: P1
 id: TASK-031
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T10:45:35.952Z'
@@ -1080,8 +1082,8 @@ related_decisions:
     name: The ontology is a reviewed file that replaces SHAPES
     url: /DECISIONS.md#DEC-034
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T10:45:35.952Z'
+  by: process:vef-cli
+  at: '2026-10-29T06:23:26.884Z'
 ---
 
 docs/context-spec.md § 11, K5.
@@ -1143,5 +1145,215 @@ modified:
 ---
 
 docs/setup-agent-spec.md § 4 and § 8, S2.
+
+---
+
+## TASK-034 — Data model M2: generated warehouse
+
+---
+title: 'Data model M2: generated warehouse'
+description: staging, core and cohorts schemas; dbt models generated from definitions; official-load setting; Cube reads core
+status: pending
+priority: P1
+id: TASK-034
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:33.295Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:27.564Z'
+---
+
+---
+
+## TASK-035 — Data model M3: the Model page
+
+---
+title: 'Data model M3: the Model page'
+description: Subjects, entities and events edited in the app, approved by the steward, with a what-changes preview
+status: pending
+priority: P1
+id: TASK-035
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:33.974Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:28.261Z'
+---
+
+---
+
+## TASK-036 — Data model M4: targets proposed per stream
+
+---
+title: 'Data model M4: targets proposed per stream'
+description: >-
+  Rules score a stream against every event and entity, the setup agent proposes; the form dataset choice goes; who the
+  rows are about
+status: pending
+priority: P1
+id: TASK-036
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:34.664Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:29.077Z'
+---
+
+---
+
+## TASK-037 — Data model M5: metric builder
+
+---
+title: 'Data model M5: metric builder'
+description: Counts, sums, rates and ratios defined in the app with their words and AMS name; Cube measures generated
+status: pending
+priority: P2
+id: TASK-037
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:35.417Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:29.808Z'
+---
+
+---
+
+## TASK-038 — Data model M6: cohort builder
+
+---
+title: 'Data model M6: cohort builder'
+description: Cohorts drawn in the app with a live suppressed preview; generated cohort models and rates
+status: pending
+priority: P2
+id: TASK-038
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:36.168Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:30.558Z'
+---
+
+---
+
+## TASK-039 — Data model M7: identity across sources
+
+---
+title: 'Data model M7: identity across sources'
+description: Crosswalks, matching settings per stream, unmatched records counted
+status: pending
+priority: P2
+id: TASK-039
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:31.489Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:31.489Z'
+---
+
+---
+
+## TASK-040 — Data model M0: out with the built-in domain
+
+---
+title: 'Data model M0: out with the built-in domain'
+description: >-
+  Organisation settings (languages, calendar, personal-data patterns), language packs, the higher-education template and
+  Arabic pack as data, neutral wording, the domain-word check in CI (docs/data-model-spec.md section 12)
+status: pending
+priority: P0
+id: TASK-040
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.808Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-037
+    name: The BI knows no organisation, industry or language; all domain meaning is configuration or a template
+    url: /DECISIONS.md#DEC-037
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.808Z'
+---
 
 <!-- End VEF generated items. -->

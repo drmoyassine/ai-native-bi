@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, knowledge, mapping, tools
+from . import accounts, knowledge, mapping, organization, tools
 from .accounts import User
 from .agent.routes import AgentContext, create_agent_router
 from .agent.suppress import count_measures, suppress_rows
@@ -63,6 +63,10 @@ def client_ip(request: Request, hops: int) -> str:
 class ChangePassword(BaseModel):
     current_password: str
     new_password: str
+
+
+class LanguageChoice(BaseModel):
+    language: str | None
 
 
 class SignIn(BaseModel):
@@ -138,7 +142,42 @@ def create_router(ctx: AppContext) -> APIRouter:
 
     @router.get('/me')
     async def me(user: Signed) -> dict[str, Any]:
-        return {'user': user.__dict__, 'datasets': mapping.datasets()}
+        org = await organization.get(ctx.pool)
+        return {
+            'user': user.__dict__,
+            'datasets': mapping.datasets(),
+            'organization': org,
+            'language': await organization.user_language(ctx.pool, user.id),
+            'locale': await organization.locale_for(ctx.pool, user.id),
+        }
+
+    @router.get('/public/branding')
+    async def branding() -> dict[str, Any]:
+        """The only read without signing in (the sign-in page): the organization's name, accent colour and languages."""
+        org = await organization.get(ctx.pool)
+        return {k: org[k] for k in ('name', 'name_secondary', 'secondary_language', 'default_locale', 'accent_color')}
+
+    @router.get('/languages')
+    async def languages(user: Signed) -> dict[str, Any]:
+        return {'languages': organization.languages_json()}
+
+    @router.put('/organization')
+    async def update_organization(body: organization.OrganizationPatch, user: Signed) -> dict[str, Any]:
+        if not user.is_admin:
+            raise HTTPException(403, 'only an admin changes the organization')
+        try:
+            org = await organization.update(ctx.pool, body, user.id)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+        log('info', 'organization changed', user=user.id, fields=sorted(body.model_dump(exclude_unset=True)))
+        return {'organization': org}
+
+    @router.put('/me/language', status_code=204)
+    async def my_language(body: LanguageChoice, user: Signed) -> None:
+        try:
+            await organization.set_user_language(ctx.pool, user.id, body.language)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
 
     @router.get('/members')
     async def members(user: Signed, client: Annotated[CubeClient, Depends(cube)]) -> dict[str, Any]:

@@ -40,6 +40,22 @@ export interface User {
   is_admin: boolean;
 }
 
+export interface Organization {
+  name: string;
+  name_secondary: string | null;
+  secondary_language: string | null;
+  default_locale: string;
+  accent_color: string | null;
+}
+
+export interface Me {
+  user: User;
+  datasets: string[];
+  organization: Organization;
+  language: string | null;
+  locale: string;
+}
+
 export type SyncStatus = 'queued' | 'running' | 'review' | 'loaded' | 'failed' | 'stale';
 
 export interface SourceType {

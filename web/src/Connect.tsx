@@ -50,7 +50,7 @@ export function Connect({ user }: { user: User }) {
         </button>
       </div>
       <p className="note">
-        Each source is a place the institution&apos;s data comes from: exports you upload today, and databases, folders and other systems as
+        Each source is a place the organization&apos;s data comes from: exports you upload today, and databases, folders and other systems as
         they are added. Nothing reaches the analytics until a BI admin approves it.
       </p>
       {listing.sources.length === 0 ? (
