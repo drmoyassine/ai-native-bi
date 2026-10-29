@@ -1,15 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Account } from './Account';
 import { api, type Me, type Organization, type Template } from './api';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
 import { useTranslation } from './i18n';
 import { isReadableAccent, PRIMARY_LANGUAGE, type LanguageInfo } from './languages';
+import { Providers } from './Providers';
+import { Tokens } from './Tokens';
 
 const DEFAULT_ACCENT = '#2b3a5c'; // close to the default --primary, for the colour picker's starting point
 
 /** Settings → Organization (DEC-038): the organization's name, its secondary language, the default interface language and its accent. */
-export function Settings({ me, languages, onSaved }: { me: Me; languages: LanguageInfo[]; onSaved: () => void }) {
+export function OrganizationSettings({ me, languages, onSaved }: { me: Me; languages: LanguageInfo[]; onSaved: () => void }) {
   const { t } = useTranslation();
   const org = me.organization;
   const canEdit = me.user.is_admin;
@@ -52,7 +55,6 @@ export function Settings({ me, languages, onSaved }: { me: Me; languages: Langua
 
   return (
     <section className="max-w-2xl">
-      <h1>{t('settings.title')}</h1>
       <Card>
         <h2 className="mt-0">{t('settings.organization')}</h2>
         <p className="text-sm text-muted-foreground">{t('settings.intro')}</p>
@@ -169,6 +171,67 @@ export function Settings({ me, languages, onSaved }: { me: Me; languages: Langua
           )}
         </form>
       </Card>
+    </section>
+  );
+}
+
+export type SettingsTab = 'organization' | 'account' | 'tokens' | 'models';
+
+const tabClass = [
+  'shrink-0 whitespace-nowrap border-0 border-b-2 border-transparent bg-transparent px-3 py-2 text-start text-sm',
+  'lg:whitespace-normal lg:rounded-md lg:border-b-0 lg:hover:bg-muted',
+].join(' ');
+
+/** Settings, after the AMS's: its own menu beside the page (a row of tabs on small screens). Models is for admins only. */
+export function Settings({
+  me,
+  languages,
+  onSaved,
+  tab,
+  onTab,
+}: {
+  me: Me;
+  languages: LanguageInfo[];
+  onSaved: () => void;
+  tab: SettingsTab;
+  onTab: (tab: SettingsTab) => void;
+}) {
+  const { t } = useTranslation();
+  const items: { key: SettingsTab; label: string; hint: string }[] = [
+    { key: 'organization', label: t('settings.organization'), hint: t('settings.organizationHint') },
+    { key: 'account', label: t('settings.account'), hint: t('settings.accountHint') },
+    { key: 'tokens', label: t('settings.tokens'), hint: t('settings.tokensHint') },
+    ...(me.user.is_admin ? [{ key: 'models' as const, label: t('settings.models'), hint: t('settings.modelsHint') }] : []),
+  ];
+  const current = items.some((i) => i.key === tab) ? tab : 'organization';
+  return (
+    <section>
+      <h1 className="mb-4 text-2xl font-semibold">{t('settings.title')}</h1>
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+        <nav
+          aria-label={t('settings.title')}
+          className="-mx-4 flex shrink-0 gap-1 overflow-x-auto border-b border-border px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:w-56 lg:flex-col lg:overflow-visible lg:border-b-0 lg:px-0"
+        >
+          {items.map((i) => (
+            <button
+              key={i.key}
+              type="button"
+              title={i.hint}
+              aria-current={current === i.key ? 'page' : undefined}
+              className={`${tabClass} ${current === i.key ? '!border-primary font-medium lg:!bg-muted' : ''}`}
+              onClick={() => onTab(i.key)}
+            >
+              {i.label}
+            </button>
+          ))}
+        </nav>
+        <div className="min-w-0 flex-1">
+          {current === 'organization' && <OrganizationSettings me={me} languages={languages} onSaved={onSaved} />}
+          {current === 'account' && <Account user={me.user} />}
+          {current === 'tokens' && <Tokens user={me.user} />}
+          {current === 'models' && me.user.is_admin && <Providers />}
+        </div>
+      </div>
     </section>
   );
 }

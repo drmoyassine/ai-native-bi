@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
 
 import httpx
@@ -23,6 +24,7 @@ from .sources import CannotAnswer, SourceRegistry
 COLLECT_QUEUE = 'collect'
 COLLECT_TASK = 'collect'
 LOAD_QUEUE = 'load'
+SCHEDULE_TASK = 'scheduled_syncs'
 LOAD_TASK = 'load'
 AGENT_QUEUE = 'agent'
 TURN_TASK = 'agent_turn'
@@ -128,6 +130,8 @@ class LoadDeps:
     database_url: str
     suppression_threshold: int = 5
     """Small counts hidden in the profiles a person checks before approving (DEC-017)."""
+    secrets: SecretStore | None = None
+    """Where an API source's credential is kept (DEC-020)."""
 
 
 @dataclass
@@ -174,7 +178,7 @@ def create_queue(
     if load is not None:
 
         async def load_sync(id: str) -> None:
-            outcome = await process_sync(load.pool, load.storage, load.database_url, id, load.suppression_threshold)
+            outcome = await process_sync(load.pool, load.storage, load.database_url, id, load.suppression_threshold, load.secrets)
             log('info', 'sync', id=id, outcome=outcome)
             if outcome == 'review' and agent is not None:  # the rules fell short: the setup agent is asked (DEC-035)
                 found = await connect_store.get_sync(load.pool, id)
@@ -182,6 +186,15 @@ def create_queue(
                     await app.configure_task(name=SETUP_TASK, queue=AGENT_QUEUE).defer_async(sync_id=id)
 
         app.task(name=LOAD_TASK, queue=LOAD_QUEUE)(load_sync)
+
+        async def scheduled_syncs(timestamp: int) -> None:
+            """Queues a sync of every endpoint of each live API source whose schedule is due (Connect data C2)."""
+            for source_id in await connect_store.due_api_sources(load.pool):
+                for sync_id in await connect_store.queue_endpoint_syncs(load.pool, source_id, None, dt.date.today()):
+                    await app.configure_task(name=LOAD_TASK, queue=LOAD_QUEUE).defer_async(id=sync_id)
+                log('info', 'scheduled syncs queued', source=source_id)
+
+        app.periodic(cron='*/15 * * * *')(app.task(name=SCHEDULE_TASK, queue=LOAD_QUEUE)(scheduled_syncs))
     if deps is not None:
         strategy = retry or CollectRetry()
 

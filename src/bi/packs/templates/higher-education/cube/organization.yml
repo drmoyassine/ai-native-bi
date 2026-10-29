@@ -1,5 +1,5 @@
 # The organization's own words for agents (docs/context-spec.md section 4): the glossary and the instructions every agent reads.
-# Part of the higher-education template's content (DEC-037); moves into it with data model M0b.
+# Part of the higher-education template (DEC-037), written into Cube's model when the template is installed.
 views:
   - name: organization
     title: Organization

@@ -60,7 +60,7 @@ cubes:
               title: رمز الفصل
               description: "رمز الفصل الدراسي"
       - name: term_label
-        sql: term_label
+        sql: term
         type: string
         title: Term
         description: The term written out, such as Fall 2026.

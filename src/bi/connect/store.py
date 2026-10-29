@@ -11,7 +11,7 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
-TYPES = {'file'}
+TYPES = {'file', 'api'}
 """The source types built so far (spec § 11: files first)."""
 NAMING = NamingConvention()
 """Raw keeps column names as written (DEC-031): Unicode and case kept, so two Arabic headers stay two columns."""
@@ -44,8 +44,18 @@ async def save_layout(pool: AsyncConnectionPool, layout_id: str, columns: list[d
         await conn.execute('insert into layout (id, columns) values (%s, %s) on conflict (id) do nothing', [layout_id, Jsonb(columns)])
 
 
-async def create_source(pool: AsyncConnectionPool, *, name: str, type: str, dataset: str | None, owner: str | None) -> str:
-    """A new source (in draft) with its one stream for now (a file source's files); returns its id."""
+async def create_source(
+    pool: AsyncConnectionPool,
+    *,
+    name: str,
+    type: str,
+    dataset: str | None,
+    owner: str | None,
+    settings: dict[str, Any] | None = None,
+    streams: dict[str, str | None] | None = None,
+) -> str:
+    """A new source (in draft) and its streams: a file source's files, or one per endpoint of an API (`streams`: name -> dataset);
+    returns its id."""
     name = ' '.join(name.split())
     if not name or len(name) > 80:
         raise SourceError('a source needs a name of up to 80 characters')
@@ -56,18 +66,28 @@ async def create_source(pool: AsyncConnectionPool, *, name: str, type: str, data
         if await (await conn.execute('select 1 from source where lower(name) = lower(%s)', [name])).fetchone():
             raise SourceError(f'there is already a source named "{name}"')
         taken = {r[0] for r in await (await conn.execute('select raw_table from source_stream')).fetchall()}
-        table, n = base, 2
-        while table in taken:
-            table, n = f'{base}_{n}', n + 1
+        taken |= {r[0] for r in await (await conn.execute('select slug from source')).fetchall()}
+
+        def free(wanted: str) -> str:
+            chosen, n = wanted, 2
+            while chosen in taken:
+                chosen, n = f'{wanted}_{n}', n + 1
+            taken.add(chosen)
+            return chosen
+
+        source_slug = free(base)
         row = await (
             await conn.execute(
-                'insert into source (name, slug, type, owner) values (%s, %s, %s, %s) returning id::text', [name, table, type, owner]
+                'insert into source (name, slug, type, owner, settings) values (%s, %s, %s, %s, %s) returning id::text',
+                [name, source_slug, type, owner, Jsonb(settings or {})],
             )
         ).fetchone()
         assert row is not None
-        await conn.execute(
-            'insert into source_stream (source_id, name, raw_table, dataset) values (%s, %s, %s, %s)', [row[0], 'files', table, dataset]
-        )
+        for stream, feeds in (streams or {'files': dataset}).items():
+            table = source_slug if streams is None else free(f'{source_slug}_{stream}')[:63]
+            await conn.execute(
+                'insert into source_stream (source_id, name, raw_table, dataset) values (%s, %s, %s, %s)', [row[0], stream, table, feeds]
+            )
     return str(row[0])
 
 
@@ -80,11 +100,13 @@ async def find_source(pool: AsyncConnectionPool, name: str) -> str | None:
 async def list_sources(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
     async with pool.connection() as conn:
         cur = await conn.execute(
-            """select s.id::text, s.name, s.type, s.state, st.dataset, st.raw_table, s.created_at,
+            """select s.id::text, s.name, s.type, s.state,
+                      (select string_agg(distinct st.dataset, ', ') from source_stream st where st.source_id = s.id) as dataset,
+                      (select min(st.raw_table) from source_stream st where st.source_id = s.id) as raw_table, s.created_at,
                       (select max(created_at) from sync where source_id = s.id) as last_sync,
                       (select count(*) from sync where source_id = s.id and status = 'review') as waiting,
                       (select status from sync where source_id = s.id order by created_at desc limit 1) as last_status
-               from source s join source_stream st on st.source_id = s.id
+               from source s
                order by s.name"""
         )
         names = [c.name for c in cur.description or []]
@@ -93,22 +115,31 @@ async def list_sources(pool: AsyncConnectionPool) -> list[dict[str, Any]]:
 
 SYNC_COLUMNS = sql.SQL("""y.id::text, y.source_id::text, y.stream_id::text, y.user_id::text, y.as_of, y.sheet, y.header_row, y.file_name,
     y.incoming_url, y.status, y.sha256, y.layout_id, y.found_header_row, y.notes, y.profile, y.rows, y.repeat, y.tests, y.note, y.error,
-    y.created_at, y.finished_at, y.agent, a.name as by_name, a.is_admin as by_admin""")
+    y.created_at, y.finished_at, y.agent, y.endpoint, a.name as by_name, a.is_admin as by_admin""")
 
 
 async def get_source(pool: AsyncConnectionPool, source_id: str) -> dict[str, Any] | None:
     async with pool.connection() as conn:
         cur = await conn.execute(
-            """select s.id::text, s.name, s.type, s.state, s.slug, s.created_at, s.approved_at, st.id::text as stream_id, st.dataset,
-                      st.raw_table, a.name as approved_by
+            """select s.id::text, s.name, s.type, s.state, s.slug, s.settings, s.created_at, s.approved_at, st.id::text as stream_id,
+                      st.dataset, st.raw_table, a.name as approved_by
                from source s join source_stream st on st.source_id = s.id left join app_user a on a.id = s.approved_by
-               where s.id::text = %s""",
+               where s.id::text = %s order by st.name""",
             [source_id],
         )
         row = await cur.fetchone()
         if row is None:
             return None
         source = dict(zip([c.name for c in cur.description or []], row, strict=True))
+        streams = await (
+            await conn.execute(
+                """select st.id::text, st.name, st.dataset, st.raw_table,
+                          (select status from sync where stream_id = st.id order by created_at desc limit 1) as last_status
+                   from source_stream st where st.source_id::text = %s order by st.name""",
+                [source_id],
+            )
+        ).fetchall()
+        source['streams'] = [dict(zip(('id', 'name', 'dataset', 'raw_table', 'last_status'), r, strict=True)) for r in streams]
         cur = await conn.execute(
             sql.SQL("""select {} from sync y left join app_user a on a.id = y.user_id
                 where y.source_id::text = %s order by y.created_at desc limit 50""").format(SYNC_COLUMNS),
@@ -122,7 +153,8 @@ async def get_source(pool: AsyncConnectionPool, source_id: str) -> dict[str, Any
 async def get_sync(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | None:
     async with pool.connection() as conn:
         cur = await conn.execute(
-            sql.SQL("""select {}, st.dataset, st.raw_table, s.name as source_name, s.state as source_state, s.slug
+            sql.SQL("""select {}, st.dataset, st.raw_table, st.name as stream_name, s.name as source_name, s.state as source_state,
+                s.slug, s.type as source_type, s.settings as source_settings
                 from sync y join source_stream st on st.id = y.stream_id join source s on s.id = y.source_id
                 left join app_user a on a.id = y.user_id
                 where y.id::text = %s""").format(SYNC_COLUMNS),
@@ -145,7 +177,8 @@ async def requeue(pool: AsyncConnectionPool, sync_id: str, header_row: int | Non
         cur = await conn.execute(
             """update sync set status = 'queued', error = null, note = null, finished_at = null,
                       header_row = case when %s then header_row else %s end
-               where id::text = %s and status in ('review', 'loaded', 'failed', 'stale') and incoming_url is not null""",
+               where id::text = %s and status in ('review', 'loaded', 'failed', 'stale')
+                 and (incoming_url is not null or endpoint is not null)""",
             [keep_header, header_row, sync_id],
         )
         return cur.rowcount == 1
@@ -157,3 +190,34 @@ async def approve_source(pool: AsyncConnectionPool, source_id: str, user_id: str
             """update source set state = 'live', approved_by = %s, approved_at = now() where id::text = %s and state = 'draft'""",
             [user_id, source_id],
         )
+
+
+async def queue_endpoint_syncs(pool: AsyncConnectionPool, source_id: str, user_id: str | None, as_of: Any) -> list[str]:
+    """One queued sync per stream of an API source (each reads its endpoint); returns their ids. A stream with a sync still queued or
+    running is left alone."""
+    async with pool.connection() as conn:
+        rows = await (
+            await conn.execute(
+                """insert into sync (source_id, stream_id, user_id, as_of, endpoint)
+                   select st.source_id, st.id, %s, %s, st.name from source_stream st
+                   where st.source_id::text = %s
+                     and not exists (select 1 from sync y where y.stream_id = st.id and y.status in ('queued', 'running'))
+                   returning id::text""",
+                [user_id, as_of, source_id],
+            )
+        ).fetchall()
+    return [str(r[0]) for r in rows]
+
+
+async def due_api_sources(pool: AsyncConnectionPool) -> list[str]:
+    """Live API sources whose schedule says a sync is due: hourly or daily, counted from their last sync."""
+    async with pool.connection() as conn:
+        rows = await (
+            await conn.execute(
+                """select s.id::text from source s
+                   where s.type = 'api' and s.state = 'live' and s.settings->>'schedule' in ('hourly', 'daily')
+                     and coalesce((select max(created_at) from sync y where y.source_id = s.id), '-infinity')
+                         < now() - case s.settings->>'schedule' when 'hourly' then interval '1 hour' else interval '1 day' end"""
+            )
+        ).fetchall()
+    return [str(r[0]) for r in rows]

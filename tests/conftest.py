@@ -9,6 +9,7 @@ import psycopg
 import pytest
 from psycopg_pool import AsyncConnectionPool
 
+from bi import definitions
 from bi.db import ensure_database, migrate
 
 ADMIN = os.environ.get('TEST_DATABASE_ADMIN_URL', 'postgres://postgres:postgres@localhost:5432/postgres')
@@ -42,8 +43,7 @@ async def make_pool() -> AsyncIterator[PoolFactory]:
         pool = AsyncConnectionPool(url, open=False)
         await pool.open()
         await migrate(pool)
-        async with pool.connection() as conn:  # the tests' made-up data is the higher-education template's (DEC-037)
-            await conn.execute("update organization set installed_templates = '{higher-education}'")
+        await definitions.install_template(pool, 'higher-education')  # the tests' made-up data is this template's (DEC-037)
         pools.append(pool)
         return pool
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Me } from './api';
-import { Account } from './Account';
 import { Chat } from './Chat';
 import { ChartPage } from './ChartPage';
 import { Connect } from './Connect';
@@ -10,11 +9,9 @@ import i18n from './i18n';
 import { applyAccent, applyLanguage, PRIMARY_LANGUAGE, type LanguageInfo } from './languages';
 import { Login } from './Login';
 import { Metrics } from './Metrics';
-import { Providers } from './Providers';
-import { Settings } from './Settings';
-import { Tokens } from './Tokens';
+import { Settings, type SettingsTab } from './Settings';
 
-type Page = 'chat' | 'chart' | 'connect' | 'metrics' | 'models' | 'tokens' | 'settings' | 'account';
+type Page = 'chat' | 'chart' | 'connect' | 'metrics' | 'settings';
 
 const navLink = 'block w-full rounded-md border-0 bg-transparent px-3 py-2 text-start text-sm hover:bg-background';
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -25,6 +22,7 @@ export function App() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [languages, setLanguages] = useState<LanguageInfo[]>([]);
   const [page, setPage] = useState<Page>('chat');
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('organization');
   const [drawer, setDrawer] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -148,12 +146,12 @@ export function App() {
         {item('chart', t('nav.chart'))}
         {item('connect', t('nav.connect'))}
         {item('metrics', t('nav.metrics'))}
-        {item('tokens', t('nav.tokens'))}
-        {user.is_admin && item('models', t('nav.models'))}
       </nav>
       <div className="mt-6 flex flex-col gap-1">
         {item('settings', t('nav.settings'))}
-        {item('account', `${t('nav.account')}: ${user.name}`)}
+        <p className="m-0 px-3 pt-2 text-xs text-muted-foreground" dir="auto">
+          {t('nav.signedInAs', { name: user.name })}
+        </p>
         <Button variant="ghost" className="w-full justify-start border-0 px-3 font-normal" onClick={() => void signOut()}>
           {t('signOut')}
         </Button>
@@ -213,10 +211,9 @@ export function App() {
         {page === 'chart' && <ChartPage />}
         {page === 'connect' && <Connect user={user} />}
         {page === 'metrics' && <Metrics />}
-        {page === 'models' && user.is_admin && <Providers />}
-        {page === 'tokens' && <Tokens user={user} />}
-        {page === 'settings' && <Settings me={me} languages={languages} onSaved={() => void load()} />}
-        {page === 'account' && <Account user={user} />}
+        {page === 'settings' && (
+          <Settings me={me} languages={languages} onSaved={() => void load()} tab={settingsTab} onTab={setSettingsTab} />
+        )}
       </main>
     </div>
   );

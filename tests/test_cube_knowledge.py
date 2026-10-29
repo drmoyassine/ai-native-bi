@@ -1,4 +1,5 @@
-"""The completeness check (docs/context-spec.md section 4): a metric cannot ship without its words."""
+"""The completeness check (docs/context-spec.md section 4): a metric cannot ship without its words. It reads every Cube file a template
+ships and every hand-written one in cube/model."""
 
 from __future__ import annotations
 
@@ -9,15 +10,17 @@ from typing import Any
 import pytest
 import yaml
 
-MODEL = Path(__file__).parent.parent / 'cube' / 'model'
+ROOT = Path(__file__).parent.parent
+SOURCES = [ROOT / 'cube' / 'model', *sorted((ROOT / 'src' / 'bi' / 'packs' / 'templates').glob('*/cube'))]
 PERSONAL = re.compile(r'[\w.+-]+@[\w-]+\.[\w.]+|\+?\d[\d\s-]{8,}\d')  # an email, or a phone or national-ID-like number
 GLOSSARY_CHARS = 8000  # the prompt's budget for the glossary and instructions (about 2,000 tokens)
 
 
 def load(kind: str) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for path in sorted((MODEL / kind).glob('*.yml')):
-        out += yaml.safe_load(path.read_text(encoding='utf-8')).get(kind, [])
+    for base in SOURCES:
+        for path in sorted(base.rglob('*.yml')):
+            out += (yaml.safe_load(path.read_text(encoding='utf-8')) or {}).get(kind, [])
     return out
 
 

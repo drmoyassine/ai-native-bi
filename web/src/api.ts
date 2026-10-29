@@ -97,6 +97,7 @@ export interface Sync {
   as_of: string;
   sheet: string | null;
   file_name: string | null;
+  endpoint: string | null;
   status: SyncStatus;
   rows: number | null;
   repeat: boolean | null;
@@ -116,6 +117,16 @@ export interface Source {
   dataset: string | null;
   approved_by: string | null;
   syncs: Sync[];
+  settings?: Partial<ApiSettings>;
+  streams?: { id: string; name: string; dataset: string | null; raw_table: string; last_status: SyncStatus | null }[];
+}
+
+/** An API source's settings (src/bi/connect/api.py); the credential is never part of them. */
+export interface ApiSettings {
+  base_url: string;
+  auth: { type: 'none' | 'bearer' | 'api_key' | 'basic'; header?: string; username?: string | null };
+  endpoints: { name: string; path: string; data_selector?: string | null }[];
+  schedule: 'manual' | 'hourly' | 'daily';
 }
 
 export interface ReviewColumn {
@@ -153,8 +164,16 @@ export interface Reason {
 }
 
 export interface Review {
-  sync: { id: string; status: SyncStatus; file_name: string; rows: number | null; note: string | null; error: string | null };
-  source: { id: string; name: string; state: string };
+  sync: {
+    id: string;
+    status: SyncStatus;
+    file_name: string | null;
+    endpoint?: string | null;
+    rows: number | null;
+    note: string | null;
+    error: string | null;
+  };
+  source: { id: string; name: string; state: string; type?: string };
   dataset: string | null;
   header: { row: number | null; above_header?: string[]; guessed?: boolean; dropped_columns?: number; dropped_total_rows?: number };
   columns: ReviewColumn[];

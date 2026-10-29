@@ -3,7 +3,7 @@ title: 'Data model M1: definitions'
 description: >-
   Subjects, entities and events stored with drafts, approval and versions; the student life-cycle template; mapping and
   setup agent read them; SHAPES removed
-status: pending
+status: completed
 priority: P1
 id: TASK-031
 last_updated: '2026-10-29'
@@ -20,7 +20,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-034
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:23:26.884Z'
+  at: '2026-10-29T07:47:19.192Z'
 ---
 # TASK-031 — Data model M1: definitions
 

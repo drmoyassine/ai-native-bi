@@ -22,8 +22,9 @@ from dlt.common.schema.typing import TColumnSchema
 from psycopg import sql
 from psycopg_pool import AsyncConnectionPool
 
-from .. import dbt, mapping
-from . import store
+from .. import dbt, definitions, generate, mapping
+from ..agent.secrets import SecretStore
+from . import api, store
 from .profile import profile_table, summary
 from .sheets import FILE_SUFFIXES, SheetError, Table, read_table
 
@@ -184,11 +185,20 @@ def _read(storage: Storage, row: dict[str, Any]) -> tuple[Table, str, str]:
 
 async def rebuild(pool: AsyncConnectionPool, database_url: str) -> dbt.Built:
     """Rebuilds staging and analytics from every approved input (dbt build, with its tests)."""
-    return await asyncio.to_thread(dbt.build, database_url, None, await mapping.dbt_vars(pool))
+    generated = generate.dbt_files(await definitions.events(pool))
+    return await asyncio.to_thread(dbt.build, database_url, None, await mapping.dbt_vars(pool), generated)
 
 
-async def process_sync(pool: AsyncConnectionPool, storage: Storage, database_url: str, sync_id: str, threshold: int) -> str:
-    """Works one sync of a file source; the outcome (`loaded`, `review` or `failed`, with the reason) is kept on the sync."""
+async def process_sync(
+    pool: AsyncConnectionPool,
+    storage: Storage,
+    database_url: str,
+    sync_id: str,
+    threshold: int,
+    secrets: SecretStore | None = None,
+) -> str:
+    """Works one sync of a source (a file, or an API endpoint); the outcome (`loaded`, `review` or `failed`, with the reason) is kept
+    on the sync."""
     async with pool.connection() as conn:
         claimed = await (
             await conn.execute("update sync set status = 'running' where id::text = %s and status = 'queued' returning id", [sync_id])
@@ -198,16 +208,32 @@ async def process_sync(pool: AsyncConnectionPool, storage: Storage, database_url
     row = await store.get_sync(pool, sync_id)
     assert row is not None
     try:
-        return await _process(pool, storage, database_url, row, threshold)
+        return await _process(pool, storage, database_url, row, threshold, secrets)
     except Exception as e:  # any failure ends the sync, with its reason: nothing is retried, nothing stays `running`
-        error = str(e) if isinstance(e, SheetError | dbt.TransformError) else f'the file could not be loaded: {e}'
+        what = 'the endpoint' if row['source_type'] == 'api' else 'the file'
+        error = str(e) if isinstance(e, SheetError | dbt.TransformError | api.ApiError) else f'{what} could not be loaded: {e}'
         await store.update_sync(pool, sync_id, status='failed', error=error, finished_at=dt.datetime.now(dt.UTC))
         return 'failed'
 
 
-async def _process(pool: AsyncConnectionPool, storage: Storage, database_url: str, row: dict[str, Any], threshold: int) -> str:
+async def _read_endpoint(row: dict[str, Any], secrets: SecretStore | None) -> tuple[Table, str]:
+    settings = api.ApiSettings.model_validate(row['source_settings'])
+    credential = None
+    if settings.auth.type != 'none':
+        if secrets is None:
+            raise api.ApiError('the secret store is not configured (BI_SECRETS_KEY), so the credential cannot be read')
+        credential = await secrets.get(api.secret_handle(row['source_id']))
+    return await asyncio.to_thread(api.read_stream, settings, credential, row['endpoint'] or row['stream_name'])
+
+
+async def _process(
+    pool: AsyncConnectionPool, storage: Storage, database_url: str, row: dict[str, Any], threshold: int, secrets: SecretStore | None
+) -> str:
     sync_id, table_name, dataset = row['id'], row['raw_table'], row['dataset']
-    table, sha256, _ = await asyncio.to_thread(_read, storage, row)
+    if row['source_type'] == 'api':
+        table, sha256 = await _read_endpoint(row, secrets)
+    else:
+        table, sha256, _ = await asyncio.to_thread(_read, storage, row)
     layout_id, columns = store.layout_of(table.columns)
     await store.save_layout(pool, layout_id, columns)
     await store.update_sync(
@@ -219,7 +245,7 @@ async def _process(pool: AsyncConnectionPool, storage: Storage, database_url: st
         '_bi_sync_id': sync_id,
         '_bi_layout': layout_id,
         '_bi_file_sha256': sha256,
-        '_bi_file_name': row['file_name'],
+        '_bi_file_name': row['file_name'] or row['endpoint'],
         '_bi_sheet': row['sheet'],
         '_bi_as_of': row['as_of'].isoformat(),
         '_bi_loaded_at': dt.datetime.now(dt.UTC).isoformat(),
@@ -265,7 +291,7 @@ async def _propose(
         return False
     names = [c['name'] for c in columns]
     kinds = {p['name']: p['kind'] for p in profile['columns']}
-    proposal, exact = mapping.propose(dataset, names, kinds)
+    proposal, exact = mapping.propose(await mapping.fields(pool, dataset), names, kinds)
     if exact:
         await mapping.save(pool, layout_id, dataset, proposal, 'approved', 'every needed part has a column of its own name')
         return True
@@ -296,8 +322,8 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
     if row is None:
         return None
     out: dict[str, Any] = {
-        'sync': {k: row[k] for k in ('id', 'source_id', 'status', 'file_name', 'as_of', 'sheet', 'rows', 'note', 'error')},
-        'source': {'id': row['source_id'], 'name': row['source_name'], 'state': row['source_state']},
+        'sync': {k: row[k] for k in ('id', 'source_id', 'status', 'file_name', 'endpoint', 'as_of', 'sheet', 'rows', 'note', 'error')},
+        'source': {'id': row['source_id'], 'name': row['source_name'], 'state': row['source_state'], 'type': row['source_type']},
         'dataset': row['dataset'],
         'header': {'row': row['found_header_row'], **(row['notes'] or {})},
         'columns': [],
@@ -321,7 +347,7 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
     if row['dataset']:
         out['parts'] = [
             {'name': f.name, 'label': f.label, 'description': f.description, 'required': f.required, 'expects': f.expects}
-            for f in mapping.fields(row['dataset'])
+            for f in await mapping.fields(pool, row['dataset'])
         ]
         kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
         if kept:
@@ -340,7 +366,7 @@ async def approve(pool: AsyncConnectionPool, sync_id: str, chosen: dict[str, str
         async with pool.connection() as conn:
             found = await (await conn.execute('select columns from layout where id = %s', [row['layout_id']])).fetchone()
         names = [c['name'] for c in (found[0] if found else [])]
-        mapping.check(row['dataset'], chosen or {}, names)
+        mapping.check(row['dataset'], await mapping.fields(pool, row['dataset']), chosen or {}, names)
         kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
         changed = kept is None or {p: c for p, c in (chosen or {}).items() if c} != {p: c for p, c in kept['mapping'].items() if c}
         await mapping.save(

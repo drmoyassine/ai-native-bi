@@ -247,7 +247,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-038
 modified:
   by: process:vef-cli
-  at: '2026-10-29T07:21:13.230Z'
+  at: '2026-10-29T07:55:51.059Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -262,7 +262,7 @@ related_tasks:
     name: 'Agent step 2d: define a KPI'
     url: /TASKS.md#TASK-015
   - id: TASK-023
-    name: 'Connect data C2: APIs and schedules'
+    name: 'Connect data C2a: REST API sources'
     url: /TASKS.md#TASK-023
   - id: TASK-024
     name: 'Connect data C3: Oracle (Banner)'
@@ -318,6 +318,9 @@ related_tasks:
   - id: TASK-041
     name: 'Data model M0b: template models installed by generation'
     url: /TASKS.md#TASK-041
+  - id: TASK-042
+    name: 'Connect data C2b: API configurations drafted, incremental reads, frozen contracts'
+    url: /TASKS.md#TASK-042
 ---
 
 Spec in docs/agent-spec.md and decisions DEC-015 to DEC-020: the runtime (Pydantic AI in a worker job, the model per mode a setting), the loop, the tools, the builder's sandbox, the data the model may see, conversations and the chat, caching and cost. Delivery is in four steps.

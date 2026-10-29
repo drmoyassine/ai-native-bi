@@ -1261,7 +1261,7 @@ tags:
   - ingest
   - dlt
 id: DEC-027
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T09:17:14.072Z'
@@ -1273,14 +1273,14 @@ related_roadmap_items:
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T09:17:37.787Z'
+  by: process:vef-cli
+  at: '2026-10-29T07:55:50.255Z'
 related_tasks:
   - id: TASK-022
     name: 'Connect data C1: sources and files'
     url: /TASKS.md#TASK-022
   - id: TASK-023
-    name: 'Connect data C2: APIs and schedules'
+    name: 'Connect data C2a: REST API sources'
     url: /TASKS.md#TASK-023
   - id: TASK-024
     name: 'Connect data C3: Oracle (Banner)'

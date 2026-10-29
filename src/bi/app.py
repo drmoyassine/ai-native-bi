@@ -13,9 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from . import accounts, knowledge, mapping, organization, tools
+from . import accounts, definitions, knowledge, mapping, organization, tools
 from .accounts import User
 from .agent.routes import AgentContext, create_agent_router
+from .agent.secrets import SecretStore
 from .agent.suppress import count_measures, suppress_rows
 from .charts import ChartDefinition
 from .connect.files import Storage
@@ -46,6 +47,8 @@ class AppContext:
     """How many failed sign-ins refuse the next (TASK-010)."""
     enqueue_setup: Callable[[str], Awaitable[None]] | None = None
     """Asks the setup agent about a sync waiting for review (docs/setup-agent-spec.md)."""
+    secrets: SecretStore | None = None
+    """The secret store (DEC-020): where an API source's credential is kept."""
     proxy_hops: int = 0
     """Proxies in front of the app that append the client's address to X-Forwarded-For (0: the connection's own address is the client)."""
 
@@ -176,6 +179,34 @@ def create_router(ctx: AppContext) -> APIRouter:
         log('info', 'organization changed', user=user.id, fields=sorted(body.model_dump(exclude_unset=True)))
         return {'organization': org}
 
+    @router.get('/model')
+    async def model(user: Signed) -> dict[str, Any]:
+        """What the organization reports on: every subject, entity and event, current version and draft (docs/data-model-spec.md)."""
+        return {'definitions': await definitions.listing(ctx.pool)}
+
+    @router.put('/model/{kind}/{name}')
+    async def draft_definition(kind: definitions.Kind, name: str, body: dict[str, Any], user: Signed) -> dict[str, Any]:
+        subject = name if kind == 'subject' else body.get('subject')
+        if not user.is_admin and not await definitions.is_steward(ctx.pool, str(subject), user.email):
+            raise HTTPException(403, "only an admin or the subject's steward changes what is defined in it")
+        try:
+            version = await definitions.save_draft(ctx.pool, kind, name, body, user.id)
+        except definitions.DefinitionError as e:
+            raise HTTPException(422, str(e)) from e
+        log('info', 'definition drafted', kind=kind, name=name, version=version, user=user.id)
+        return {'version': version, 'status': 'draft'}
+
+    @router.post('/model/{kind}/{name}/approve')
+    async def approve_definition(kind: definitions.Kind, name: str, user: Signed) -> dict[str, Any]:
+        if not await definitions.may_approve(ctx.pool, kind, name, user.email, user.is_admin):
+            raise HTTPException(403, "only an admin or the subject's steward approves it")
+        try:
+            version = await definitions.approve(ctx.pool, kind, name, user.id)
+        except definitions.DefinitionError as e:
+            raise HTTPException(409, str(e)) from e
+        log('info', 'definition approved', kind=kind, name=name, version=version, user=user.id)
+        return {'version': version, 'status': 'approved'}
+
     @router.put('/me/language', status_code=204)
     async def my_language(body: LanguageChoice, user: Signed) -> None:
         try:
@@ -238,5 +269,5 @@ def create_router(ctx: AppContext) -> APIRouter:
     if ctx.agent is not None:
         router.include_router(create_agent_router(ctx.agent, current_user))
     router.include_router(create_tokens_router(ctx.pool, current_user, ctx.public_url))
-    router.include_router(create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, ctx.enqueue_setup, current_user))
+    router.include_router(create_connect_router(ctx.pool, ctx.storage, ctx.enqueue_load, ctx.enqueue_setup, current_user, ctx.secrets))
     return router

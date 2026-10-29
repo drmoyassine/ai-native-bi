@@ -26,8 +26,10 @@ async def main() -> None:
         else:
             log('info', 'no cube configured: every request ends no_source')
         deps = CollectDeps(pool=pool, sources=SourceRegistry(sources), callback_timeout_ms=env.CALLBACK_TIMEOUT_MS, client=client)
-        load = LoadDeps(pool=pool, storage=storage(env), database_url=env.DATABASE_URL, suppression_threshold=env.SUPPRESSION_THRESHOLD)
         secrets = DbSecretStore(pool, env.BI_SECRETS_KEY) if env.BI_SECRETS_KEY else None
+        load = LoadDeps(
+            pool=pool, storage=storage(env), database_url=env.DATABASE_URL, suppression_threshold=env.SUPPRESSION_THRESHOLD, secrets=secrets
+        )
         cube_client = CubeClient(client, env.CUBE_API_URL, env.CUBE_API_SECRET) if env.CUBE_API_URL and env.CUBE_API_SECRET else None
         turn = TurnDeps(
             pool=pool, cube=cube_client, suppression_threshold=env.SUPPRESSION_THRESHOLD, model_for=make_model_for(pool, secrets)
