@@ -159,6 +159,9 @@ its own generated comments.
 
 ## 8. The ontology
 
+Grown into the model of the whole BI by `docs/data-model-spec.md` (DEC-036): subject areas, entities and events, which K5 builds as
+step M1. The sketch below is the first version.
+
 ### Version 1: a reviewed file
 
 `src/bi/ontology.yml` declares the entities, their keys, attributes and relationships, and which dataset parts and Cube members they

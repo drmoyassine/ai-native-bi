@@ -1059,15 +1059,17 @@ docs/context-spec.md § 11, K4.
 
 ---
 
-## TASK-031 — Context K5: the ontology
+## TASK-031 — Context K5 / data model M1: the ontology
 
 ---
-title: 'Context K5: the ontology'
-description: src/bi/ontology.yml replaces SHAPES; mapping and agents read it
+title: 'Context K5 / data model M1: the ontology'
+description: >-
+  src/bi/ontology.yml with subject areas, entities and events (docs/data-model-spec.md section 5) replaces SHAPES;
+  mapping and the setup agent read it
 status: pending
 priority: P1
 id: TASK-031
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T10:45:35.952Z'
@@ -1080,8 +1082,8 @@ related_decisions:
     name: The ontology is a reviewed file that replaces SHAPES
     url: /DECISIONS.md#DEC-034
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T10:45:35.952Z'
+  by: process:vef-cli
+  at: '2026-10-29T06:15:47.213Z'
 ---
 
 docs/context-spec.md § 11, K5.
@@ -1143,5 +1145,146 @@ modified:
 ---
 
 docs/setup-agent-spec.md § 4 and § 8, S2.
+
+---
+
+## TASK-034 — Data model M2: warehouse layers
+
+---
+title: 'Data model M2: warehouse layers'
+description: >-
+  staging, core and marts schemas; staging generated from approved mappings; core.fct_term_enrollment, dim_term,
+  dim_program; Cube reads core
+status: pending
+priority: P1
+id: TASK-034
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:33.295Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: The BI is organised by subject area, entity and event; sources map onto them
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:33.295Z'
+---
+
+---
+
+## TASK-035 — Data model M3: targets proposed per stream
+
+---
+title: 'Data model M3: targets proposed per stream'
+description: >-
+  The rules score a stream against every entity and event, the setup agent proposes where unsure; the dataset choice
+  leaves the Add a source form
+status: pending
+priority: P1
+id: TASK-035
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:33.974Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: The BI is organised by subject area, entity and event; sources map onto them
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:33.974Z'
+---
+
+---
+
+## TASK-036 — Data model M4: the student life cycle
+
+---
+title: 'Data model M4: the student life cycle'
+description: >-
+  application, admission_decision, graduation events, cohorts, students_lifecycle mart, admit rate, yield, retention and
+  graduation rate, the Student life cycle view
+status: pending
+priority: P1
+id: TASK-036
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:34.664Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: The BI is organised by subject area, entity and event; sources map onto them
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:34.664Z'
+---
+
+---
+
+## TASK-037 — Data model M5: identity across sources
+
+---
+title: 'Data model M5: identity across sources'
+description: Crosswalks per personal entity, declared matching rules, unmatched records counted on the source page
+status: pending
+priority: P2
+id: TASK-037
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:35.417Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: The BI is organised by subject area, entity and event; sources map onto them
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:35.417Z'
+---
+
+---
+
+## TASK-038 — Data model M6: staff
+
+---
+title: 'Data model M6: staff'
+description: Staff subject area, its events and view, faculty by rank, institution.student_faculty_ratio
+status: pending
+priority: P2
+id: TASK-038
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:36.168Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: The BI is organised by subject area, entity and event; sources map onto them
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:15:36.168Z'
+---
 
 <!-- End VEF generated items. -->

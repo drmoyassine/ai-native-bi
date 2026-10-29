@@ -9,7 +9,7 @@ status: In Progress
 priority: P1
 tags:
   - agent
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-26T13:23:31.090Z'
@@ -68,9 +68,12 @@ related_decisions:
   - id: DEC-035
     name: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
     url: /DECISIONS.md#DEC-035
+  - id: DEC-036
+    name: The BI is organised by subject area, entity and event; sources map onto them
+    url: /DECISIONS.md#DEC-036
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T13:07:33.243Z'
+  by: process:vef-cli
+  at: '2026-10-29T06:15:47.213Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -109,7 +112,7 @@ related_tasks:
     name: 'Context K4: drafted documentation'
     url: /TASKS.md#TASK-030
   - id: TASK-031
-    name: 'Context K5: the ontology'
+    name: 'Context K5 / data model M1: the ontology'
     url: /TASKS.md#TASK-031
   - id: TASK-032
     name: 'Setup agent S1: masked samples'
@@ -117,6 +120,21 @@ related_tasks:
   - id: TASK-033
     name: 'Setup agent S2: mapping proposals'
     url: /TASKS.md#TASK-033
+  - id: TASK-034
+    name: 'Data model M2: warehouse layers'
+    url: /TASKS.md#TASK-034
+  - id: TASK-035
+    name: 'Data model M3: targets proposed per stream'
+    url: /TASKS.md#TASK-035
+  - id: TASK-036
+    name: 'Data model M4: the student life cycle'
+    url: /TASKS.md#TASK-036
+  - id: TASK-037
+    name: 'Data model M5: identity across sources'
+    url: /TASKS.md#TASK-037
+  - id: TASK-038
+    name: 'Data model M6: staff'
+    url: /TASKS.md#TASK-038
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 

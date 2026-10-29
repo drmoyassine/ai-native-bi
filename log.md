@@ -209,3 +209,13 @@ and typos forgiven), the chat prompt carries the instructions and glossary, and 
 `METRICS` table is gone: a measure is answerable to the AMS when it declares `meta.metric`, with period, dimensions, as-of and lineage
 read from Cube. CI checks completeness and personal-data-looking text. `docs/ams-contract-proposals.md` § 7 drafts a request for a
 metrics catalogue route. TASK-027 completed; next in stage A: K2 verified questions (TASK-028).
+
+## 2026-10-29 — Spec: the data model (subject areas, entities, events)
+
+The owner asked how Banner through an API, the student life cycle (application to employment), staff, courses and events fit together.
+`docs/data-model-spec.md` sets the hierarchy: a source per system connection and a stream per table or endpoint; an ontology of subject
+areas (each with a steward), entities and events that streams map onto (proposed after the first read, not asked on the form); a
+warehouse in four layers (raw, staging generated from mappings, core with shared dimensions and one fact per event, marts for life
+cycles); Cube views per subject area and lens; rates on cohorts; people matched across systems inside the warehouse. DEC-036; K5 becomes
+step M1 (TASK-031), M2 to M6 are TASK-034 to TASK-038. Draft for review, with six open questions (cohorts, census, applicant IDs,
+employment survey, next subject, history).
