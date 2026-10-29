@@ -22,7 +22,7 @@ from dlt.common.schema.typing import TColumnSchema
 from psycopg import sql
 from psycopg_pool import AsyncConnectionPool
 
-from .. import dbt, definitions, generate, mapping
+from .. import calendars, dbt, definitions, generate, mapping
 from ..agent.secrets import SecretStore
 from . import api, store
 from .profile import profile_table, summary
@@ -194,7 +194,7 @@ def without_left_out(table: Table, decisions: dict[str, dict[str, Any]]) -> Tabl
 
 async def rebuild(pool: AsyncConnectionPool, database_url: str) -> dbt.Built:
     """Rebuilds staging and analytics from every approved input (dbt build, with its tests)."""
-    generated = generate.dbt_files(await definitions.events(pool))
+    generated = generate.dbt_files(await definitions.events(pool), await calendars.all_calendars(pool))
     return await asyncio.to_thread(dbt.build, database_url, None, await mapping.dbt_vars(pool), generated)
 
 

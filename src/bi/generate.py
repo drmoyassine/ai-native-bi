@@ -11,7 +11,10 @@ from typing import Any
 
 import yaml
 
-from .definitions import ArithmeticRule, BucketRule, DatePartRule, Derived, EventBody, GroupRule, JoinRule, Part
+from .calendars import CalendarBody
+from .definitions import ArithmeticRule, BucketRule, DatePartRule, Derived, EventBody, GroupRule, JoinRule, Part, PeriodRule
+
+Calendars = dict[str, CalendarBody]
 
 
 def _q(name: str) -> str:
@@ -44,8 +47,30 @@ def _operand(value: str | float) -> str:
     return f'typed.{_q(value)}' if isinstance(value, str) else _num(value)
 
 
-def derived_sql(d: Derived) -> str:
-    """The SQL of one derived part, over the typed parts (`typed`). Pure: the same rule gives the same SQL."""
+def period_sql(value: str, calendar: CalendarBody | None) -> str:
+    """The code of the calendar's period a date falls in (bi.calendars; the same as CalendarBody.code_for)."""
+    if calendar is None:
+        return 'null::text'
+    repeat = calendar.repeat
+    if repeat is None:
+        if not calendar.periods:
+            return 'null::text'
+        ordered = sorted(calendar.periods, key=lambda p: p.starts)
+        whens = ' '.join(
+            f"when {value} between date '{p.starts.isoformat()}' and date '{p.ends.isoformat()}' then {_lit(p.code)}" for p in ordered
+        )
+        return f'case {whens} else null end'
+    # Shifting the date back to the start day makes the year (and its quarters) begin on 1 January (the day is at most 28).
+    shifted = f"({value} - interval '{repeat.month - 1} months' - interval '{repeat.day - 1} days')"
+    later = 1 if repeat.named_by == 'end' and (repeat.month, repeat.day) != (1, 1) else 0
+    year = f'(cast(extract(year from {shifted}) as integer) + {later})::text'
+    if repeat.every == 'year':
+        return year
+    return f"{year} || '-Q' || cast(extract(quarter from {shifted}) as integer)::text"
+
+
+def derived_sql(d: Derived, calendars: Calendars | None = None) -> str:
+    """The SQL of one derived part, over the typed parts (`typed`). Pure: the same rule (and calendars) give the same SQL."""
     r = d.rule
     if isinstance(r, GroupRule):
         whens = ' '.join(f'when {_lit(k)} then {_lit(v)}' for k, v in r.groups.items())
@@ -56,6 +81,8 @@ def derived_sql(d: Derived) -> str:
     if isinstance(r, DatePartRule):
         unit = {'year': 'year', 'quarter': 'quarter', 'month': 'month', 'week': 'week', 'day_of_week': 'isodow'}[r.unit]
         return f'cast(extract({unit} from typed.{_q(r.part)}) as integer)'
+    if isinstance(r, PeriodRule):
+        return period_sql(f'typed.{_q(r.part)}', (calendars or {}).get(r.calendar))
     if isinstance(r, ArithmeticRule):
         right = _operand(r.right)
         if r.op == '/':
@@ -68,7 +95,7 @@ def derived_sql(d: Derived) -> str:
     return 'coalesce(' + ', '.join(f'nullif(trim(typed.{_q(p)}::text), {_lit("")})' for p in r.parts) + ')'
 
 
-def staging_sql(name: str, event: EventBody) -> str:
+def staging_sql(name: str, event: EventBody, calendars: Calendars | None = None) -> str:
     names = ', '.join(repr(p.name) for p in event.parts)
     lines = [
         f'-- Generated from the approved event "{name}" (bi.generate): every approved input, typed. Do not edit.',
@@ -96,7 +123,8 @@ def staging_sql(name: str, event: EventBody) -> str:
     if event.snapshot_by:
         on = ' and '.join(f'raw.{_q(k)} = latest.{_q(k)}' for k in event.snapshot_by)
         lines += ['    inner join latest', f'        on {on} and raw._bi_loaded_at = latest.loaded_at']
-    lines += [')', '', 'select', '    typed.*' + ''.join(f',\n    {derived_sql(d)} as {_q(d.name)}' for d in event.derived), 'from typed']
+    derived = ''.join(f',\n    {derived_sql(d, calendars)} as {_q(d.name)}' for d in event.derived)
+    lines += [')', '', 'select', '    typed.*' + derived, 'from typed']
     return '\n'.join(lines) + '\n'
 
 
@@ -126,11 +154,11 @@ def tests_yml(events: dict[str, EventBody]) -> str:
     )
 
 
-def dbt_files(events: dict[str, EventBody]) -> dict[str, str]:
-    """The generated models, by path inside the dbt project."""
+def dbt_files(events: dict[str, EventBody], calendars: Calendars | None = None) -> dict[str, str]:
+    """The generated models, by path inside the dbt project (a calendar's periods are written into the events that read it)."""
     files: dict[str, str] = {}
     for name, event in sorted(events.items()):
-        files[f'models/staging/stg_{name}.sql'] = staging_sql(name, event)
+        files[f'models/staging/stg_{name}.sql'] = staging_sql(name, event, calendars)
         files[f'models/analytics/{name}.sql'] = analytics_sql(name, event)
     if events:
         files['models/generated.yml'] = tests_yml(events)

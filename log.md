@@ -313,3 +313,13 @@ they use exist and have the right kind; no names reused) and generated into the 
 literal values are escaped (a test feeds a hostile one). Saving makes a draft; "What approving changes" lists what is added, changed or
 removed and warns about approved mappings and Cube files that read a part that goes away; an admin or the subject's steward approves.
 Checked in a browser. Next: the organization calendar (TASK-043), then the metric builder (M5).
+
+## 2026-10-29 — The organization calendar built (TASK-043)
+
+Settings has a Calendars tab. A calendar is the organization's own periods, whatever it calls them: either listed (a code, a label,
+first and last day; overlapping periods are refused, a date in none has no period) or repeating every year from a start day, as years
+or quarters, named by the year they start or end in (a budget year from 1 July named by its end year). Only an admin changes them; one
+an event reads cannot be removed. An event's new derived part "a period of a calendar" says which period a date falls in; the periods
+are written into the generated staging model, so a change applies at the next build. The SQL for repeating calendars is tested against
+the Python definition over 800 days for four shapes. Validation messages now read as "where: what", not the validator's dump. Checked
+in a browser. Next: the metric builder (M5).

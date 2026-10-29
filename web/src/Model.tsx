@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { api, type Me } from './api';
+import { api, type CalendarSummary, type Me } from './api';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -28,6 +28,7 @@ type Rule =
   | { type: 'group'; part: string; groups: Record<string, string>; otherwise?: string | null }
   | { type: 'join'; parts: string[]; separator?: string }
   | { type: 'date_part'; part: string; unit: 'year' | 'quarter' | 'month' | 'week' | 'day_of_week' }
+  | { type: 'period'; part: string; calendar: string }
   | { type: 'arithmetic'; left: string | number; op: '+' | '-' | '*' | '/'; right: string | number }
   | { type: 'bucket'; part: string; edges: number[]; labels: string[] }
   | { type: 'first_of'; parts: string[] };
@@ -73,13 +74,13 @@ interface Changes {
 }
 
 const NAME = '^[a-z][a-z0-9_]{0,62}$';
-const RULES: Rule['type'][] = ['group', 'join', 'date_part', 'arithmetic', 'bucket', 'first_of'];
+const RULES: Rule['type'][] = ['group', 'join', 'date_part', 'period', 'arithmetic', 'bucket', 'first_of'];
 
 function words(w: Words | undefined, locale: string): string {
   return (w && (w[locale] || w[PRIMARY_LANGUAGE])) || '';
 }
 
-function newRule(type: Rule['type'], parts: Part[]): Rule {
+function newRule(type: Rule['type'], parts: Part[], calendars: CalendarSummary[]): Rule {
   const first = parts[0]?.name ?? '';
   switch (type) {
     case 'group':
@@ -88,6 +89,8 @@ function newRule(type: Rule['type'], parts: Part[]): Rule {
       return { type, parts: parts.slice(0, 2).map((p) => p.name), separator: ' ' };
     case 'date_part':
       return { type, part: parts.find((p) => p.expects === 'date')?.name ?? first, unit: 'year' };
+    case 'period':
+      return { type, part: parts.find((p) => p.expects === 'date')?.name ?? first, calendar: calendars[0]?.name ?? '' };
     case 'arithmetic':
       return { type, left: parts.find((p) => p.expects === 'number')?.name ?? first, op: '+', right: 0 };
     case 'bucket':
@@ -208,7 +211,7 @@ function Status({ d }: { d: Definition }) {
   );
 }
 
-function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block text-sm">
       {label}
@@ -218,7 +221,7 @@ function Field({ label, children, hint }: { label: string; children: ReactNode; 
   );
 }
 
-function WordsInput({ value, onChange, me, label }: { value: Words; onChange: (w: Words) => void; me: Me; label: string }) {
+export function WordsInput({ value, onChange, me, label }: { value: Words; onChange: (w: Words) => void; me: Me; label: string }) {
   const secondary = me.organization.secondary_language;
   return (
     <div className="grid gap-2 sm:grid-cols-2">
@@ -380,7 +383,7 @@ function Editor({
               onGrain={(grain) => set({ grain })}
               onSnapshot={(snapshot_by) => set({ snapshot_by })}
             />
-            <DerivedList parts={parts} derived={body.derived ?? []} onChange={(derived) => set({ derived })} />
+            <DerivedList me={me} parts={parts} derived={body.derived ?? []} onChange={(derived) => set({ derived })} />
           </>
         )}
         {kind === 'entity' && (
@@ -556,8 +559,15 @@ function PartsTable({
   );
 }
 
-function DerivedList({ parts, derived, onChange }: { parts: Part[]; derived: Derived[]; onChange: (d: Derived[]) => void }) {
+function DerivedList({ me, parts, derived, onChange }: { me: Me; parts: Part[]; derived: Derived[]; onChange: (d: Derived[]) => void }) {
   const { t } = useTranslation();
+  const [calendars, setCalendars] = useState<CalendarSummary[]>([]);
+  useEffect(() => {
+    api
+      .get<{ calendars: CalendarSummary[] }>('/calendars')
+      .then((r) => setCalendars(r.calendars))
+      .catch(() => setCalendars([]));
+  }, []);
   const named = parts.filter((p) => p.name);
   const set = (i: number, change: Partial<Derived>) => onChange(derived.map((d, j) => (j === i ? { ...d, ...change } : d)));
   const partSelect = (value: string, onPick: (v: string) => void, only?: Expects) => (
@@ -585,7 +595,11 @@ function DerivedList({ parts, derived, onChange }: { parts: Part[]; derived: Der
                 <Input value={d.name} pattern={NAME} onChange={(e) => set(i, { name: e.target.value })} />
               </Field>
               <Field label={t('model.rule')}>
-                <select className="mt-1 block" value={r.type} onChange={(e) => setRule(newRule(e.target.value as Rule['type'], named))}>
+                <select
+                  className="mt-1 block"
+                  value={r.type}
+                  onChange={(e) => setRule(newRule(e.target.value as Rule['type'], named, calendars))}
+                >
                   {RULES.map((type) => (
                     <option key={type} value={type}>
                       {t(`model.rule_${type}`)}
@@ -666,6 +680,22 @@ function DerivedList({ parts, derived, onChange }: { parts: Part[]; derived: Der
                 </select>
               </div>
             )}
+            {r.type === 'period' && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                {partSelect(r.part, (part) => setRule({ ...r, part }), 'date')}
+                {calendars.length === 0 ? (
+                  <span className="text-muted-foreground">{t('model.noCalendar')}</span>
+                ) : (
+                  <select aria-label={t('model.calendar')} value={r.calendar} onChange={(e) => setRule({ ...r, calendar: e.target.value })}>
+                    {calendars.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {words(c.body.label, me.locale) || c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
             {r.type === 'arithmetic' && (
               <div className="flex gap-2 text-sm">
                 {partSelect(String(r.left), (left) => setRule({ ...r, left }), 'number')}
@@ -713,7 +743,7 @@ function DerivedList({ parts, derived, onChange }: { parts: Part[]; derived: Der
       <button
         type="button"
         className="link mt-2"
-        onClick={() => onChange([...derived, { name: '', rule: newRule('group', named) }])}
+        onClick={() => onChange([...derived, { name: '', rule: newRule('group', named, calendars) }])}
         disabled={named.length === 0}
       >
         + {t('model.addDerived')}
