@@ -212,7 +212,7 @@ The AMS integration (contract) stays: it is a connected system that reads metric
 | **M0b. Template models installed** — built 2026-10-29 | The template's dbt models and Cube files move into the template and are installed by generation | No model outside a template or generation: staging and analytics are generated per approved event (`bi.generate`, at each build); a template's Cube files are written to `cube_model.file`, which Cube reads through `cube/cube.js` and reloads on change |
 | **M1. Definitions** — built 2026-10-29 (storage, approval, versions, template install, API; the Model page is M3) | The `definition` table (subjects, entities, events) with drafts, approval, versions; templates install as definitions; mapping and setup agent read them; `SHAPES` removed | Connect data's parts come from the installed template's events |
 | **M2. Generated warehouse** — generation built with M0b; the rest to do | dbt models generated (done); then the core and cohorts schemas, shared dimensions per entity, the official-load setting, Cube on core | A metric from the template answers the AMS from generated models |
-| **M3. The Model page** | Subjects, entities, events edited in the app (parts, grain, snapshot, derived parts); steward approval; what-changes preview | A person defines a new event in the UI and it is generated after approval |
+| **M3. The Model page** — built 2026-10-29 | Subjects, entities, events edited in the app (parts, grain, snapshot, derived parts); steward approval; what-changes preview | A person defines a new event in the UI and it is generated after approval |
 | **M4. Targets, proposed** | A stream's target scored and proposed; the form's choice removed; whom the rows are about | A made-up export is proposed its event, with reasons, and approved |
 | **M5. Metric builder** | Counts, sums, rates, ratios; words in each language; connected-system name; generated measures | A rate defined in the UI, charted, and asked for by the AMS |
 | **M6. Cohort builder** | Live, suppressed preview; generated cohort models and rates | A cohort followed over two outcomes on made-up files of two different templates |
@@ -223,8 +223,7 @@ and frozen contracts are C2b.
 
 ### Order from here (2026-10-29)
 
-1. **M3. The Model page**: subjects, entities and events defined on a screen (today only by templates or the API), with derived parts.
-   Alongside it, **C1b** (connect data spec § 6.7): the column decisions a person makes before approving a stream.
+1. ~~M3, the Model page, with derived parts~~ and ~~C1b, column decisions at review~~: built 2026-10-29.
 2. **The organization's calendar** (§ 4): its periods, which cohorts and metrics are cut by.
 3. **M5. The metric builder**, then **M6. The cohort builder** (cohort rates are metrics).
 4. **M2's rest** (core and cohorts schemas, shared dimensions, the official-load setting) and **M4** (targets proposed after the first

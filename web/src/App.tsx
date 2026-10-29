@@ -9,9 +9,10 @@ import i18n from './i18n';
 import { applyAccent, applyLanguage, PRIMARY_LANGUAGE, type LanguageInfo } from './languages';
 import { Login } from './Login';
 import { Metrics } from './Metrics';
+import { Model } from './Model';
 import { Settings, type SettingsTab } from './Settings';
 
-type Page = 'chat' | 'chart' | 'connect' | 'metrics' | 'settings';
+type Page = 'chat' | 'chart' | 'connect' | 'metrics' | 'model' | 'settings';
 
 const navLink = 'block w-full rounded-md border-0 bg-transparent px-3 py-2 text-start text-sm hover:bg-background';
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -146,6 +147,7 @@ export function App() {
         {item('chart', t('nav.chart'))}
         {item('connect', t('nav.connect'))}
         {item('metrics', t('nav.metrics'))}
+        {item('model', t('nav.model'))}
       </nav>
       <div className="mt-6 flex flex-col gap-1">
         {item('settings', t('nav.settings'))}
@@ -211,6 +213,7 @@ export function App() {
         {page === 'chart' && <ChartPage />}
         {page === 'connect' && <Connect user={user} />}
         {page === 'metrics' && <Metrics />}
+        {page === 'model' && <Model me={me} />}
         {page === 'settings' && (
           <Settings me={me} languages={languages} onSaved={() => void load()} tab={settingsTab} onTab={setSettingsTab} />
         )}

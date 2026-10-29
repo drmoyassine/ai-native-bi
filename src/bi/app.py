@@ -196,6 +196,20 @@ def create_router(ctx: AppContext) -> APIRouter:
         log('info', 'definition drafted', kind=kind, name=name, version=version, user=user.id)
         return {'version': version, 'status': 'draft'}
 
+    @router.get('/model/{kind}/{name}/changes')
+    async def definition_changes(kind: definitions.Kind, name: str, user: Signed) -> dict[str, Any]:
+        try:
+            return await definitions.changes(ctx.pool, kind, name)
+        except definitions.DefinitionError as e:
+            raise HTTPException(404, str(e)) from e
+
+    @router.get('/model/stewards')
+    async def stewards(user: Signed) -> dict[str, Any]:
+        """Who may be named a subject's steward: the BI's accounts (names and emails only)."""
+        async with ctx.pool.connection() as conn:
+            rows = await (await conn.execute('select name, email from app_user order by name')).fetchall()
+        return {'people': [{'name': n, 'email': e} for n, e in rows]}
+
     @router.post('/model/{kind}/{name}/approve')
     async def approve_definition(kind: definitions.Kind, name: str, user: Signed) -> dict[str, Any]:
         if not await definitions.may_approve(ctx.pool, kind, name, user.email, user.is_admin):
