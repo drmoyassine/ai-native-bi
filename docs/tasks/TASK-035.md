@@ -1,8 +1,6 @@
 ---
-title: 'Data model M3: targets proposed per stream'
-description: >-
-  The rules score a stream against every entity and event, the setup agent proposes where unsure; the dataset choice
-  leaves the Add a source form
+title: 'Data model M3: the Model page'
+description: Subjects, entities and events edited in the app, approved by the steward, with a what-changes preview
 status: pending
 priority: P1
 id: TASK-035
@@ -16,10 +14,12 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:33.974Z'
+  at: '2026-10-29T06:23:28.261Z'
 ---
-# TASK-035 — Data model M3: targets proposed per stream
+# TASK-035 — Data model M3: the Model page

@@ -219,3 +219,13 @@ warehouse in four layers (raw, staging generated from mappings, core with shared
 cycles); Cube views per subject area and lens; rates on cohorts; people matched across systems inside the warehouse. DEC-036; K5 becomes
 step M1 (TASK-031), M2 to M6 are TASK-034 to TASK-038. Draft for review, with six open questions (cohorts, census, applicant IDs,
 employment survey, next subject, history).
+
+## 2026-10-29 — The rule: agnostic and configuration-driven, no compromise
+
+The owner rejected institution-specific choices in the data model spec (cohort rules, census, which subject next) and set a rule
+without exception: the BI is agnostic of organisation and industry and driven by configuration throughout. `docs/data-model-spec.md`
+rewritten: subjects, entities, events, cohorts (a cohort builder) and metrics (a metric builder) are defined in the app and approved by
+the subject's steward; dbt and Cube models are generated from them; the organisation's languages, calendar and personal-data patterns
+are settings; domain content (today's university enrollment, Arabic handling) moves into a template and a language pack, which are data.
+A CI check will fail on domain words in code. DEC-037 (the rule, also CLAUDE.md rule 0), DEC-036 revised (supersedes DEC-034); M0 is
+TASK-040 (P0), M1 to M7 are TASK-031 and TASK-034 to TASK-039.

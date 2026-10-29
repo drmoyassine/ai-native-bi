@@ -69,11 +69,16 @@ related_decisions:
     name: The setup agent proposes mappings where the rules fall short; masking is by profile kind, in code
     url: /DECISIONS.md#DEC-035
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
+  - id: DEC-037
+    name: The BI knows no organisation, industry or language; all domain meaning is configuration or a template
+    url: /DECISIONS.md#DEC-037
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:47.213Z'
+  at: '2026-10-29T06:25:07.808Z'
 related_tasks:
   - id: TASK-012
     name: 'Agent step 2a: ask questions, get charts'
@@ -112,7 +117,7 @@ related_tasks:
     name: 'Context K4: drafted documentation'
     url: /TASKS.md#TASK-030
   - id: TASK-031
-    name: 'Context K5 / data model M1: the ontology'
+    name: 'Data model M1: definitions'
     url: /TASKS.md#TASK-031
   - id: TASK-032
     name: 'Setup agent S1: masked samples'
@@ -121,20 +126,26 @@ related_tasks:
     name: 'Setup agent S2: mapping proposals'
     url: /TASKS.md#TASK-033
   - id: TASK-034
-    name: 'Data model M2: warehouse layers'
+    name: 'Data model M2: generated warehouse'
     url: /TASKS.md#TASK-034
   - id: TASK-035
-    name: 'Data model M3: targets proposed per stream'
+    name: 'Data model M3: the Model page'
     url: /TASKS.md#TASK-035
   - id: TASK-036
-    name: 'Data model M4: the student life cycle'
+    name: 'Data model M4: targets proposed per stream'
     url: /TASKS.md#TASK-036
   - id: TASK-037
-    name: 'Data model M5: identity across sources'
+    name: 'Data model M5: metric builder'
     url: /TASKS.md#TASK-037
   - id: TASK-038
-    name: 'Data model M6: staff'
+    name: 'Data model M6: cohort builder'
     url: /TASKS.md#TASK-038
+  - id: TASK-039
+    name: 'Data model M7: identity across sources'
+    url: /TASKS.md#TASK-039
+  - id: TASK-040
+    name: 'Data model M0: out with the built-in domain'
+    url: /TASKS.md#TASK-040
 ---
 # ROADMAP-003 — Phase 2: the agent builds integrations and KPIs
 

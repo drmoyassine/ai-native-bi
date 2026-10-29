@@ -6,6 +6,11 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
 
 ## Rules
 
+0. **Agnostic and configuration-driven, without exception** (DEC-037). The BI knows no organisation, industry or language: no domain
+   word (student, term, program, patient, customer …) and no language assumption in code, schema, prompts, interface, defaults or
+   hand-written models. Subjects, entities, events, cohorts, metrics, their words, languages, calendar and what is personal are
+   configuration made in the app and approved by a person; domain content ships only as templates and language packs (data). CI
+   checks it. Model: `docs/data-model-spec.md` (DEC-036).
 1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `src/bi/contract.py` mirrors the AMS's
    `packages/shared/src/collection.ts`. Change the AMS first, then mirror it here. Never add a field the AMS does not know.
    The copy is not edited by hand: the AMS's `contract-sync` workflow opens a pull request (`ams-contract-sync`) with the new

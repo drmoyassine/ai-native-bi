@@ -1,8 +1,8 @@
 ---
-title: 'Context K5 / data model M1: the ontology'
+title: 'Data model M1: definitions'
 description: >-
-  src/bi/ontology.yml with subject areas, entities and events (docs/data-model-spec.md section 5) replaces SHAPES;
-  mapping and the setup agent read it
+  Subjects, entities and events stored with drafts, approval and versions; the student life-cycle template; mapping and
+  setup agent read them; SHAPES removed
 status: pending
 priority: P1
 id: TASK-031
@@ -20,8 +20,8 @@ related_decisions:
     url: /DECISIONS.md#DEC-034
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:47.213Z'
+  at: '2026-10-29T06:23:26.884Z'
 ---
-# TASK-031 — Context K5 / data model M1: the ontology
+# TASK-031 — Data model M1: definitions
 
 docs/context-spec.md § 11, K5.

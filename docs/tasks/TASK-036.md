@@ -1,8 +1,8 @@
 ---
-title: 'Data model M4: the student life cycle'
+title: 'Data model M4: targets proposed per stream'
 description: >-
-  application, admission_decision, graduation events, cohorts, students_lifecycle mart, admit rate, yield, retention and
-  graduation rate, the Student life cycle view
+  Rules score a stream against every event and entity, the setup agent proposes; the form dataset choice goes; who the
+  rows are about
 status: pending
 priority: P1
 id: TASK-036
@@ -16,10 +16,12 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:34.664Z'
+  at: '2026-10-29T06:23:29.077Z'
 ---
-# TASK-036 — Data model M4: the student life cycle
+# TASK-036 — Data model M4: targets proposed per stream

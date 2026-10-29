@@ -1059,13 +1059,13 @@ docs/context-spec.md § 11, K4.
 
 ---
 
-## TASK-031 — Context K5 / data model M1: the ontology
+## TASK-031 — Data model M1: definitions
 
 ---
-title: 'Context K5 / data model M1: the ontology'
+title: 'Data model M1: definitions'
 description: >-
-  src/bi/ontology.yml with subject areas, entities and events (docs/data-model-spec.md section 5) replaces SHAPES;
-  mapping and the setup agent read it
+  Subjects, entities and events stored with drafts, approval and versions; the student life-cycle template; mapping and
+  setup agent read them; SHAPES removed
 status: pending
 priority: P1
 id: TASK-031
@@ -1083,7 +1083,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-034
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:47.213Z'
+  at: '2026-10-29T06:23:26.884Z'
 ---
 
 docs/context-spec.md § 11, K5.
@@ -1148,13 +1148,11 @@ docs/setup-agent-spec.md § 4 and § 8, S2.
 
 ---
 
-## TASK-034 — Data model M2: warehouse layers
+## TASK-034 — Data model M2: generated warehouse
 
 ---
-title: 'Data model M2: warehouse layers'
-description: >-
-  staging, core and marts schemas; staging generated from approved mappings; core.fct_term_enrollment, dim_term,
-  dim_program; Cube reads core
+title: 'Data model M2: generated warehouse'
+description: staging, core and cohorts schemas; dbt models generated from definitions; official-load setting; Cube reads core
 status: pending
 priority: P1
 id: TASK-034
@@ -1168,22 +1166,22 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:33.295Z'
+  at: '2026-10-29T06:23:27.564Z'
 ---
 
 ---
 
-## TASK-035 — Data model M3: targets proposed per stream
+## TASK-035 — Data model M3: the Model page
 
 ---
-title: 'Data model M3: targets proposed per stream'
-description: >-
-  The rules score a stream against every entity and event, the setup agent proposes where unsure; the dataset choice
-  leaves the Add a source form
+title: 'Data model M3: the Model page'
+description: Subjects, entities and events edited in the app, approved by the steward, with a what-changes preview
 status: pending
 priority: P1
 id: TASK-035
@@ -1197,22 +1195,24 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:33.974Z'
+  at: '2026-10-29T06:23:28.261Z'
 ---
 
 ---
 
-## TASK-036 — Data model M4: the student life cycle
+## TASK-036 — Data model M4: targets proposed per stream
 
 ---
-title: 'Data model M4: the student life cycle'
+title: 'Data model M4: targets proposed per stream'
 description: >-
-  application, admission_decision, graduation events, cohorts, students_lifecycle mart, admit rate, yield, retention and
-  graduation rate, the Student life cycle view
+  Rules score a stream against every event and entity, the setup agent proposes; the form dataset choice goes; who the
+  rows are about
 status: pending
 priority: P1
 id: TASK-036
@@ -1226,20 +1226,22 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:34.664Z'
+  at: '2026-10-29T06:23:29.077Z'
 ---
 
 ---
 
-## TASK-037 — Data model M5: identity across sources
+## TASK-037 — Data model M5: metric builder
 
 ---
-title: 'Data model M5: identity across sources'
-description: Crosswalks per personal entity, declared matching rules, unmatched records counted on the source page
+title: 'Data model M5: metric builder'
+description: Counts, sums, rates and ratios defined in the app with their words and AMS name; Cube measures generated
 status: pending
 priority: P2
 id: TASK-037
@@ -1253,20 +1255,22 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:35.417Z'
+  at: '2026-10-29T06:23:29.808Z'
 ---
 
 ---
 
-## TASK-038 — Data model M6: staff
+## TASK-038 — Data model M6: cohort builder
 
 ---
-title: 'Data model M6: staff'
-description: Staff subject area, its events and view, faculty by rank, institution.student_faculty_ratio
+title: 'Data model M6: cohort builder'
+description: Cohorts drawn in the app with a live suppressed preview; generated cohort models and rates
 status: pending
 priority: P2
 id: TASK-038
@@ -1280,11 +1284,76 @@ roadmap_item:
   url: /ROADMAP.md#ROADMAP-003
 related_decisions:
   - id: DEC-036
-    name: The BI is organised by subject area, entity and event; sources map onto them
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:15:36.168Z'
+  at: '2026-10-29T06:23:30.558Z'
+---
+
+---
+
+## TASK-039 — Data model M7: identity across sources
+
+---
+title: 'Data model M7: identity across sources'
+description: Crosswalks, matching settings per stream, unmatched records counted
+status: pending
+priority: P2
+id: TASK-039
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:31.489Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:23:31.489Z'
+---
+
+---
+
+## TASK-040 — Data model M0: out with the built-in domain
+
+---
+title: 'Data model M0: out with the built-in domain'
+description: >-
+  Organisation settings (languages, calendar, personal-data patterns), language packs, the higher-education template and
+  Arabic pack as data, neutral wording, the domain-word check in CI (docs/data-model-spec.md section 12)
+status: pending
+priority: P0
+id: TASK-040
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.808Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-037
+    name: The BI knows no organisation, industry or language; all domain meaning is configuration or a template
+    url: /DECISIONS.md#DEC-037
+  - id: DEC-036
+    name: >-
+      What the institution reports on is configuration: subjects, entities, events, cohorts and metrics defined in the
+      app; models generated
+    url: /DECISIONS.md#DEC-036
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T06:25:07.808Z'
 ---
 
 <!-- End VEF generated items. -->
