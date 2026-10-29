@@ -249,7 +249,29 @@ table with a new or changed column stops before anything loads (§ 4). The sync 
 [Valentine](https://github.com/delftdata/valentine) (schema matching: COMA, Cupid, Similarity Flooding, distribution-based) can match a
 new layout to an approved one by their data. We keep it in mind for layout changes if names and profiles turn out not to be enough.
 
-### 6.7 Projects considered
+### 6.7 Column decisions at review (added 2026-10-29)
+
+What the rules and the agent found about each column is a proposal. Before approving a stream a person can change it, column by column;
+the decisions are kept per stream (by column name, so a later layout keeps them) and apply to every later sync:
+
+| Decision | Choices | What it changes |
+|---|---|---|
+| **Personal** | identifies a person (name, email, phone, national ID) · describes a person (gender, nationality: countable, never shown alone) · not personal | Identifying columns are never shown as values, masked in samples, and can never become a dimension; describing ones are counted only with small numbers hidden. A column a person marks "not personal" needs a reason, logged with who and when. |
+| **Keep** | keep · leave out | A column left out never reaches raw: the BI holds only what it needs (data minimisation). The default proposal leaves out identifying columns no dataset needs. |
+| **Kind** | as found · text · number · date · category · identifier · yes/no | Checked against the column's values before approval: "212 values are not dates" with examples of their shapes, never the values of a personal column. |
+| **Name** | a label in each of the organization's languages, and a description | Shown downstream (mapping, Metrics, the agent); raw keeps the name as written for lineage. |
+| **Row key** | the columns that identify a row | Checked for uniqueness and emptiness before approval; becomes the dbt tests of the stream. |
+| **As of** | the date given at upload · a column of the data | Which date each row is true as of. |
+
+Set on the source, not the column: **how often** it is read (API and database sources: hourly, daily, on request; files: the cadence
+expected, so a missing upload is flagged as late), and who owns it.
+
+**Not at this step: derived columns.** A calculated value belongs to a definition, where it has one meaning everywhere: a **derived
+part** of an event (data model spec § 6: grouping values, joining text, a date's year or period, arithmetic on parts), generated into the
+staging model; or a **metric** (a rate, a ratio, a sum), made in the metric builder. A column added at the source would only exist for
+that source.
+
+### 6.8 Projects considered
 
 | Project | What it offers | Use |
 |---|---|---|
@@ -316,6 +338,7 @@ only the read tools).
 | Step | Scope | Done when |
 |---|---|---|
 | **C1. Sources and files** | The source, stream, layout and sync model; Connect data page; the file type through the whole flow (header detection, profiles, mappings per layout, plain part names); uploads migrated | The real xlsb loads: header found, mapping proposed with profiles, approved, analytics built |
+| **C1b. Column decisions at review** | § 6.7: personal (identifying / describing / not, with a reason), keep or leave out, kind with validation, labels and descriptions, row key with checks, as-of column; expected cadence for files | Civil ID is marked identifying and left out, a column re-kinded as a date reports the values that are not dates, and the next sync keeps every decision |
 | **C2a. REST API sources** — built 2026-10-29 | One source per API, one stream per endpoint (`bi.connect.api`): base URL (https; plain http only to this machine), bearer, API key or basic credential in the secret store, GET only, pagination found by dlt `rest_api`, nested fields flattened to `parent__child`; the same draft, profile, mapping and review path as files; Read it now; an hourly or daily schedule (a periodic job every 15 minutes queues what is due) | A paged API behind a token is connected, read, reviewed, approved and built; a second read of the approved layout loads on its own |
 | **C2b. API drafting, incremental, contracts** | `rest_api` configurations drafted from an OpenAPI document (with setup agent S5); incremental reads with state; frozen contracts on approved streams | A changed field pauses the stream with a review |
 | **C3. Oracle (Banner)** | `sql_database` with `oracledb`: `check` (read-only), `discover_schema()`, choose tables and columns, incremental history (§ 13, 3). Needs dlt 1.32 | Tables of a test Oracle (a container in CI) appear with types and keys; chosen ones load incrementally; an unmapped personal column is not read |

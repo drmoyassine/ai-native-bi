@@ -1186,7 +1186,9 @@ modified:
 
 ---
 title: 'Data model M3: the Model page'
-description: Subjects, entities and events edited in the app, approved by the steward, with a what-changes preview
+description: >-
+  Subjects, entities and events edited in the app (parts, grain, snapshot, derived parts: group values, join, date
+  period, arithmetic, buckets, first non-empty), approved by the steward, with a what-changes preview
 status: pending
 priority: P1
 id: TASK-035
@@ -1206,7 +1208,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:23:28.261Z'
+  at: '2026-10-29T09:56:57.544Z'
 ---
 
 ---
@@ -1454,6 +1456,39 @@ related_decisions:
 modified:
   by: process:vef-cli
   at: '2026-10-29T09:23:52.213Z'
+---
+
+---
+
+## TASK-044 — Connect data C1b: column decisions at review
+
+---
+title: 'Connect data C1b: column decisions at review'
+description: >-
+  Before approving a stream: personal (identifying, describing, not, with a reason), keep or leave out, kind with
+  validation, labels and descriptions, row key with checks, as-of column; expected cadence for file sources
+  (docs/connect-data-spec.md section 6.7)
+status: pending
+priority: P0
+id: TASK-044
+last_updated: '2026-10-29'
+generated:
+  by: process:vef-cli
+  at: '2026-10-29T09:56:56.648Z'
+roadmap_item:
+  id: ROADMAP-003
+  name: 'Phase 2: the agent builds integrations and KPIs'
+  url: /ROADMAP.md#ROADMAP-003
+related_decisions:
+  - id: DEC-028
+    name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
+    url: /DECISIONS.md#DEC-028
+  - id: DEC-032
+    name: Masked sample rows reach the model during setup only, through providers an admin enables
+    url: /DECISIONS.md#DEC-032
+modified:
+  by: process:vef-cli
+  at: '2026-10-29T09:56:56.648Z'
 ---
 
 <!-- End VEF generated items. -->

@@ -282,3 +282,12 @@ PR #26 (Settings, M1, M0b, C2a) merged and deployed. The first deploy failed: Cu
 (#27). The AMS's contract sync of 2026-10-27 (6.2 person identity, 6.3 co-deployment) had never been merged; `contract.py` already
 matched it, so it merges as is (#28). Order from here (data model spec § 13): the Model page (M3), the organization calendar
 (TASK-043), the metric builder (M5), the cohort builder (M6), then the rest of M2, M4, M7, C2b and database sources.
+
+## 2026-10-29 — Column decisions at review (C1b) and derived parts (M3)
+
+A real export on staging showed "Civil ID" classed as a plain identifier: the English pack had no word for it. The packs now also know
+civil, citizen, identity, NIN, visa, residency, licence, IBAN, nationality's short "NAT.", religion, ethnicity, health and others (and
+Arabic مدني). The owner asked what a person should decide before approving a stream. Specified (connect data spec § 6.7, TASK-044, P0):
+personal (identifying, describing or not, with a reason), keep or leave out, kind with validation, labels and descriptions, row key with
+checks, the as-of column; cadence on the source. Derived columns belong to definitions (derived parts of an event: group values, join,
+a date's period, arithmetic, buckets, first non-empty; data model spec § 6) or to metrics, not to a source; they are part of M3.

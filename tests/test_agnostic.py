@@ -82,3 +82,12 @@ def test_language_packs_bring_the_words_code_used_to_hold() -> None:
     assert arabic_total.total is not None
     assert packs.pack_for('مريم').code != 'en' and packs.pack_for('Maria').code == 'en'
     assert packs.pack_for('Мария').code == 'en'  # a script no pack covers falls back to the primary language's
+
+
+def test_national_ids_and_other_personal_columns_are_recognised() -> None:
+    from bi import packs
+
+    for column in ('Civil ID', 'National ID', 'NAT.', 'Passport No', 'Mobile', 'Guardian Phone'):
+        assert packs.looks_personal(column), column
+    for column in ('Program', 'Major', 'Funding type', 'Term'):
+        assert not packs.looks_personal(column), column

@@ -1321,7 +1321,7 @@ tags:
   - discovery
   - privacy
 id: DEC-028
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T09:17:14.951Z'
@@ -1333,8 +1333,12 @@ related_roadmap_items:
     name: 'Phase 2: the agent builds integrations and KPIs'
     url: /ROADMAP.md#ROADMAP-003
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T09:44:09.176Z'
+  by: process:vef-cli
+  at: '2026-10-29T09:56:56.648Z'
+related_tasks:
+  - id: TASK-044
+    name: 'Connect data C1b: column decisions at review'
+    url: /TASKS.md#TASK-044
 ---
 
 ---
@@ -1488,7 +1492,7 @@ tags:
   - agent
   - connect-data
 id: DEC-032
-last_updated: '2026-10-28'
+last_updated: '2026-10-29'
 generated:
   by: agent/claude-code
   at: '2026-10-28T10:35:05.069Z'
@@ -1500,8 +1504,12 @@ related_decisions:
     name: 'Discovery: metadata at the source, header rows found, profiles and classification inside the BI'
     url: /DECISIONS.md#DEC-028
 modified:
-  by: agent/claude-code
-  at: '2026-10-28T10:35:05.069Z'
+  by: process:vef-cli
+  at: '2026-10-29T09:56:56.648Z'
+related_tasks:
+  - id: TASK-044
+    name: 'Connect data C1b: column decisions at review'
+    url: /TASKS.md#TASK-044
 ---
 
 ---
