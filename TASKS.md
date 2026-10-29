@@ -1066,7 +1066,7 @@ title: 'Data model M1: definitions'
 description: >-
   Subjects, entities and events stored with drafts, approval and versions; the student life-cycle template; mapping and
   setup agent read them; SHAPES removed
-status: pending
+status: completed
 priority: P1
 id: TASK-031
 last_updated: '2026-10-29'
@@ -1083,7 +1083,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-034
 modified:
   by: process:vef-cli
-  at: '2026-10-29T06:23:26.884Z'
+  at: '2026-10-29T07:47:19.192Z'
 ---
 
 docs/context-spec.md § 11, K5.
@@ -1366,7 +1366,7 @@ title: 'Data model M0b: template models installed by generation'
 description: >-
   The higher-education template's dbt models and Cube files move into the template and are installed by generation (with
   M1/M2); the waiting list in tests/test_agnostic.py reaches zero
-status: pending
+status: completed
 priority: P0
 id: TASK-041
 last_updated: '2026-10-29'
@@ -1388,7 +1388,7 @@ related_decisions:
     url: /DECISIONS.md#DEC-036
 modified:
   by: process:vef-cli
-  at: '2026-10-29T07:21:13.230Z'
+  at: '2026-10-29T07:47:19.913Z'
 ---
 
 <!-- End VEF generated items. -->

@@ -22,6 +22,9 @@ from bi.connect.files import Storage
 from bi.connect.setup_agent import PartChoice, SetupProposal, process_setup, validate
 
 from .conftest import PoolFactory, database_url
+from .fakes import template_fields
+
+FIELDS = template_fields()
 
 DB = 'bi_setup_agent_test'
 AS_OF = dt.date(2026, 10, 20)
@@ -139,13 +142,13 @@ async def waiting_sync(pool: AsyncConnectionPool, tmp_path: Path, name: str, by_
 
 def test_validation_keeps_good_choices_drops_bad_ones_and_leaves_guesses_to_the_person() -> None:
     rules = {'student_id': 'Student Number', 'term_code': None, 'term': 'Term', 'term_start': 'Start Date'}
-    checked = validate(GOOD, 'enrollment', COLUMNS, KINDS, rules)
+    checked = validate(GOOD, FIELDS, COLUMNS, KINDS, rules)
     assert checked.mapping['term_code'] == 'Term' and checked.mapping['program'] == 'Programme'  # the agent's correction stands
     assert checked.mapping.get('level') is None and checked.mapping.get('status') is None  # personal column and unknown column: dropped
     assert len(checked.dropped) == 2 and any('Nope' in d for d in checked.dropped)
 
     low = SetupProposal(parts=[PartChoice(part='term_code', column='Term', confidence='low', reason='a guess')])
-    guessed = validate(low, 'enrollment', COLUMNS, KINDS, rules)
+    guessed = validate(low, FIELDS, COLUMNS, KINDS, rules)
     assert guessed.mapping['term_code'] is None and guessed.choices['term_code'].column == 'Term'  # shown, not applied
 
     twice = SetupProposal(
@@ -156,7 +159,7 @@ def test_validation_keeps_good_choices_drops_bad_ones_and_leaves_guesses_to_the_
             PartChoice(part='term_code', column='Programme', confidence='high', reason='again'),
         ]
     )
-    dup = validate(twice, 'enrollment', COLUMNS, KINDS, {})
+    dup = validate(twice, FIELDS, COLUMNS, KINDS, {})
     assert dup.mapping['term_code'] == 'Term' and dup.mapping.get('program') is None and len(dup.dropped) == 3
 
 

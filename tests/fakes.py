@@ -38,3 +38,11 @@ def csv_file(path: Path, rows: list[list[Any]], header: list[str] = HEADER) -> P
         writer.writerow(header)
         writer.writerows([[v.isoformat() if isinstance(v, dt.date) else v for v in row] for row in rows])
     return path
+
+
+def template_fields(event: str = 'enrollment', template: str = 'higher-education') -> list[Any]:
+    """The parts of a template's event, as the mapping sees them (the tests' made-up data is the template's, DEC-037)."""
+    from bi import definitions, mapping, packs
+
+    body = definitions.parse('event', packs.templates()[template]['events'][event])
+    return [mapping.to_field(p) for p in body.parts]

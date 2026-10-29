@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -71,16 +72,32 @@ async def app(pool: AsyncConnectionPool, tmp_path: Path) -> AsyncIterator[tuple[
     async def enqueue(id: str) -> None:
         queued.append(id)
 
-    async def enqueue_collect(id: str) -> None:
+    async with app_for(pool, tmp_path, enqueue, cube) as client:
+        yield client, queued, cube
+
+
+@asynccontextmanager
+async def app_for(
+    pool: AsyncConnectionPool, tmp_path: Path, enqueue: Any = None, cube: FakeCube | None = None
+) -> AsyncIterator[httpx.AsyncClient]:
+    """The app over a pool, as a client (other modules' tests use it too)."""
+
+    async def nothing(id: str) -> None:
         pass
 
-    context = AppContext(pool=pool, storage=Storage(f'file://{tmp_path}/files'), enqueue_load=enqueue, cube=cube, cookie_secure=False)  # type: ignore[arg-type]
+    context = AppContext(
+        pool=pool,
+        storage=Storage(f'file://{tmp_path}/files'),
+        enqueue_load=enqueue or nothing,
+        cube=cube or FakeCube(),  # type: ignore[arg-type]
+        cookie_secure=False,
+    )
     web = tmp_path / 'web'
-    web.mkdir()
+    web.mkdir(exist_ok=True)
     (web / 'index.html').write_text('<!doctype html><title>BI</title>')
-    api = create_app(AppDeps(pool=pool, api_key='k' * 16, ams_origin=AMS, enqueue=enqueue_collect, app=context, web_dir=str(web)))
+    api = create_app(AppDeps(pool=pool, api_key='k' * 16, ams_origin=AMS, enqueue=nothing, app=context, web_dir=str(web)))
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=api), base_url='http://bi') as client:
-        yield client, queued, cube
+        yield client
 
 
 async def signed_in(client: httpx.AsyncClient) -> None:

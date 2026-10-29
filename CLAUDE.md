@@ -13,7 +13,9 @@ contract. Read `ARCHITECTURE.md` first; vision, roadmap and decisions are in `VI
    checks it. Model: `docs/data-model-spec.md` (DEC-036). The AMS's patterns apply (DEC-038): configuration is data, never code;
    one code path tested on several templates, one right-to-left; English plus one secondary language; interface text through `t()`.
    Language packs, the language registry and templates live in `src/bi/packs` (data); `tests/test_agnostic.py` fails on a domain
-   word or a language's letters anywhere else.
+   word or a language's letters anywhere else. What is reported on is stored as definitions (`src/bi/definitions.py`: subjects,
+   entities, events; drafts, approval, versions); dbt models are generated from approved events (`src/bi/generate.py`), never
+   written by hand; Cube reads hand-written files in `cube/model` and the files the BI writes in `cube_model.file` (`cube/cube.js`).
 1. **The contract is owned by the AMS.** `docs/ams-bi-contract-v0.md` is a copy; `src/bi/contract.py` mirrors the AMS's
    `packages/shared/src/collection.ts`. Change the AMS first, then mirror it here. Never add a field the AMS does not know.
    The copy is not edited by hand: the AMS's `contract-sync` workflow opens a pull request (`ams-contract-sync`) with the new

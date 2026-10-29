@@ -22,7 +22,7 @@ from dlt.common.schema.typing import TColumnSchema
 from psycopg import sql
 from psycopg_pool import AsyncConnectionPool
 
-from .. import dbt, mapping
+from .. import dbt, definitions, generate, mapping
 from . import store
 from .profile import profile_table, summary
 from .sheets import FILE_SUFFIXES, SheetError, Table, read_table
@@ -184,7 +184,8 @@ def _read(storage: Storage, row: dict[str, Any]) -> tuple[Table, str, str]:
 
 async def rebuild(pool: AsyncConnectionPool, database_url: str) -> dbt.Built:
     """Rebuilds staging and analytics from every approved input (dbt build, with its tests)."""
-    return await asyncio.to_thread(dbt.build, database_url, None, await mapping.dbt_vars(pool))
+    generated = generate.dbt_files(await definitions.events(pool))
+    return await asyncio.to_thread(dbt.build, database_url, None, await mapping.dbt_vars(pool), generated)
 
 
 async def process_sync(pool: AsyncConnectionPool, storage: Storage, database_url: str, sync_id: str, threshold: int) -> str:
@@ -265,7 +266,7 @@ async def _propose(
         return False
     names = [c['name'] for c in columns]
     kinds = {p['name']: p['kind'] for p in profile['columns']}
-    proposal, exact = mapping.propose(dataset, names, kinds)
+    proposal, exact = mapping.propose(await mapping.fields(pool, dataset), names, kinds)
     if exact:
         await mapping.save(pool, layout_id, dataset, proposal, 'approved', 'every needed part has a column of its own name')
         return True
@@ -321,7 +322,7 @@ async def review(pool: AsyncConnectionPool, sync_id: str) -> dict[str, Any] | No
     if row['dataset']:
         out['parts'] = [
             {'name': f.name, 'label': f.label, 'description': f.description, 'required': f.required, 'expects': f.expects}
-            for f in mapping.fields(row['dataset'])
+            for f in await mapping.fields(pool, row['dataset'])
         ]
         kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
         if kept:
@@ -340,7 +341,7 @@ async def approve(pool: AsyncConnectionPool, sync_id: str, chosen: dict[str, str
         async with pool.connection() as conn:
             found = await (await conn.execute('select columns from layout where id = %s', [row['layout_id']])).fetchone()
         names = [c['name'] for c in (found[0] if found else [])]
-        mapping.check(row['dataset'], chosen or {}, names)
+        mapping.check(row['dataset'], await mapping.fields(pool, row['dataset']), chosen or {}, names)
         kept = await mapping.stored(pool, row['layout_id'], row['dataset'])
         changed = kept is None or {p: c for p, c in (chosen or {}).items() if c} != {p: c for p, c in kept['mapping'].items() if c}
         await mapping.save(

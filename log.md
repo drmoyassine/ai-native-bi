@@ -252,3 +252,15 @@ template whose datasets streams already feed, so staging keeps working. Metric w
 became "organization" (`AGENT_ORGANIZATION_MONTHLY_TOKENS`, the old name read for one release). `tests/test_agnostic.py` fails on a
 domain word or a language's letters outside packs; the files waiting for M0b (the template's dbt and Cube models) are listed and the
 list can only shrink. TASK-040 completed; M0b is TASK-041.
+
+## 2026-10-29 — Settings regrouped; M1 definitions and M0b generated models
+
+Settings now holds Organization, Your account (password), Access tokens (MCP) and Models, with the AMS's side menu; the sidebar keeps
+the work pages. M1: `definition` (migration 0014) stores subjects, entities and events as versioned JSON bodies checked by
+`bi.definitions` (parts with kinds, words by language, grain, snapshot_by); a change is a draft until an admin or the subject's steward
+approves it; `/app/api/model` lists, drafts and approves. Installing a template creates its definitions (never over the organization's
+own) and writes its Cube files; uninstalling retires them. M0b: the hand-written enrollment dbt models are gone; `bi.generate` writes
+staging, analytics and tests for every approved event into a copy of the dbt project at each build; the enrollment Cube files moved into
+the template, and Cube reads them from `cube_model.file` through `cube/cube.js` (reloading when they change). The waiting list of
+`tests/test_agnostic.py` is gone. Tests run a second, unrelated domain (a service desk's tickets) through definitions, loading,
+generation and dbt. TASK-031 and TASK-041 completed.

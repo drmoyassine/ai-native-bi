@@ -68,11 +68,15 @@ ModelFor = Callable[[dict[str, Any]], Awaitable[tuple[Model, dict[str, Any]]]]
 
 
 def validate(
-    proposal: SetupProposal, dataset: str, columns: list[dict[str, str]], kinds: dict[str, str], rules: dict[str, str | None]
+    proposal: SetupProposal,
+    fields: list[mapping.Field],
+    columns: list[dict[str, str]],
+    kinds: dict[str, str],
+    rules: dict[str, str | None],
 ) -> Checked:
     """Checks the agent's choices as a person's would be: a known part, a column the data has (by name or header), a column that fits the
     part, and no column twice. Low-confidence choices are kept for the person to see but do not change the mapping."""
-    parts = {f.name: f for f in mapping.fields(dataset)}
+    parts = {f.name: f for f in fields}
     by_name = {c['name']: c['name'] for c in columns}
     by_name.update({c['header']: c['name'] for c in columns})
     choices: dict[str, PartChoice] = {}
@@ -81,7 +85,7 @@ def validate(
     for choice in proposal.parts:
         field = parts.get(choice.part)
         if field is None:
-            dropped.append(f'"{choice.part}" is not a part of the {dataset} dataset')
+            dropped.append(f'"{choice.part}" is not a part of this dataset')
             continue
         if choice.part in choices:
             dropped.append(f'{field.label} was chosen twice: the first choice stands')
@@ -114,6 +118,7 @@ def validate(
 
 def prompt(
     dataset: str,
+    fields: list[mapping.Field],
     header: dict[str, Any],
     columns: list[dict[str, str]],
     summaries: dict[str, str],
@@ -121,10 +126,7 @@ def prompt(
     rules: dict[str, str | None],
     sample_rows: list[dict[str, Any]] | None,
 ) -> str:
-    parts = [
-        {'part': f.name, 'label': f.label, 'description': f.description, 'needed': f.required, 'expects': f.expects}
-        for f in mapping.fields(dataset)
-    ]
+    parts = [{'part': f.name, 'label': f.label, 'description': f.description, 'needed': f.required, 'expects': f.expects} for f in fields]
     cols = [{'name': c['name'], 'header': c['header'], 'kind': kinds.get(c['name']), 'holds': summaries.get(c['name'])} for c in columns]
     body: dict[str, Any] = {
         'dataset': dataset,
@@ -216,6 +218,7 @@ async def process_setup(
     if kept is not None and kept['status'] == 'approved':
         return await finish('none', reason='This layout is already approved.')
     rules = {p: c for p, c in ((kept or {}).get('mapping') or {}).items()}
+    fields = await mapping.fields(pool, dataset)
 
     shown: list[dict[str, Any]] | None = None
     masked: dict[str, str] | None = None
@@ -228,7 +231,9 @@ async def process_setup(
             masked = masker.summary(list(raw_rows[0]))
     model, settings = await model_for(chosen)
     try:
-        proposal, usage = await run_model(model, settings, prompt(dataset, row['notes'] or {}, columns, summaries, kinds, rules, shown))
+        proposal, usage = await run_model(
+            model, settings, prompt(dataset, fields, row['notes'] or {}, columns, summaries, kinds, rules, shown)
+        )
     except Exception as e:  # a model that fails or answers nonsense never blocks the review
         log('warning', 'setup agent failed', sync=sync_id, error=str(e)[:300])
         await _record_run(pool, sync_id, chosen, {}, 'failed', str(e)[:300])
@@ -241,7 +246,7 @@ async def process_setup(
             purpose='mapping proposal', rows=len(shown), masked=masked,
         )  # fmt: skip
 
-    checked = validate(proposal, dataset, columns, kinds, rules)
+    checked = validate(proposal, fields, columns, kinds, rules)
     reasons = {
         part: {'column': c.column, 'confidence': c.confidence, 'reason': c.reason, 'by': 'agent'} for part, c in checked.choices.items()
     }

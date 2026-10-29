@@ -1,7 +1,6 @@
 """The BI knows no organisation, industry or language (DEC-037, CLAUDE.md rule 0). The code, its prompts and its interface name no
-domain and assume no language; anything domain-specific is a template or a language pack (src/bi/packs), which are data. Templates'
-models that still live outside a template wait in WAITING until data model M0b moves them (docs/data-model-spec.md section 12); the
-list only shrinks."""
+domain and assume no language; anything domain-specific is a template or a language pack (src/bi/packs), which are data. The warehouse
+and Cube models are generated from definitions or shipped inside a template (data model M0b), so nothing waits outside."""
 
 from __future__ import annotations
 
@@ -10,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 SCANNED = [ROOT / 'src' / 'bi', ROOT / 'web' / 'src', ROOT / 'cube' / 'model']
-SUFFIXES = {'.py', '.sql', '.yml', '.yaml', '.ts', '.tsx', '.css', '.html'}
+SUFFIXES = {'.py', '.sql', '.yml', '.yaml', '.js', '.ts', '.tsx', '.css', '.html'}
 PACKS = ROOT / 'src' / 'bi' / 'packs'
 
 # Words that name a domain. Broad on purpose: a neutral use is allowed by name below, with a reason.
@@ -19,15 +18,6 @@ DOMAIN = re.compile(
     r'|patient|clinic|hospital|diagnos|customer|invoice|retail|shopper|employee|payroll|institution',
     re.IGNORECASE,
 )
-
-# Files the higher-education template's models still live in, until generation installs them (M0b). Never add to this list.
-WAITING = {
-    'cube/model/cubes/enrollment.yml',
-    'cube/model/views/organization.yml',
-    'src/bi/transform/models/analytics/enrollment.sql',
-    'src/bi/transform/models/staging/stg_enrollment.sql',
-    'src/bi/transform/models/schema.yml',
-}
 
 # A word allowed in one file, and why.
 ALLOWED = {
@@ -57,8 +47,6 @@ def rel(path: Path) -> str:
 def test_no_code_names_a_domain() -> None:
     found: list[str] = []
     for path in files():
-        if rel(path) in WAITING:
-            continue
         for n, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
             for m in DOMAIN.finditer(line):
                 word = m.group(0).lower()
@@ -72,20 +60,10 @@ def test_no_code_assumes_a_language() -> None:
     ellipses) is fine."""
     found: list[str] = []
     for path in files():
-        if rel(path) in WAITING:
-            continue
         for n, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
             if any(ord(ch) > 127 and ch.isalpha() for ch in line):
                 found.append(f'{rel(path)}:{n}')
     assert found == [], 'letters of a language outside language packs (DEC-037):\n' + '\n'.join(found)
-
-
-def test_the_waiting_list_only_holds_what_still_waits() -> None:
-    """A file that no longer names a domain leaves the list, so the list can only shrink to nothing."""
-    for name in WAITING:
-        path = ROOT / name
-        assert path.exists(), f'{name} is gone: remove it from WAITING'
-        assert DOMAIN.search(path.read_text(encoding='utf-8')), f'{name} names no domain any more: remove it from WAITING'
 
 
 def test_templates_and_language_packs_are_the_only_domain_content() -> None:

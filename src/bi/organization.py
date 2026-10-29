@@ -8,7 +8,7 @@ from typing import Any
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, Field, field_validator
 
-from . import packs
+from . import definitions, packs
 from .languages import BY_CODE, LANGUAGES, PRIMARY_LANGUAGE, effective_locale, is_readable_accent, secondary_language_problem
 
 _FIELDS = ('name', 'name_secondary', 'secondary_language', 'default_locale', 'accent_color', 'installed_templates')
@@ -71,8 +71,7 @@ async def update(pool: AsyncConnectionPool, patch: OrganizationPatch, user_id: s
     merged = {**current, **changes}
     if merged['name'] is None:
         merged['name'] = ''
-    if merged['installed_templates'] is None:
-        merged['installed_templates'] = []
+    wanted = merged.pop('installed_templates') or []
     if merged['default_locale'] not in (PRIMARY_LANGUAGE, merged['secondary_language']):
         if 'default_locale' in changes:
             raise ValueError('the default language must be English or the secondary language')
@@ -80,10 +79,16 @@ async def update(pool: AsyncConnectionPool, patch: OrganizationPatch, user_id: s
     async with pool.connection() as conn:
         await conn.execute(
             """update organization set name = %s, name_secondary = %s, secondary_language = %s, default_locale = %s,
-                                       accent_color = %s, installed_templates = %s, updated_at = now(), updated_by = %s""",
-            [*(merged[f] for f in _FIELDS), user_id],
+                                       accent_color = %s, updated_at = now(), updated_by = %s""",
+            [*(merged[f] for f in _FIELDS if f != 'installed_templates'), user_id],
         )
-    return merged
+    if 'installed_templates' in changes:  # templates come and go through their definitions (bi.definitions)
+        had = set(current['installed_templates'])
+        for name in sorted(set(wanted) - had):
+            await definitions.install_template(pool, name, user_id)
+        for name in sorted(had - set(wanted)):
+            await definitions.uninstall_template(pool, name)
+    return await get(pool)
 
 
 def language_json(code: str) -> dict[str, str]:
@@ -121,20 +126,20 @@ def templates_json() -> list[dict[str, Any]]:
             'name': name,
             'label': t.get('label', {}),
             'languages': t.get('languages', []),
-            'datasets': [{'name': d, 'label': v.get('label', {})} for d, v in (t.get('datasets') or {}).items()],
+            'datasets': [{'name': d, 'label': v.get('label', {})} for d, v in (t.get('events') or {}).items()],
         }
         for name, t in packs.templates().items()
     ]
 
 
 async def install_fed_templates(pool: AsyncConnectionPool) -> list[str]:
-    """Installs every template whose datasets a stream already feeds (data made before templates existed keeps working). Returns the
-    templates it installed."""
-    fed: dict[str, str] = {d: name for name, t in packs.templates().items() for d in (t.get('datasets') or {})}
+    """Installs every template with an event that a stream already feeds, unless its definition exists (data made before templates and
+    definitions keeps working). Returns the templates it installed."""
+    fed: dict[str, str] = {e: name for name, t in packs.templates().items() for e in (t.get('events') or {})}
     async with pool.connection() as conn:
         rows = await (await conn.execute('select distinct dataset from source_stream where dataset is not null')).fetchall()
-        installed = set((await get(pool))['installed_templates'])
-        missing = sorted({fed[r[0]] for r in rows if r[0] in fed} - installed)
-        if missing:
-            await conn.execute('update organization set installed_templates = %s', [sorted(installed | set(missing))])
+    defined = set(await definitions.events(pool))
+    missing = sorted({fed[r[0]] for r in rows if r[0] in fed and r[0] not in defined})
+    for name in missing:
+        await definitions.install_template(pool, name)
     return missing

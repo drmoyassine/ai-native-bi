@@ -36,14 +36,18 @@ async def ensure_reader_role(admin_url: str, user: str, password: str) -> None:
 
 
 async def grant_analytics(pool: AsyncConnectionPool, reader: str) -> None:
-    """Lets `reader` read the analytics schema and nothing else (CLAUDE.md rule 5): its tables now and those dbt builds later (the
-    default privileges of the BI's role, which dbt runs as). raw and staging are never granted."""
+    """Lets `reader` read the analytics schema and the Cube model's files, nothing else (CLAUDE.md rule 5): analytics' tables now and
+    those dbt builds later (the default privileges of the BI's role, which dbt runs as). raw and staging are never granted."""
     reader_id = sql.Identifier(reader)
     async with pool.connection() as conn:
         await conn.execute('create schema if not exists analytics')
         await conn.execute(sql.SQL('grant usage on schema analytics to {}').format(reader_id))
         await conn.execute(sql.SQL('grant select on all tables in schema analytics to {}').format(reader_id))
         await conn.execute(sql.SQL('alter default privileges in schema analytics grant select on tables to {}').format(reader_id))
+        # The Cube model the BI writes (docs/data-model-spec.md, M0b): Cube reads its files, nothing else there.
+        if (await (await conn.execute("select to_regclass('cube_model.file') is not null")).fetchone() or [False])[0]:
+            await conn.execute(sql.SQL('grant usage on schema cube_model to {}').format(reader_id))
+            await conn.execute(sql.SQL('grant select on cube_model.file to {}').format(reader_id))
 
 
 def migration_names() -> list[str]:

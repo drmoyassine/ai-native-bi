@@ -13,6 +13,7 @@ import psycopg
 import pytest
 from psycopg_pool import AsyncConnectionPool
 
+from bi import definitions
 from bi.collect import Accepted, accept_collect
 from bi.connect.files import Storage, load_now
 from bi.cube import CubeClient
@@ -34,7 +35,7 @@ async def pool(cube_env: tuple[str, str], tmp_path_factory: pytest.TempPathFacto
             admin.execute(f'create database {CUBE_DB}')
     with psycopg.connect(DB, autocommit=True) as conn:
         # A database for these tests only (Cube keeps its connection, so it is reset rather than dropped).
-        for schema in ('raw', 'draft', 'staging', 'analytics', 'public'):
+        for schema in ('raw', 'draft', 'staging', 'analytics', 'cube_model', 'public'):
             conn.execute(f'drop schema if exists {schema} cascade')
         conn.execute('create schema public')
     files = tmp_path_factory.mktemp('files')
@@ -42,6 +43,7 @@ async def pool(cube_env: tuple[str, str], tmp_path_factory: pytest.TempPathFacto
     spring = students(SPRING, (1001, 'BSME', 'Bachelor'))
     async with AsyncConnectionPool(DB, open=False) as p:
         await migrate(p)
+        await definitions.install_template(p, 'higher-education')  # its events and its Cube files (M0b)
         for name, rows in (('fall.xlsx', fall), ('spring.xlsx', spring)):
             path = xlsx(files / name, rows)
             ended = await load_now(p, Storage(f'file://{files}'), DB, path, source_name='Registrar', dataset='enrollment',

@@ -64,7 +64,7 @@ def create_connect_router(
         return {
             'sources': await store.list_sources(pool),
             'types': TYPES,
-            'datasets': [{'name': d, 'label': mapping.dataset_label(d)} for d in await mapping.installed_datasets(pool)],
+            'datasets': [{'name': d, 'label': label} for d, label in (await mapping.dataset_labels(pool)).items()],
         }
 
     @router.post('/sources', status_code=201)

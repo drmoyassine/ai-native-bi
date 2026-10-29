@@ -1,7 +1,7 @@
-"""What a dataset needs, and which column of a layout supplies it (DEC-026, DEC-029). Data is not made to fit: the columns a stream has are
-discovered, matched to the parts the dataset needs by name and by what the columns hold, and a person approves any match that is not
-exact. Mappings are kept per layout, so files of several layouts can feed one dataset. The transforms read the approved mappings as
-the dbt variable `<dataset>_inputs`."""
+"""What a dataset (an approved event, bi.definitions) needs, and which column of a layout supplies it (DEC-026, DEC-029). Data is not
+made to fit: the columns a stream has are discovered, matched to the parts the dataset needs by name and by what the columns hold, and
+a person approves any match that is not exact. Mappings are kept per layout, so files of several layouts can feed one dataset. The
+transforms read the approved mappings as the dbt variable `<dataset>_inputs`."""
 
 from __future__ import annotations
 
@@ -12,10 +12,11 @@ from typing import Any, Literal
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
-from . import packs
+from . import definitions
+from .definitions import Part
 from .languages import PRIMARY_LANGUAGE
 
-Expects = Literal['key', 'date', 'text']
+Expects = Literal['key', 'date', 'text', 'number']
 
 
 @dataclass(frozen=True)
@@ -25,38 +26,9 @@ class Field:
     label: str
     description: str
     expects: Expects = 'text'
-    """What the column must hold: a key (an identifier or a code), a date, or any text that is not personal."""
+    """What the column must hold: a key (an identifier or a code), a date, a number, or any text that is not personal."""
     aliases: tuple[str, ...] = ()
     """Other names an export is likely to use (compared without case, spaces or punctuation)."""
-
-
-def _field(part: dict[str, Any]) -> Field:
-    return Field(
-        name=part['name'],
-        required=bool(part.get('needed', False)),
-        label=part.get('label', {}).get(PRIMARY_LANGUAGE, part['name']),
-        description=part.get('description', {}).get(PRIMARY_LANGUAGE, ''),
-        expects=part.get('expects', 'text'),
-        aliases=tuple(norm(a) for a in part.get('aliases', [])),
-    )
-
-
-def shapes() -> dict[str, list[Field]]:
-    """What each dataset needs, from the templates shipped (bi.packs, DEC-037): the BI itself defines none. A stream that feeds no dataset
-    is kept in raw and nothing more."""
-    out: dict[str, list[Field]] = {}
-    for template in packs.templates().values():
-        for name, dataset in (template.get('datasets') or {}).items():
-            out[name] = [_field(p) for p in dataset.get('parts', [])]
-    return out
-
-
-def dataset_label(name: str) -> str:
-    for template in packs.templates().values():
-        dataset = (template.get('datasets') or {}).get(name)
-        if dataset:
-            return str(dataset.get('label', {}).get(PRIMARY_LANGUAGE, name))
-    return name
 
 
 class MappingError(ValueError):
@@ -68,20 +40,30 @@ def norm(name: str) -> str:
     return re.sub(r'[\W_]+', '', name.casefold())
 
 
-def fields(dataset: str) -> list[Field]:
-    return shapes().get(dataset, [])
+def to_field(part: Part) -> Field:
+    return Field(
+        name=part.name,
+        required=part.needed,
+        label=part.label.get(PRIMARY_LANGUAGE, part.name),
+        description=part.description.get(PRIMARY_LANGUAGE, ''),
+        expects=part.expects,
+        aliases=tuple(norm(a) for a in part.aliases),
+    )
 
 
-def datasets(installed: list[str]) -> list[str]:
-    """The datasets of the templates the organization installed: what a source can feed."""
-    templates = packs.templates()
-    return sorted(d for t in installed if t in templates for d in (templates[t].get('datasets') or {}))
+async def fields(pool: AsyncConnectionPool, dataset: str) -> list[Field]:
+    """What a dataset needs: the parts of the approved event of that name (bi.definitions). The BI itself defines none (DEC-037)."""
+    event = (await definitions.events(pool)).get(dataset)
+    return [to_field(p) for p in event.parts] if event else []
 
 
 async def installed_datasets(pool: AsyncConnectionPool) -> list[str]:
-    async with pool.connection() as conn:
-        row = await (await conn.execute('select installed_templates from organization')).fetchone()
-    return datasets(list(row[0]) if row else [])
+    """The datasets a source can feed: every approved event."""
+    return sorted(await definitions.events(pool))
+
+
+async def dataset_labels(pool: AsyncConnectionPool) -> dict[str, str]:
+    return {name: e.label.get(PRIMARY_LANGUAGE, name) for name, e in (await definitions.events(pool)).items()}
 
 
 def fits(field: Field, kind: str | None) -> bool:
@@ -95,7 +77,7 @@ def fits(field: Field, kind: str | None) -> bool:
     return kind != 'date'
 
 
-def propose(dataset: str, columns: list[str], kinds: dict[str, str] | None = None) -> tuple[dict[str, str | None], bool]:
+def propose(parts: list[Field], columns: list[str], kinds: dict[str, str] | None = None) -> tuple[dict[str, str | None], bool]:
     """Matches the dataset's parts to the columns found: by the part's own name or label first (exact), then by the names exports use (a
     guess), never to a column whose profile does not fit the part. Returns the mapping (None where nothing matched) and whether every
     needed part matched by its own name."""
@@ -106,12 +88,12 @@ def propose(dataset: str, columns: list[str], kinds: dict[str, str] | None = Non
     mapping: dict[str, str | None] = {}
     taken: set[str] = set()
     exact = True
-    for f in fields(dataset):  # first pass: own names, so a loose alias never takes a column another part names exactly
+    for f in parts:  # first pass: own names, so a loose alias never takes a column another part names exactly
         own = by_norm.get(norm(f.name)) or by_norm.get(norm(f.label))
         if own and fits(f, kinds.get(own)):
             mapping[f.name] = own
             taken.add(own)
-    for f in fields(dataset):
+    for f in parts:
         if f.name in mapping:
             continue
         found = next((by_norm[a] for a in f.aliases if a in by_norm and by_norm[a] not in taken and fits(f, kinds.get(by_norm[a]))), None)
@@ -123,9 +105,9 @@ def propose(dataset: str, columns: list[str], kinds: dict[str, str] | None = Non
     return mapping, exact
 
 
-def check(dataset: str, mapping: dict[str, str | None], columns: list[str]) -> None:
+def check(dataset: str, parts: list[Field], mapping: dict[str, str | None], columns: list[str]) -> None:
     """Raises MappingError unless the mapping names every needed part, and only columns the data has, each at most once."""
-    known = {f.name: f for f in fields(dataset)}
+    known = {f.name: f for f in parts}
     for part, column in mapping.items():
         if part not in known:
             raise MappingError(f'"{part}" is not a part of the {dataset} dataset')
@@ -211,4 +193,4 @@ async def inputs(pool: AsyncConnectionPool, dataset: str) -> list[dict[str, Any]
 
 
 async def dbt_vars(pool: AsyncConnectionPool) -> dict[str, Any]:
-    return {f'{d}_inputs': await inputs(pool, d) for d in shapes()}
+    return {f'{d}_inputs': await inputs(pool, d) for d in await definitions.events(pool)}

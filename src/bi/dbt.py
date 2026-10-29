@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 import threading
 from dataclasses import dataclass
 from importlib import resources
+from pathlib import Path
 from typing import Any
 from unittest import mock
 from urllib.parse import unquote, urlsplit
@@ -39,10 +41,18 @@ def _profile_env(database_url: str) -> dict[str, str]:
     }
 
 
-def build(database_url: str, select: str | None = None, variables: dict[str, Any] | None = None) -> Built:
-    """`dbt build` (models and their tests) in dependency order, with `variables` for the models (the datasets' column mappings); raises
-    TransformError when anything fails."""
-    with _LOCK, resources.as_file(resources.files('bi') / 'transform') as project, tempfile.TemporaryDirectory() as work:
+def build(
+    database_url: str, select: str | None = None, variables: dict[str, Any] | None = None, files: dict[str, str] | None = None
+) -> Built:
+    """`dbt build` (models and their tests) in dependency order, with `variables` for the models (the datasets' column mappings) and the
+    generated `files` (bi.generate) added to a copy of the project; raises TransformError when anything fails."""
+    with _LOCK, resources.as_file(resources.files('bi') / 'transform') as source, tempfile.TemporaryDirectory() as work:
+        project = Path(work) / 'project'
+        shutil.copytree(source, project)
+        for path, content in (files or {}).items():
+            target = project / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding='utf-8')
         args = ['build', '--project-dir', str(project), '--profiles-dir', str(project)]
         args += ['--target-path', f'{work}/target', '--log-path', f'{work}/logs', '--quiet']
         if select:

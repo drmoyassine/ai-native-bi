@@ -1,19 +1,26 @@
-# Higher-education template (DEC-037): configuration an organization installs, changes or ignores; never code. Today it holds the
-# term enrollment dataset the BI was first built on. Its dbt models and Cube files still live in src/bi/transform and cube/model until
-# templates are installed by generation (data model M1/M2, docs/data-model-spec.md section 13); then they move here.
+# Higher-education template (DEC-037): configuration an organization installs, changes or ignores; never code. Installing it creates
+# its subjects and events as approved definitions (docs/data-model-spec.md, M1) and writes its Cube files into the model Cube reads
+# (M0b); the warehouse models are generated from the events. Today it holds the term enrollment the BI was first built on.
 name: higher-education
 label: {en: Higher education, ar: التعليم العالي}
 languages: [en, ar]
-datasets:
+subjects:
+  academics:
+    label: {en: Students and academics, ar: الطلاب والشؤون الأكاديمية}
+    description: {en: 'Students through their time here: enrollment, progression and graduation.'}
+events:
   enrollment:
+    subject: academics
     label: {en: Enrollment, ar: التسجيل}
     description: {en: 'Who is on each term''s roster: one row per student and term.'}
+    grain: [student_id, term_code] # one row per student and term
+    snapshot_by: [term_code] # the latest load of a term replaces the earlier ones
     parts:
       - name: student_id
         needed: true
         expects: key
         label: {en: Student ID, ar: رقم الطالب}
-        description: {en: Identifies each student, such as a student number. Used to count students, never shown.}
+        description: {en: 'Identifies each student, such as a student number. Used to count students, never shown.'}
         aliases: [studentid, studentnumber, studentno, sid, idbanner, id, رقمالطالب, الرقمالجامعي]
       - name: term_code
         needed: true
@@ -30,25 +37,28 @@ datasets:
         needed: true
         expects: date
         label: {en: Term start date, ar: بداية الفصل}
-        description: {en: The first day of the term.}
+        description: {en: 'The first day of the term.'}
         aliases: [termstart, termstartdate, startdate, semesterstart, begindate, بدايةالفصل]
       - name: term_end
         expects: date
         label: {en: Term end date, ar: نهاية الفصل}
-        description: {en: The last day of the term.}
+        description: {en: 'The last day of the term.'}
         aliases: [termend, termenddate, enddate, semesterend, نهايةالفصل]
       - name: program
         expects: text
         label: {en: Program, ar: البرنامج}
-        description: {en: The program or major the student is enrolled in.}
+        description: {en: 'The program or major the student is enrolled in.'}
         aliases: [programme, major, programcode, programname, degreeprogram, البرنامج, التخصص]
       - name: level
         expects: text
         label: {en: Level, ar: المستوى}
         description: {en: 'The level of study, such as bachelor or master.'}
         aliases: [studentlevel, degreelevel, levelcode, academiclevel, classlevel, المستوى]
+        normalize: lower
       - name: status
         expects: text
         label: {en: Enrollment status, ar: حالة التسجيل}
         description: {en: 'Whether the student is enrolled, withdrawn, and so on.'}
         aliases: [enrollmentstatus, enrolmentstatus, registrationstatus, studentstatus, الحالة]
+        normalize: lower
+cube_files: [cube/enrollment.yml, cube/organization.yml]
