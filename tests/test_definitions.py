@@ -144,3 +144,66 @@ async def test_the_subjects_steward_drafts_and_approves_and_nobody_else(pool: As
         assert next(d for d in listed if d['name'] == 'ticket')['current']['body']['label'] == {'en': 'Desk ticket'}
         bad = await client.put('/app/api/model/event/ticket', json={**body, 'grain': ['nope']}, headers=APP)
         assert bad.status_code == 422
+
+
+DERIVED: list[dict[str, Any]] = [
+    {'name': 'team', 'rule': {'type': 'group', 'part': 'queue', 'groups': {'network': 'Infrastructure', 'access': 'Identity'}}},
+    {'name': 'opened_month', 'rule': {'type': 'date_part', 'part': 'opened_on', 'unit': 'month'}},
+    {'name': 'hours', 'rule': {'type': 'arithmetic', 'left': 'minutes', 'op': '/', 'right': 60}},
+    {'name': 'speed', 'rule': {'type': 'bucket', 'part': 'minutes', 'edges': [15, 60], 'labels': ['fast', 'normal', 'slow']}},
+    {'name': 'label', 'rule': {'type': 'join', 'parts': ['ticket_id', 'queue'], 'separator': ' / '}},
+]
+
+
+@pytest.mark.parametrize(
+    ('derived', 'reason'),
+    [
+        ({'name': 'x', 'rule': {'type': 'date_part', 'part': 'queue', 'unit': 'year'}}, 'is not a date'),
+        ({'name': 'x', 'rule': {'type': 'arithmetic', 'left': 'queue', 'op': '+', 'right': 1}}, 'not every part it uses is a number'),
+        ({'name': 'queue', 'rule': {'type': 'first_of', 'parts': ['queue', 'ticket_id']}}, 'already used'),
+        ({'name': 'x', 'rule': {'type': 'bucket', 'part': 'minutes', 'edges': [5, 1], 'labels': ['a', 'b', 'c']}}, 'must go up'),
+        ({'name': 'x', 'rule': {'type': 'group', 'part': 'nope', 'groups': {'a': 'b'}}}, 'not a part'),
+        ({'name': 'x', 'rule': {'type': 'sql', 'text': 'drop table'}}, 'does not match any of the expected tags'),
+    ],
+)
+def test_a_derived_part_is_checked(derived: dict[str, Any], reason: str) -> None:
+    with pytest.raises(definitions.DefinitionError, match=reason):
+        definitions.parse('event', {**TICKET, 'derived': [derived]})
+
+
+def test_a_derived_value_cannot_escape_its_literal() -> None:
+    hostile = {'name': 'x', 'rule': {'type': 'group', 'part': 'queue', 'groups': {"a'); drop table x; --": '{{ evil }}'}}}
+    sql = generate.staging_sql('ticket', definitions.parse('event', {**TICKET, 'derived': [hostile]}))
+    assert "'a''); drop table x; --'" in sql and '{{ evil' not in sql
+
+
+async def test_derived_parts_are_built_and_the_preview_says_what_changes(pool: AsyncConnectionPool, tmp_path: Path) -> None:
+    body = {**TICKET, 'label': {'en': 'Ticket'}, 'derived': DERIVED}
+    await definitions.save_draft(pool, 'event', 'ticket', body, None)
+    preview = await definitions.changes(pool, 'event', 'ticket')
+    assert 'adds the derived part "team"' in preview['changes'] and not preview['new']
+    await definitions.approve(pool, 'event', 'ticket', None)
+    rows = [['T-9', dt.date(2026, 11, 5), 'Network', '30'], ['T-10', dt.date(2026, 11, 6), 'Mail', '90']]
+    path = csv_file(tmp_path / 'more.csv', rows, header=['ticket_id', 'opened_on', 'queue', 'minutes'])
+    ended = await load_now(
+        pool,
+        Storage(f'file://{tmp_path}/files'),
+        database_url(DB),
+        path,
+        source_name='Desk export',
+        dataset='ticket',
+        as_of=dt.date(2026, 11, 7),
+    )
+    assert ended['status'] == 'loaded', ended
+    with psycopg.connect(database_url(DB)) as conn:
+        built = conn.execute(
+            'select team, opened_month, round(hours, 2), speed, label from analytics.ticket'
+            " where ticket_id in ('T-9', 'T-10') order by ticket_id"
+        ).fetchall()
+    assert built == [(None, 11, 1.5, 'slow', 'T-10 / mail'), ('Infrastructure', 11, 0.5, 'normal', 'T-9 / network')]
+
+    shrunk = {**body, 'parts': [p for p in TICKET['parts'] if p['name'] != 'queue'], 'derived': []}
+    await definitions.save_draft(pool, 'event', 'ticket', shrunk, None)
+    preview = await definitions.changes(pool, 'event', 'ticket')
+    assert 'removes the part "queue"' in preview['changes'] and 'removes the derived part "team"' in preview['changes']
+    assert any('supply "queue"' in w for w in preview['warnings'])

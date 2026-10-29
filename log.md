@@ -302,3 +302,14 @@ decisions, so masking and mapping follow them, and every later sync of the strea
 words (gender, nationality, religion, age) from identifying ones, so Gender and NAT. are kept and counted instead of proposed for
 leaving out. Checked in a browser on an export shaped like the real Banner file. Still to do: the as-of column and the expected cadence of
 file sources.
+
+## 2026-10-29 — M3 built: the Model page, with derived parts
+
+"Model" in the sidebar lists the subjects with their events and entities, versions and waiting drafts. A subject has labels in the
+organization's languages and a steward chosen from the BI's accounts; an event has its parts (kind, needed, personal, other names),
+its grain, which parts' newest load counts, and derived parts made from small structured rules: grouping values, joining text, a part
+of a date, arithmetic (a division by zero is no value), ranges of a number, the first non-empty. Derived parts are checked (the parts
+they use exist and have the right kind; no names reused) and generated into the staging model, so every source gets the same value;
+literal values are escaped (a test feeds a hostile one). Saving makes a draft; "What approving changes" lists what is added, changed or
+removed and warns about approved mappings and Cube files that read a part that goes away; an admin or the subject's steward approves.
+Checked in a browser. Next: the organization calendar (TASK-043), then the metric builder (M5).

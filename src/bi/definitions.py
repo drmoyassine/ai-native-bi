@@ -6,6 +6,7 @@ Cube reads them (cube_model.file, read through cube/cube.js)."""
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any, Literal
 
 from psycopg.types.json import Jsonb
@@ -58,6 +59,82 @@ def _check_parts(parts: list[Part], *named: tuple[str, list[str]]) -> None:
             raise ValueError(f'{what} names no part: {", ".join(unknown)}')
 
 
+# Derived parts (docs/data-model-spec.md § 6): computed from an event's parts by small structured rules, never SQL. Generated into the
+# staging model (bi.generate), so every source of the event gets the same value.
+
+Value = Annotated[str, StringConstraints(max_length=200)]
+
+
+class GroupRule(_Body):
+    """Many values of a part into a few groups (value -> group); a value not listed becomes `otherwise` (empty when not given)."""
+
+    type: Literal['group']
+    part: Name
+    groups: Annotated[dict[Value, Value], Field(min_length=1, max_length=500)]
+    otherwise: Value | None = None
+
+
+class JoinRule(_Body):
+    type: Literal['join']
+    parts: Annotated[list[Name], Field(min_length=2, max_length=10)]
+    separator: Annotated[str, StringConstraints(max_length=10)] = ' '
+
+
+class DatePartRule(_Body):
+    type: Literal['date_part']
+    part: Name
+    unit: Literal['year', 'quarter', 'month', 'week', 'day_of_week']
+
+
+class ArithmeticRule(_Body):
+    type: Literal['arithmetic']
+    left: Name | float
+    op: Literal['+', '-', '*', '/']
+    right: Name | float
+
+
+class BucketRule(_Body):
+    """A number into ranges: `edges` [10, 20] with labels ['under 10', '10 to 20', '20 and over'] (one more label than edges)."""
+
+    type: Literal['bucket']
+    part: Name
+    edges: Annotated[list[float], Field(min_length=1, max_length=50)]
+    labels: list[Value]
+
+    @model_validator(mode='after')
+    def _labels(self) -> BucketRule:
+        if self.edges != sorted(self.edges) or len(set(self.edges)) != len(self.edges):
+            raise ValueError('the edges of the ranges must go up')
+        if len(self.labels) != len(self.edges) + 1:
+            raise ValueError('a range needs one label more than its edges')
+        return self
+
+
+class FirstOfRule(_Body):
+    """The first of several parts that is not empty."""
+
+    type: Literal['first_of']
+    parts: Annotated[list[Name], Field(min_length=2, max_length=10)]
+
+
+Rule = Annotated[GroupRule | JoinRule | DatePartRule | ArithmeticRule | BucketRule | FirstOfRule, Field(discriminator='type')]
+
+
+class Derived(_Body):
+    name: Name
+    label: Words = Field(default_factory=dict)
+    description: Words = Field(default_factory=dict)
+    rule: Rule
+
+    def uses(self) -> list[str]:
+        r = self.rule
+        if isinstance(r, JoinRule | FirstOfRule):
+            return list(r.parts)
+        if isinstance(r, ArithmeticRule):
+            return [v for v in (r.left, r.right) if isinstance(v, str)]
+        return [r.part]
+
+
 class SubjectBody(_Body):
     label: Words
     description: Words = Field(default_factory=dict)
@@ -88,10 +165,26 @@ class EventBody(_Body):
     """The parts that make a row unique (checked by the generated tests)."""
     snapshot_by: list[Name] = Field(default_factory=list)
     """For a state: the parts whose latest load replaces the earlier ones (each period's newest load counts)."""
+    derived: Annotated[list[Derived], Field(max_length=50)] = Field(default_factory=list)
+    """Parts computed from the other parts (never from another derived part)."""
 
     @model_validator(mode='after')
     def _names(self) -> EventBody:
         _check_parts(self.parts, ('the grain', self.grain), ('snapshot_by', self.snapshot_by))
+        names = {p.name for p in self.parts}
+        kinds = {p.name: p.expects for p in self.parts}
+        for d in self.derived:
+            if d.name in names or d.name in RESERVED:
+                raise ValueError(f'the derived part "{d.name}" takes a name already used')
+            names.add(d.name)
+            unknown = [u for u in d.uses() if u not in kinds]
+            if unknown:
+                raise ValueError(f'"{d.name}" uses {", ".join(unknown)}, which is not a part of the event')
+            rule = d.rule
+            if isinstance(rule, DatePartRule) and kinds[rule.part] != 'date':
+                raise ValueError(f'"{d.name}" takes a part of a date, but "{rule.part}" is not a date')
+            if isinstance(rule, ArithmeticRule | BucketRule) and any(kinds[u] != 'number' for u in d.uses()):
+                raise ValueError(f'"{d.name}" does arithmetic, but not every part it uses is a number')
         return self
 
 
@@ -243,3 +336,63 @@ async def uninstall_template(pool: AsyncConnectionPool, name: str) -> None:
         await conn.execute("update definition set status = 'retired' where template = %s and status = 'approved'", [name])
         await conn.execute('delete from cube_model.file where source = %s', [f'template:{name}'])
         await conn.execute('update organization set installed_templates = array_remove(installed_templates, %s)', [name])
+
+
+async def changes(pool: AsyncConnectionPool, kind: Kind, name: str) -> dict[str, Any]:
+    """What approving the draft changes (the Model page shows it before approval): what differs from the current version, and what
+    depends on what goes away (sources whose mappings use a part, Cube files that read it)."""
+    async with pool.connection() as conn:
+        rows = await (
+            await conn.execute(
+                """select status, body from definition where kind = %s and name = %s and status in ('draft', 'approved')
+                   order by version desc""",
+                [kind, name],
+            )
+        ).fetchall()
+    draft = next((b for s, b in rows if s == 'draft'), None)
+    approved = next((b for s, b in rows if s == 'approved'), None)
+    if draft is None:
+        raise DefinitionError(f'no draft of the {kind} "{name}"')
+    out: dict[str, Any] = {'new': approved is None, 'changes': [], 'warnings': []}
+    if kind != 'event':
+        out['changes'] = [f'{k} changes' for k in sorted(set(draft) | set(approved or {})) if draft.get(k) != (approved or {}).get(k)]
+        return out
+    new, old = parse('event', draft), parse('event', approved) if approved else None
+    old_parts = {p.name: p for p in old.parts} if old else {}
+    new_parts = {p.name: p for p in new.parts}
+    for p in new.parts:
+        if p.name not in old_parts:
+            out['changes'].append(f'adds the part "{p.name}"' + (' (needed)' if p.needed else ''))
+        elif p != old_parts[p.name]:
+            out['changes'].append(f'changes the part "{p.name}"')
+    gone = [n for n in old_parts if n not in new_parts]
+    out['changes'] += [f'removes the part "{n}"' for n in gone]
+    old_derived = {d.name: d for d in old.derived} if old else {}
+    for d in new.derived:
+        if d.name not in old_derived:
+            out['changes'].append(f'adds the derived part "{d.name}"')
+        elif d != old_derived[d.name]:
+            out['changes'].append(f'changes the derived part "{d.name}"')
+    gone += [n for n in old_derived if n not in {d.name for d in new.derived}]
+    out['changes'] += [f'removes the derived part "{n}"' for n in old_derived if n not in {d.name for d in new.derived}]
+    if old and (new.grain != old.grain or new.snapshot_by != old.snapshot_by):
+        out['changes'].append('changes what one row is, or which load counts')
+    added_needed = [p.name for p in new.parts if p.needed and not (old_parts.get(p.name) and old_parts[p.name].needed)]
+    async with pool.connection() as conn:
+        mappings = await (
+            await conn.execute("select mapping from layout_mapping where dataset = %s and status = 'approved'", [name])
+        ).fetchall()
+        files = await (await conn.execute('select name, content from cube_model.file')).fetchall()
+    for part in gone:
+        used = sum(1 for (m,) in mappings if m.get(part))
+        if used:
+            out['warnings'].append(f'{used} approved mapping(s) supply "{part}": their column will no longer be read')
+        readers = [f for f, content in files if re.search(rf'\b{re.escape(part)}\b', content)]
+        if readers:
+            out['warnings'].append(f'the metric layer reads "{part}" ({", ".join(readers)}): it will fail until that file changes')
+    if added_needed and mappings:
+        out['warnings'].append(
+            f'{len(mappings)} approved mapping(s) have no column for the new needed part(s) {", ".join(added_needed)}: '
+            'their next files will wait for review'
+        )
+    return out
