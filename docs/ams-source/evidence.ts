@@ -82,6 +82,38 @@ export const ScheduleSchema = z.object({
 }).strict();
 export type Schedule = z.infer<typeof ScheduleSchema>;
 
+
+// ---- The KPI documentation card (TASK-120): evidence is a KPI or a document -------------------------------------------------------
+export const KPI_SYMBOLS = ['#', '%', '$'] as const;
+export const KPI_SCOPES = ['institution', 'unit', 'program', 'course'] as const;
+export type KpiScope = (typeof KPI_SCOPES)[number];
+const text = (n: number) => z.string().trim().min(1).max(n).optional();
+/**
+ * The simple form of the KPI Institute's documentation sheet. The symbol is the type; the unit comes from the formula. The meaning is
+ * here; the numbers are the item's versions. A named interface (not the inferred object type) so the API's route chain stays under
+ * the compiler's serialisation limit (TS7056).
+ */
+export interface KpiCard {
+  symbol: (typeof KPI_SYMBOLS)[number]; scope: KpiScope;
+  formula?: string | undefined; sources?: string | undefined;
+  /** Trend is good when figures are higher or lower. */
+  direction?: 'higher' | 'lower' | undefined; nature?: 'lagging' | 'leading' | undefined;
+  objective?: string | undefined; purpose?: string | undefined;
+  /** Targets by year as stated (text: "75% (IE-002: 85%)"), and the traffic-light thresholds. */
+  baseline?: string | undefined; target2027?: string | undefined; target2030?: string | undefined;
+  green?: string | undefined; yellow?: string | undefined; red?: string | undefined;
+  custodian?: string | undefined; dataSource?: string | undefined; limitations?: string | undefined;
+}
+export const KpiCardSchema: z.ZodType<KpiCard> = z.object({
+  symbol: z.enum(KPI_SYMBOLS), scope: z.enum(KPI_SCOPES),
+  formula: text(2000), sources: text(1000),
+  direction: z.enum(['higher', 'lower']).optional(), nature: z.enum(['lagging', 'leading']).optional(),
+  objective: text(500), purpose: text(1000),
+  baseline: text(200), target2027: text(200), target2030: text(200),
+  green: text(200), yellow: text(200), red: text(200),
+  custodian: text(200), dataSource: text(500), limitations: text(1000),
+}).strict();
+
 export const EvidenceVersionSchema = z.object({
   id: z.string(), versionNo: z.number(), fileName: z.string().nullable(), mime: z.string().nullable(), size: z.number().nullable(),
   sha256: z.string().nullable(), url: z.string().nullable(), asOfDate: z.string().nullable(), notes: z.string().nullable(), createdAt: iso,
@@ -100,6 +132,8 @@ export const EvidenceItemSchema = z.object({
   /** A semester schedule the academic calendar cannot place ("no term defined"); null otherwise. Never guessed. */
   scheduleGap: z.enum(['no_term']).nullable(),
   confidentiality: z.enum(CONFIDENTIALITY_LEVELS), containsStudentData: z.boolean(), tags: z.array(z.string()),
+  /** The documentation card when the item is a KPI (a dataset with one); null for a document. */
+  kpi: KpiCardSchema.nullable(),
   status: z.enum(['active', 'archived']), latest: EvidenceVersionSchema.nullable(), linkCount: z.number(),
   /** Links not yet approved or rejected. */
   proposedLinkCount: z.number(),
@@ -184,6 +218,7 @@ export const CreateEvidenceSchema = z.object({
   tags: z.array(z.string().trim().min(1)).default([]),
   /** The collection method (default `manual`) and its settings; the schedule is optional. */
   method: z.enum(EVIDENCE_METHODS).default('manual'), methodConfig: z.record(z.string(), z.unknown()).default({}), schedule: ScheduleSchema.nullable().optional(),
+  kpi: KpiCardSchema.optional(),
   /** For a link to a document kept elsewhere (e.g. SharePoint): registers version 1 with this address. */
   url: z.url().optional(),
 }).strict().superRefine((d, ctx) => methodRules(d, ctx));
@@ -198,8 +233,19 @@ export const UpdateEvidenceSchema = z.object({
   tags: z.array(z.string().trim().min(1)).optional(), status: z.enum(['active', 'archived']).optional(),
   /** Changing the method without settings resets them; settings alone are checked against the item's current method by the service. */
   method: z.enum(EVIDENCE_METHODS).optional(), methodConfig: z.record(z.string(), z.unknown()).optional(), schedule: ScheduleSchema.nullable().optional(),
+  kpi: KpiCardSchema.nullable().optional(),
 }).strict().superRefine((d, ctx) => { if (d.method && d.methodConfig) methodRules(d, ctx, 'dataset'); });
 export type UpdateEvidence = z.infer<typeof UpdateEvidenceSchema>;
+/** Several items changed at once: the fields to set on all of them, and tags to add or remove. */
+export const BulkEvidenceSchema = z.object({
+  ids: z.array(z.uuid()).min(1).max(500),
+  set: z.object({
+    ownerUnitId: z.uuid().nullable().optional(), ownerUserId: z.uuid().nullable().optional(), periodLabel: z.string().trim().nullable().optional(),
+    confidentiality: z.enum(CONFIDENTIALITY_LEVELS).optional(), containsStudentData: z.boolean().optional(), status: z.enum(['active', 'archived']).optional(),
+  }).strict().default({}),
+  addTags: z.array(z.string().trim().min(1)).max(20).optional(), removeTags: z.array(z.string().trim().min(1)).max(20).optional(),
+}).strict();
+export type BulkEvidence = z.input<typeof BulkEvidenceSchema>;
 
 export const LinkEvidenceSchema = z.object({ evidenceVersionId: z.uuid(), rationale: z.string().trim().min(1, 'say why this evidence supports it') }).strict();
 export type LinkEvidence = z.infer<typeof LinkEvidenceSchema>;
